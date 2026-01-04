@@ -28,11 +28,19 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve static files from the docs directory with explicit content-type for JS files
+// Serve static files from the docs directory with explicit content-type and cache control
 app.use((req, res, next) => {
   if (req.path.endsWith('.js')) {
     res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
   }
+
+  // Prevent caching of HTML and JS files during development
+  if (req.path.endsWith('.html') || req.path.endsWith('.js')) {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  }
+
   next();
 });
 app.use(express.static(path.join(__dirname, 'docs')));
@@ -132,40 +140,56 @@ app.get('/api/tmb-stops', async (req, res) => {
   try {
     console.log('🚏 Fetching TMB stops data from API...');
 
-    // Use TMB transit parades endpoint for stops information
-    const appId = process.env.TMB_APP_ID || '8029906b';
-    const appKey = process.env.TMB_APP_KEY || '73b5ad24d1db9fa24988bf134a1523d1';
+    // Try multiple TMB API endpoints for bus stops
+    const endpoints = [
+      'https://opendata-ajuntament.barcelona.cat/data/api/action/datastore_search?resource_id=0d3e10b6-9acc-4e1d-8e7d-7c1d35e8e5b8&limit=100',
+      'https://opendata-ajuntament.barcelona.cat/data/dataset/6aa3416d-ce1a-494d-861b-7bd07f069600/resource/1b215493-9e63-4a12-8980-2d7e0fa19f85/download',
+      'https://api.tmb.cat/v1/transit/parades?app_id=8029906b&app_key=73b5ad24d1db9fa24988bf134a1523d1'
+    ];
 
-    const tmbUrl = `https://api.tmb.cat/v1/transit/parades?app_id=${appId}&app_key=${appKey}`;
+    let data = null;
+    let success = false;
 
-    const response = await fetch(tmbUrl, {
-      headers: {
-        'User-Agent': 'OpenLocalMap-Proxy/1.0',
-        'Accept': 'application/json'
-      },
-      timeout: 30000 // 30 second timeout for Vercel
-    });
+    for (const tmbUrl of endpoints) {
+      try {
+        console.log('🔄 Trying TMB endpoint:', tmbUrl.split('/').pop());
 
-    if (!response.ok) {
-      console.warn(`⚠️ TMB stops API returned ${response.status}: ${response.statusText}`);
+        const response = await fetch(tmbUrl, {
+          headers: {
+            'User-Agent': 'OpenLocalMap-Proxy/1.0',
+            'Accept': 'application/json'
+          },
+          timeout: 15000
+        });
+
+        if (response.ok) {
+          data = await response.json();
+          console.log('✅ Successfully fetched TMB stops data from:', tmbUrl.split('/').pop());
+          success = true;
+          break;
+        } else {
+          console.warn(`⚠️ TMB endpoint ${tmbUrl.split('/').pop()} returned ${response.status}`);
+        }
+      } catch (endpointError) {
+        console.warn(`❌ Failed to fetch from ${tmbUrl.split('/').pop()}:`, endpointError.message);
+        continue;
+      }
+    }
+
+    if (!success || !data) {
+      console.error('❌ All TMB API endpoints failed');
       setCorsHeaders(res);
-      return res.status(response.status).json({
-        error: 'TMB stops API error',
-        status: response.status,
-        message: response.statusText,
+      return res.status(503).json({
+        error: 'TMB API unavailable',
+        message: 'Unable to fetch real TMB stops data from any endpoint',
         timestamp: new Date().toISOString()
       });
     }
 
-    const data = await response.json();
-    console.log('✅ Successfully fetched TMB stops data');
-
     setCorsHeaders(res);
     res.json(data);
   } catch (error) {
-    console.error('❌ Error fetching TMB stops data:', error.message);
-
-    // Return error response with explicit CORS headers
+    console.error('❌ Error in TMB stops API proxy:', error.message);
     setCorsHeaders(res);
     res.status(500).json({
       error: 'Failed to fetch TMB stops data',
@@ -326,82 +350,89 @@ app.get('/api/tmb-realtime', async (req, res) => {
 // Bus API proxy endpoint
 app.get('/api/bus-realtime', async (req, res) => {
   try {
-    console.log('🚌 Fetching bus data from TMB API...');
+    console.log('🚌 Generating mock bus data for testing...');
 
-    // TMB bus API endpoint for real-time bus positions
-    // Using TMB's transit endpoint for bus lines
-    const appId = process.env.TMB_APP_ID || '8029906b';
-    const appKey = process.env.TMB_APP_KEY || '73b5ad24d1db9fa24988bf134a1523d1';
-
-    const busUrl = `https://api.tmb.cat/v1/transit/linies/bus?app_id=${appId}&app_key=${appKey}`;
-
-    const response = await fetch(busUrl, {
-      headers: {
-        'User-Agent': 'OpenLocalMap-Proxy/1.0',
-        'Accept': 'application/json'
-      },
-      timeout: 30000 // 30 second timeout for Vercel
-    });
-
-    if (!response.ok) {
-      console.warn(`⚠️ Bus API returned ${response.status}: ${response.statusText}`);
-      setCorsHeaders(res);
-      return res.status(response.status).json({
-        error: 'Bus API error',
-        status: response.status,
-        message: response.statusText,
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    const data = await response.json();
-    console.log('✅ Successfully fetched bus data:', data.features ? data.features.length : 0, 'bus lines');
-
-    // Transform the data to match expected format for bus visualization
-    const transformedData = {
-      entity: []
+    // For now, return mock data to test the frontend functionality
+    // TODO: Replace with real TMB API integration when available
+    const mockData = {
+      entity: [
+        {
+          id: 'BUS_V15-001',
+          vehicle: {
+            trip: {
+              tripId: 'v15_trip_001_' + Date.now(),
+              route_id: 'V15',
+              startTime: '12:00:00',
+              startDate: new Date().toISOString().split('T')[0].replace(/-/g, '')
+            },
+            position: {
+              latitude: 41.3851 + (Math.random() - 0.5) * 0.01,
+              longitude: 2.1734 + (Math.random() - 0.5) * 0.01,
+              bearing: Math.random() * 360,
+              speed: Math.random() * 30 + 15
+            },
+            vehicle: {
+              id: 'V15-001',
+              label: 'V15-001-PLATF.(1)'
+            }
+          }
+        },
+        {
+          id: 'BUS_59-002',
+          vehicle: {
+            trip: {
+              tripId: '59_trip_002_' + Date.now(),
+              route_id: '59',
+              startTime: '12:05:00',
+              startDate: new Date().toISOString().split('T')[0].replace(/-/g, '')
+            },
+            position: {
+              latitude: 41.3871 + (Math.random() - 0.5) * 0.01,
+              longitude: 2.1754 + (Math.random() - 0.5) * 0.01,
+              bearing: Math.random() * 360,
+              speed: Math.random() * 25 + 10
+            },
+            vehicle: {
+              id: '59-002',
+              label: '59-002-PLATF.(2)'
+            }
+          }
+        },
+        {
+          id: 'BUS_7-003',
+          vehicle: {
+            trip: {
+              tripId: '7_trip_003_' + Date.now(),
+              route_id: '7',
+              startTime: '12:10:00',
+              startDate: new Date().toISOString().split('T')[0].replace(/-/g, '')
+            },
+            position: {
+              latitude: 41.3831 + (Math.random() - 0.5) * 0.01,
+              longitude: 2.1714 + (Math.random() - 0.5) * 0.01,
+              bearing: Math.random() * 360,
+              speed: Math.random() * 35 + 20
+            },
+            vehicle: {
+              id: '7-003',
+              label: '7-003-PLATF.(1)'
+            }
+          }
+        }
+      ]
     };
 
-    // Convert TMB GeoJSON format to GTFS-RT style format for compatibility
-    if (data.features && Array.isArray(data.features)) {
-      data.features.forEach((feature, index) => {
-        if (feature.properties) {
-          // Create a mock vehicle entity for each bus line
-          // In a real implementation, this would come from actual real-time bus position data
-          transformedData.entity.push({
-            id: `BUS_${feature.properties.CODI_LINIA || index}`,
-            vehicle: {
-              trip: {
-                tripId: `trip_${feature.properties.CODI_LINIA || index}_${Date.now()}`,
-                route_id: feature.properties.CODI_LINIA || `line_${index}`,
-                startTime: '00:00:00',
-                startDate: new Date().toISOString().split('T')[0].replace(/-/g, '')
-              },
-              position: {
-                latitude: 41.3851 + (Math.random() - 0.5) * 0.02, // Barcelona center with some randomization
-                longitude: 2.1734 + (Math.random() - 0.5) * 0.02,
-                bearing: Math.random() * 360,
-                speed: Math.random() * 50 + 10 // Random speed between 10-60 km/h
-              },
-              vehicle: {
-                id: `BUS_${feature.properties.CODI_LINIA || index}`,
-                label: feature.properties.NOM_LINIA || `Bus ${feature.properties.CODI_LINIA || index}`
-              }
-            }
-          });
-        }
-      });
-    }
+    console.log('✅ Returning mock bus data:', mockData.entity.length, 'buses');
 
     setCorsHeaders(res);
-    res.json(transformedData);
+    res.json(mockData);
   } catch (error) {
-    console.error('❌ Error fetching bus data:', error.message);
+    console.error('❌ Error generating mock bus data:', error.message);
 
     // Return error response with explicit CORS headers
     setCorsHeaders(res);
     res.status(500).json({
-      error: 'Failed to fetch bus data',
+      error: 'Failed to generate bus data',
       message: error.message,
       timestamp: new Date().toISOString()
     });
