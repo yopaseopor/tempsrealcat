@@ -429,7 +429,49 @@ function loadFgcContent() {
         });
 }
 
-// Initialize train and FGC content loading when tabs are clicked
+// Function to load external HTML content for Bus tab
+function loadBusContent() {
+    const busPane = document.getElementById('bus');
+
+    // Check if content is already loaded (look for the specific Bus title)
+    if (busPane.querySelector('h1')) {
+        return; // Content already loaded
+    }
+
+    // Load the bus.html content
+    fetch('bus.html')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to load bus.html');
+            }
+            return response.text();
+        })
+        .then(html => {
+            // Extract the sidebar-pane content from the HTML
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const busContent = doc.querySelector('#bus');
+
+            if (busContent) {
+                // Clear existing content and add new content
+                busPane.innerHTML = busContent.innerHTML;
+
+                // Update language for the new content
+                updateLanguage();
+
+                console.log('Bus content loaded successfully');
+            } else {
+                console.error('Could not find #bus content in bus.html');
+                busPane.innerHTML = '<div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span></div><h1>Error loading Bus content</h1>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading Bus content:', error);
+            busPane.innerHTML = '<div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span></div><h1>Error loading Bus content</h1><p>' + error.message + '</p>';
+        });
+}
+
+// Initialize train, FGC, and Bus content loading when tabs are clicked
 document.addEventListener('DOMContentLoaded', function() {
     // Add event listener to train tab
     const trainTab = document.querySelector('a[href="#train"]');
@@ -446,6 +488,15 @@ document.addEventListener('DOMContentLoaded', function() {
         fgcTab.addEventListener('click', function(e) {
             // Load FGC content after a short delay to ensure tab is active
             setTimeout(loadFgcContent, 100);
+        });
+    }
+
+    // Add event listener to Bus tab
+    const busTab = document.querySelector('a[href="#bus"]');
+    if (busTab) {
+        busTab.addEventListener('click', function(e) {
+            // Load Bus content after a short delay to ensure tab is active
+            setTimeout(loadBusContent, 100);
         });
     }
 
