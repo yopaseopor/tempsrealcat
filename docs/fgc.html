@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FGC - Ferrocarrils de la Generalitat de Catalunya</title>
+</head>
+<body>
+    <!--FGC-->
+    <div class="sidebar-pane" id="fgc">
+      <div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span>
+      </div>
+      <h1 data-i18n="fgc_title">🚆 FGC - Ferrocarrils de la Generalitat de Catalunya</h1>
+      <p style="text-align:justify; margin-right:5px;" data-i18n="fgc_description">Visualitza les posicions en temps real dels trens FGC a Catalunya. Les dades provenen directament de l'API oberta de FGC.</p>
+
+      <!-- Real-time FGC controls -->
+      <div style="margin-bottom: 15px;">
+        <h3 style="margin-bottom: 10px; color: #333;" data-i18n="fgc_realtime_tracking">📡 Seguiment en temps real</h3>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
+          <button id="start-fgc-realtime-btn" onclick="startRealtimeFGCTrains()" style="background:#2a2a2a; color:white; padding:10px 15px; border:none; border-radius:5px; cursor:pointer; font-size: 14px;">
+            <i class="fa fa-play"></i> <span data-i18n="fgc_start_tracking">Inicia seguiment</span>
+          </button>
+          <button id="stop-fgc-realtime-btn" onclick="stopRealtimeFGCTrains()" style="background:#cc0000; color:white; padding:10px 15px; border:none; border-radius:5px; cursor:pointer; font-size: 14px; display: none;">
+            <i class="fa fa-stop"></i> <span data-i18n="fgc_stop_tracking">Atura seguiment</span>
+          </button>
+        </div>
+
+        <!-- Legend toggle -->
+        <button id="fgc-legend-btn" onclick="toggleFGCTrainLegend()" style="background:#007acc; color:white; padding:8px 12px; border:none; border-radius:3px; cursor:pointer; font-size: 12px; display: none; margin-right: 10px;">
+          <i class="fa fa-map"></i> <span data-i18n="fgc_legend">🎨 Llegenda de línies</span>
+        </button>
+      </div>
+
+      <!-- Status display -->
+      <div id="fgc-realtime-status" style="background: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #ddd;">
+        <span data-i18n="fgc_status">Status:</span> <span data-i18n="fgc_status_inactive">Inactiu</span>
+      </div>
+
+      <!-- Manual data entry section -->
+      <div id="fgc-manual-data-entry" style="display: none; margin-bottom: 15px;">
+        <h4 style="margin-bottom: 10px; color: #333;" data-i18n="fgc_manual_data">📝 Introduir Dades Manualment</h4>
+        <p style="font-size: 12px; color: #666; margin-bottom: 10px;">
+          Si les dades automàtiques no funcionen, pots copiar-les manualment des de:
+        </p>
+        <button onclick="openFGCJson()" style="background:#666; color:white; padding:6px 10px; border:none; border-radius:3px; cursor:pointer; font-size: 12px; margin-right: 5px;">
+          <i class="fa fa-external-link"></i> <span data-i18n="fgc_open_json">Obre API FGC</span>
+        </button>
+        <button onclick="copyFGCUrl()" style="background:#666; color:white; padding:6px 10px; border:none; border-radius:3px; cursor:pointer; font-size: 12px;">
+          <i class="fa fa-copy"></i> <span data-i18n="fgc_copy_url">Copia URL</span>
+        </button>
+        <div style="margin-top: 10px;">
+          <textarea id="fgc-manual-json-data" placeholder="Enganxa aquí les dades JSON de FGC..." style="width: 100%; height: 100px; padding: 8px; border: 1px solid #ccc; border-radius: 3px; font-family: monospace; font-size: 11px;" data-i18n="fgc_paste_json"></textarea>
+        </div>
+        <div style="margin-top: 10px;">
+          <button onclick="processFGCManualJsonData()" style="background:#007acc; color:white; padding:8px 12px; border:none; border-radius:3px; cursor:pointer;">
+            <i class="fa fa-play"></i> <span data-i18n="fgc_process_data">Processar Dades FGC</span>
+          </button>
+          <button onclick="clearFGCTextarea()" style="background:#666; color:white; padding:8px 12px; border:none; border-radius:3px; cursor:pointer;">
+            <i class="fa fa-trash"></i> <span data-i18n="fgc_clear">Neteja</span>
+          </button>
+        </div>
+        <div id="fgc-json-status" style="margin-top: 10px; font-size: 12px; color: #666;">
+          <span data-i18n="fgc_json_status">Status: Preparat per enganxar dades</span>
+        </div>
+      </div>
+
+      <!-- Instructions -->
+      <div style="background: #e8f4f8; padding: 15px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #b8daff;">
+        <h4 style="margin-top: 0; color: #004085;" data-i18n="fgc_how_it_works">📖 Com funciona</h4>
+        <ol style="font-size: 13px; color: #004085; margin: 0; padding-left: 20px;">
+          <li data-i18n="fgc_step1">Inicia el seguiment: Prem "Inicia seguiment" per carregar trens FGC en temps real</li>
+          <li data-i18n="fgc_step2">Visualitza al mapa: Els trens apareixeran com marcadors amb el codi de la línia</li>
+          <li data-i18n="fgc_step3">Clica als marcadors: Obté informació detallada sobre cada tren</li>
+          <li data-i18n="fgc_step4">Llegenda: Mostra la llegenda per veure les línies i colors</li>
+          <li data-i18n="fgc_step5">Atura quan vulguis: Prem "Atura seguiment" per netejar el mapa</li>
+        </ol>
+      </div>
+
+      <!-- Additional options -->
+      <div style="margin-bottom: 15px;">
+        <button onclick="showFGCDataEntry()" style="background:#f0f0f0; color:#333; padding:8px 12px; border:1px solid #ccc; border-radius:3px; cursor:pointer; font-size: 12px;">
+          <i class="fa fa-cog"></i> <span data-i18n="fgc_advanced_options">Opcions avançades</span>
+        </button>
+        <button onclick="testFGCSampleData()" style="background:#f0f0f0; color:#333; padding:8px 12px; border:1px solid #ccc; border-radius:3px; cursor:pointer; font-size: 12px; margin-left: 5px;">
+          <i class="fa fa-flask"></i> <span data-i18n="fgc_sample_data">Prova amb dades d'exemple</span>
+        </button>
+      </div>
+
+      <!-- Coverage info -->
+      <div style="background: #fff3cd; padding: 10px; border-radius: 3px; border: 1px solid #ffeaa7; font-size: 12px;">
+        <strong data-i18n="fgc_coverage">ℹ️ Cobertura:</strong> Aquest servei mostra trens FGC de Catalunya, incloent Línia Barcelona-Vallès, Línia Llobregat-Anoia i Metro del Vallès. Les dades s'actualitzen cada 30 segons.
+      </div>
+
+      <br><hr width="90%">
+
+      <!-- Help section -->
+      <h3 style="color: #333;" data-i18n="fgc_help_title"><i class="fa fa-question-circle"></i> Ajuda</h3>
+      <p style="text-align:justify; margin-right:5px; font-size: 13px;" data-i18n="fgc_help_text">
+        Aquest panell et permet visualitzar la posició en temps real dels trens FGC a Catalunya. Les dades provenen de l'API oberta de FGC i s'actualitzen automàticament. Si tens problemes amb la càrrega automàtica, pots utilitzar l'opció de dades manuals.
+      </p>
+      <center><button style="background:#2a2a2a; color:white; padding:5px;" class="fa fa-support"
+          onclick="copyFGCInstructions()" data-i18n="fgc_copy_instructions"> 📋 Copiar instruccions</button></center>
+    </div>
+</body>
+</html>

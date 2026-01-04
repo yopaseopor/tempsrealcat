@@ -345,6 +345,123 @@ function addr_search() {
     });
 }
 
+// Function to load external HTML content for train tab
+function loadTrainContent() {
+    const trainPane = document.getElementById('train');
+
+    // Check if content is already loaded
+    if (trainPane.querySelector('.close-button')) {
+        return; // Content already loaded
+    }
+
+    // Load the train.html content
+    fetch('train.html')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to load train.html');
+            }
+            return response.text();
+        })
+        .then(html => {
+            // Extract the sidebar-pane content from the HTML
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const trainContent = doc.querySelector('#train');
+
+            if (trainContent) {
+                // Clear existing content and add new content
+                trainPane.innerHTML = trainContent.innerHTML;
+
+                // Update language for the new content
+                updateLanguage();
+
+                console.log('Train content loaded successfully');
+            } else {
+                console.error('Could not find #train content in train.html');
+                trainPane.innerHTML = '<div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span></div><h1>Error loading train content</h1>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading train content:', error);
+            trainPane.innerHTML = '<div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span></div><h1>Error loading train content</h1><p>' + error.message + '</p>';
+        });
+}
+
+// Function to load external HTML content for FGC tab
+function loadFgcContent() {
+    const fgcPane = document.getElementById('fgc');
+
+    // Check if content is already loaded (look for the specific FGC title)
+    if (fgcPane.querySelector('h1[data-i18n="fgc_title"]')) {
+        return; // Content already loaded
+    }
+
+    // Load the fgc.html content
+    fetch('fgc.html')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to load fgc.html');
+            }
+            return response.text();
+        })
+        .then(html => {
+            // Extract the sidebar-pane content from the HTML
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const fgcContent = doc.querySelector('#fgc');
+
+            if (fgcContent) {
+                // Clear existing content and add new content
+                fgcPane.innerHTML = fgcContent.innerHTML;
+
+                // Update language for the new content
+                updateLanguage();
+
+                console.log('FGC content loaded successfully');
+            } else {
+                console.error('Could not find #fgc content in fgc.html');
+                fgcPane.innerHTML = '<div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span></div><h1>Error loading FGC content</h1>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading FGC content:', error);
+            fgcPane.innerHTML = '<div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span></div><h1>Error loading FGC content</h1><p>' + error.message + '</p>';
+        });
+}
+
+// Initialize train and FGC content loading when tabs are clicked
+document.addEventListener('DOMContentLoaded', function() {
+    // Add event listener to train tab
+    const trainTab = document.querySelector('a[href="#train"]');
+    if (trainTab) {
+        trainTab.addEventListener('click', function(e) {
+            // Load train content after a short delay to ensure tab is active
+            setTimeout(loadTrainContent, 100);
+        });
+    }
+
+    // Add event listener to FGC tab
+    const fgcTab = document.querySelector('a[href="#fgc"]');
+    if (fgcTab) {
+        fgcTab.addEventListener('click', function(e) {
+            // Load FGC content after a short delay to ensure tab is active
+            setTimeout(loadFgcContent, 100);
+        });
+    }
+
+    // Pre-load FGC content to ensure it's available immediately
+    setTimeout(function() {
+        const fgcPane = document.getElementById('fgc');
+        if (fgcPane && !fgcPane.querySelector('h1[data-i18n="fgc_title"]')) {
+            loadFgcContent();
+        }
+    }, 500);
+
+    // Initialize language
+    const savedLang = localStorage.getItem('language') || 'ca';
+    setLanguage(savedLang);
+});
+
 // Global search functions
 
 var feature3

@@ -1901,7 +1901,7 @@ function stopRealtimeTrains() {
 function updateRealtimeStatus(status) {
     var statusElement = document.getElementById('realtime-status');
     if (statusElement) {
-        statusElement.textContent = 'Status: ' + status;
+        statusElement.textContent = getTranslation('train_status') + ' ' + status;
     }
 }
 

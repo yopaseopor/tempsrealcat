@@ -40,6 +40,7 @@
 	<li><a href="#home" role="tab"><i class="fa fa-map-marker"></i></a></li>
 	<li><a href="#routes" role="tab"><i class="fa fa-compass"></i></a></li>
 	<li><a href="#train" role="tab"><i class="fa fa-train"></i></a></li>
+	<li><a href="#fgc" role="tab"><i class="fa fa-chevron-circle-right"></i></a></li>
 	<li><a href="#gtfs" role="tab"><i class="fa fa-clock-o"></i></a></li>
 	<li><a href="#wikipedia" role="tab"><i class="fa fa-book"></i></a></li>
 		<!--MODIFICAR AQUÍ-->
@@ -294,98 +295,14 @@
 
 	<!--TRAIN-->
 	<div class="sidebar-pane" id="train">
+	  <!-- Content will be loaded dynamically from train.html -->
+	</div>
+
+	<!--FGC-->
+	<div class="sidebar-pane" id="fgc">
 	  <div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span>
 	  </div>
-	  <h1 data-i18n="train_title">🚆 Trens RENFE</h1>
-	  <p style="text-align:justify; margin-right:5px;" data-i18n="train_description">Visualitza les posicions en temps real dels trens RENFE a Espanya. Les dades provenen directament de l'API oficial de RENFE a través de GTFS-RT.</p>
-
-	  <!-- Real-time train controls -->
-	  <div style="margin-bottom: 15px;">
-	    <h3 style="margin-bottom: 10px; color: #333;">📡 Seguiment en temps real</h3>
-	    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
-	      <button id="start-realtime-btn" onclick="startRealtimeTrains()" style="background:#2a2a2a; color:white; padding:10px 15px; border:none; border-radius:5px; cursor:pointer; font-size: 14px;">
-	        <i class="fa fa-play"></i> Inicia seguiment
-	      </button>
-	      <button id="stop-realtime-btn" onclick="stopRealtimeTrains()" style="background:#cc0000; color:white; padding:10px 15px; border:none; border-radius:5px; cursor:pointer; font-size: 14px; display: none;">
-	        <i class="fa fa-stop"></i> Atura seguiment
-	      </button>
-	    </div>
-
-	    <!-- Legend toggle -->
-	    <button id="legend-btn" onclick="toggleTrainLegend()" style="background:#007acc; color:white; padding:8px 12px; border:none; border-radius:3px; cursor:pointer; font-size: 12px; display: none; margin-right: 10px;">
-	      <i class="fa fa-map"></i> 🎨 Llegenda de línies
-	    </button>
-	  </div>
-
-	  <!-- Status display -->
-	  <div id="realtime-status" style="background: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #ddd;">
-	    Status: Inactiu
-	  </div>
-
-	  <!-- Manual data entry section -->
-	  <div id="manual-data-entry" style="display: none; margin-bottom: 15px;">
-	    <h4 style="margin-bottom: 10px; color: #333;">📝 Introduir Dades Manualment</h4>
-	    <p style="font-size: 12px; color: #666; margin-bottom: 10px;">
-	      Si les dades automàtiques no funcionen, pots copiar-les manualment des de:
-	    </p>
-	    <button onclick="openRenfeJson()" style="background:#666; color:white; padding:6px 10px; border:none; border-radius:3px; cursor:pointer; font-size: 12px; margin-right: 5px;">
-	      <i class="fa fa-external-link"></i> Obrir JSON RENFE
-	    </button>
-	    <button onclick="copyRenfeUrl()" style="background:#666; color:white; padding:6px 10px; border:none; border-radius:3px; cursor:pointer; font-size: 12px;">
-	      <i class="fa fa-copy"></i> Copiar URL
-	    </button>
-	    <div style="margin-top: 10px;">
-	      <textarea id="manual-json-data" placeholder="Enganxa aquí les dades JSON de RENFE..." style="width: 100%; height: 100px; padding: 8px; border: 1px solid #ccc; border-radius: 3px; font-family: monospace; font-size: 11px;"></textarea>
-	    </div>
-	    <div style="margin-top: 10px;">
-	      <button onclick="processManualJsonData()" style="background:#007acc; color:white; padding:8px 12px; border:none; border-radius:3px; cursor:pointer;">
-	        <i class="fa fa-play"></i> Processar Dades Reals
-	      </button>
-	      <button onclick="clearTextarea()" style="background:#666; color:white; padding:8px 12px; border:none; border-radius:3px; cursor:pointer;">
-	        <i class="fa fa-trash"></i> Neteja
-	      </button>
-	    </div>
-	    <div id="json-status" style="margin-top: 10px; font-size: 12px; color: #666;">
-	      Status: Preparat per enganxar dades
-	    </div>
-	  </div>
-
-	  <!-- Instructions -->
-	  <div style="background: #e8f4f8; padding: 15px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #b8daff;">
-	    <h4 style="margin-top: 0; color: #004085;">📖 Com funciona</h4>
-	    <ol style="font-size: 13px; color: #004085; margin: 0; padding-left: 20px;">
-	      <li><strong>Inicia el seguiment</strong>: Prem "Inicia seguiment" per carregar trens RENFE en temps real</li>
-	      <li><strong>Visualitza al mapa</strong>: Els trens apareixeran com marcadors amb el codi de la línia</li>
-	      <li><strong>Clica als marcadors</strong>: Obté informació detallada sobre cada tren</li>
-	      <li><strong>Llegenda</strong>: Mostra la llegenda per veure les línies i colors</li>
-	      <li><strong>Atura quan vulguis</strong>: Prem "Atura seguiment" per netejar el mapa</li>
-	    </ol>
-	  </div>
-
-	  <!-- Additional options -->
-	  <div style="margin-bottom: 15px;">
-	    <button onclick="showManualDataEntry()" style="background:#f0f0f0; color:#333; padding:8px 12px; border:1px solid #ccc; border-radius:3px; cursor:pointer; font-size: 12px;">
-	      <i class="fa fa-cog"></i> Opcions avançades
-	    </button>
-	    <button onclick="testSampleData()" style="background:#f0f0f0; color:#333; padding:8px 12px; border:1px solid #ccc; border-radius:3px; cursor:pointer; font-size: 12px; margin-left: 5px;">
-	      <i class="fa fa-flask"></i> Prova amb dades d'exemple
-	    </button>
-	  </div>
-
-	  <!-- Coverage info -->
-	  <div style="background: #fff3cd; padding: 10px; border-radius: 3px; border: 1px solid #ffeaa7; font-size: 12px;">
-	    <strong>ℹ️ Cobertura:</strong> Aquest servei mostra trens RENFE de tot Espanya, incloent Rodalies, Cercanías, AVE, Alvia, Avant i trens regionals. Les dades s'actualitzen cada 30 segons.
-	  </div>
-
-	  <br><hr width="90%">
-
-	  <!-- Help section -->
-	  <h3 style="color: #333;"><i class="fa fa-question-circle"></i> Ajuda</h3>
-	  <p style="text-align:justify; margin-right:5px; font-size: 13px;" data-i18n="train_help_text">
-	    Aquest panell et permet visualitzar la posició en temps real dels trens RENFE a Espanya. Les dades provenen de l'API oficial de RENFE (GTFS-RT) i s'actualitzen automàticament. Si tens problemes amb la càrrega automàtica, pots utilitzar l'opció de dades manuals.
-	  </p>
-	  <center><button style="background:#2a2a2a; color:white; padding:5px;" class="fa fa-support"
-          onClick="copyJsonInstructions()"> 📋 Copiar instruccions</button></center>
+	  <h1>FGC</h1>
 	</div>
 
 	<!--GTFS-->
@@ -2194,6 +2111,7 @@ s.setAttribute('data-timestamp', +new Date());
     <script src="assets/js/translations.js"></script>
     <script src="assets/js/site.js"></script>
     <script src="assets/js/renfe.functions.js"></script>
+    <script src="assets/js/fgc.functions.js"></script>
 
   </body>
 </html>
