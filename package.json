@@ -1,0 +1,26 @@
+{
+  "name": "tempsrealcat",
+  "version": "1.0.0",
+  "description": "More customized Local OSM map showing multiple data with leaflet plugins.",
+  "main": "site.functions.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yopaseopor/tempsrealcat.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/yopaseopor/tempsrealcat/issues"
+  },
+  "homepage": "https://github.com/yopaseopor/tempsrealcat#readme",
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}
