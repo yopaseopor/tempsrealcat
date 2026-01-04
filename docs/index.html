@@ -1,20 +1,18 @@
-<!DOCTYPE html>
   <head>
   <!--MODIFICAR AQUÍ-->
-	 <title>OpenLocalMap</title>
+    <title>OpenLocalMap</title>
 
-	 <meta charset="utf-8">
-	 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-	 <base href="./" id="base-href">
-	 <!--MODIFICAR AQUÍ-->
-	 <meta property="og:title" content="OpenLocalMap" />
-	 <meta property="og:type" content="website" />
-	 <!--MODIFICAR AQUÍ-->
-	 <meta property="og:url" content="https://yopaseopor.github.io/openlocalmap2" />
-	 <!--MODIFICAR AQUÍ-->
-	 <meta property="og:image" content="https://yopaseopor.github.io/openlocalmap2/assets/img/preview.jpg" />
-	 <!--MODIFICAR AQUÍ-->
-	 <meta property="og:description" content="Mapa de Vilanova i la Geltrú amb cerca de punts d'interès i altra informació." />
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!--MODIFICAR AQUÍ-->
+	<meta property="og:title" content="OpenLocalMap" />
+    <meta property="og:type" content="website" />
+	<!--MODIFICAR AQUÍ-->
+    <meta property="og:url" content="https://osm-catalan.github.io/openlocalmap" />
+	<!--MODIFICAR AQUÍ-->
+    <meta property="og:image" content="https://osm-catalan.github.io/openlocalmap/assets/img/preview.jpg" />
+	<!--MODIFICAR AQUÍ-->
+    <meta property="og:description" content="Mapa de Vilanova i la Geltrú amb cerca de punts d'interès i altra informació." />
     <link rel="shortcut icon" href="assets/img/favicon.ico"/>
     <link rel="stylesheet" href="assets/leaflet/leaflet.css" />
     <link rel="stylesheet" href="assets/css/Control.Loading.css" />
@@ -186,7 +184,95 @@
 	  <p><button type="button" onclick="clear_layer();" data-i18n="mapillary_clear">Neteja els marcadors de Mapillary</button></p>
 	  </center>
 
+	  <br><hr width="90%">
+	  
+	  
+	  
 
+	  <!--Mapillary - ajuda -->
+	  <A NAME="help_mapillary"></A>
+	  <h1 data-i18n="mapillary_help_title"><span class="fa fa-support"></span> Ajuda</h1>
+	  <p style="text-align:justify; margin-right:5px;" data-i18n="mapillary_help_text1">Des d'aquesta secció podeu trobar deu punts a
+	   l'atzar de la vostra vista del mapa, en els que es disposa de fotografia a Mapillary. Si us
+	   interessa localitzar fotografies en una zona concreta, és recomanable apropar-vos el màxim a
+	   aquella zona abans de fer clic a «Troba 10 llocs a l'atzar a Mapillary». Després de fer-ho us
+	   apareixeran 10 marcadors blaus al mapa:</p>
+	  <center><img src="assets/img/help/mapillary1.png" width="70%"></center>
+	  <p style="text-align:justify; margin-right:5px;" data-i18n="mapillary_help_text2">En seleccionar un dels marcadors us apareixerà una
+	   bafarada amb la fotografia a Mapillary de la zona:</p>
+	  <center><img src="assets/img/help/mapillary2.png" width="70%"></center>
+	  <p style="text-align:justify; margin-right:5px;" data-i18n="mapillary_help_text3">Si seguiu l'enllaç <b>«Continua la seqüència a
+	   Mapillary»</b> s'obrirà la pàgina de Mapillary en una altra pestanya, en el punt exacte on éreu. I
+	   des d'allà podreu resseguir tota la ruta:</p>
+	  <center><img src="assets/img/help/mapillary_web.png" width="90%"></center>
+	  <br>
+	  <center><button style="background:#2a2a2a; color:white; padding:5px;" class="fa fa-arrow-up"
+          onClick="location.href='#mapillary_init'" data-i18n="mapillary_help_back"> Inici</button></center>
+	</div>
+	
+	<!--RUTES-->
+	<A NAME="rutes_init"></A>
+	<div class="sidebar-pane" id="routes">
+	  <div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span>
+	  </div>
+	  <center><button style="background:#2a2a2a; color:white; padding:5px;" class="fa fa-support"
+          onClick="location.href='#help_rutes'" data-i18n="routes_help_button"> Ajuda (rutes)</button></center>
+  <h1 id="routes-title" data-i18n="routes_title">Rutes</h1>
+  <p style="text-align:justify; margin-right:5px;" data-i18n="routes_description">Les rutes han estat creades a partir de les dades
+   d'OpenStreetMap amb
+  <a href="https://graphhopper.com/maps/">GraphHopper</a>.</p>
+
+  <!-- Route type buttons -->
+  <center style="margin-bottom: 15px;">
+    <div style="text-align: center;">
+      <button id="walking-routes-btn" class="route-type-btn" type="button" onclick="loadWalkingRoutes()" style="background:#2a2a2a; color:white; padding:8px 12px; border:none; border-radius:3px; cursor:pointer; margin: 5px;"><i class="fa fa-user"></i> Rutes a peu</button>
+      <button id="biking-routes-btn" class="route-type-btn" type="button" onclick="loadBikingRoutes()" style="background:#2a2a2a; color:white; padding:8px 12px; border:none; border-radius:3px; cursor:pointer; margin: 5px;"><i class="fa fa-bicycle"></i> Rutes en bicicleta</button>
+    </div>
+
+    <!-- Public transport type buttons -->
+    <div style="text-align: center; margin-top: 10px;">
+      <h4 style="margin: 5px 0; color: #666; font-size: 14px;">Transport públic:</h4>
+      <button class="transport-type-btn" type="button" onclick="loadSpecificTransportRoutes('bus')" title="Autobusos" style="background:#2a2a2a; color:white; padding:6px 8px; border:none; border-radius:3px; cursor:pointer; margin: 2px; font-size: 12px;">🚌 Bus</button>
+      <button class="transport-type-btn" type="button" onclick="loadSpecificTransportRoutes('tram')" title="Tramvies" style="background:#2a2a2a; color:white; padding:6px 8px; border:none; border-radius:3px; cursor:pointer; margin: 2px; font-size: 12px;">🚊 Tram</button>
+      <button class="transport-type-btn" type="button" onclick="loadSpecificTransportRoutes('subway')" title="Metro" style="background:#2a2a2a; color:white; padding:6px 8px; border:none; border-radius:3px; cursor:pointer; margin: 2px; font-size: 12px;">🚇 Metro</button>
+      <button class="transport-type-btn" type="button" onclick="loadSpecificTransportRoutes('train')" title="Trens" style="background:#2a2a2a; color:white; padding:6px 8px; border:none; border-radius:3px; cursor:pointer; margin: 2px; font-size: 12px;">🚆 Tren</button>
+      <button class="transport-type-btn" type="button" onclick="loadSpecificTransportRoutes('light_rail')" title="Tramvia lleuger" style="background:#2a2a2a; color:white; padding:6px 8px; border:none; border-radius:3px; cursor:pointer; margin: 2px; font-size: 12px;">🚊 Tram lleuger</button>
+      <button class="transport-type-btn" type="button" onclick="loadPublicTransportRoutes()" title="Tots els transports públics" style="background:#007acc; color:white; padding:6px 8px; border:none; border-radius:3px; cursor:pointer; margin: 2px; font-size: 12px;">🚌🚊🚇🚆🚊 All</button>
+    </div>
+
+    <small style="color: #666; font-size: 11px;" data-i18n="routes_manual_note">Les consultes es fan manualment per evitar sobrecàrrega dels servidors</small>
+  </center>
+
+  <!-- Route categories -->
+  <div id="routes-content">
+    <!-- Content will be populated dynamically -->
+  </div>
+
+	  <!-- Route details -->
+	  <div id="route-details" style="display: none;">
+	    <hr>
+	    <h3 id="route-detail-title"></h3>
+	    <p id="route-detail-description"></p>
+    <div class="route-info">
+      <div class="route-info-item"><strong data-i18n="routes_detail_distance">Distància:</strong> <span id="route-distance"></span></div>
+      <div class="route-info-item"><strong data-i18n="routes_detail_elevation">Desnivell:</strong> <span id="route-elevation"></span></div>
+      <div class="route-info-item"><strong data-i18n="routes_detail_difficulty">Dificultat:</strong> <span id="route-difficulty"></span></div>
+      <div class="route-info-item"><strong data-i18n="routes_detail_duration">Durada estimada:</strong> <span id="route-duration"></span></div>
+      <div class="route-info-item"><strong data-i18n="routes_detail_frequency">Freqüència:</strong> <span id="route-frequency"></span></div>
+      <div class="route-info-item"><strong data-i18n="routes_detail_first_service">Primer servei:</strong> <span id="route-first-service"></span></div>
+      <div class="route-info-item"><strong data-i18n="routes_detail_last_service">Últim servei:</strong> <span id="route-last-service"></span></div>
+    </div>
+	    <div id="route-stops" style="display: none;">
+	      <h4 data-i18n="routes_stops_title">Parades:</h4>
+	      <ul id="route-stops-list"></ul>
+	    </div>
+	    <div class="route-actions">
+	      <button id="show-route-btn" class="fa fa-search" onclick="showSelectedRoute()" data-i18n="routes_show_route"> Mostra ruta</button>
+	      <button id="clear-route-btn" class="fa fa-trash" onclick="clearRoute()" data-i18n="routes_clear_route"> Neteja</button>
+	      <div id="route-download-link" style="margin-top: 10px;"></div>
+	    </div>
+	    <button onclick="hideRouteDetails()" style="margin-top: 10px;" data-i18n="routes_back_to_list">← Tornar al llistat</button>
+	  </div>
 
 	  <br><hr width="90%">
 
@@ -212,363 +298,71 @@
 	  </div>
 	  <center><button style="background:#2a2a2a; color:white; padding:5px;" class="fa fa-support"
           onClick="location.href='#help_gtfs'"> Ajuda (GTFS)</button></center>
-  <h1 data-i18n="gtfs_title">GTFS - Dades de Transport</h1>
-  <p style="text-align:justify; margin-right:5px;" data-i18n="gtfs_description">Explora conjunts de dades GTFS de transports públics de tot el món. Selecciona un conjunt de dades per veure informació sobre rutes, parades i horaris.</p>
+	  <h1 data-i18n="gtfs_title">GTFS - Dades de Transport</h1>
+	  <p style="text-align:justify; margin-right:5px;" data-i18n="gtfs_description">Explora conjunts de dades GTFS de transports públics de tot el món. Selecciona un conjunt de dades per veure informació sobre rutes, parades i horaris.</p>
 
-  <!-- Mobility Database Auth UI -->
-  <details style="margin-bottom: 20px;">
-    <summary style="background: #f0f0f0; border: 1px solid #ccc; border-radius: 5px; padding: 15px; cursor: pointer; list-style: none;">
-      <h3 style="margin: 0; color: #333; display: inline;">🔑 Mobility Database Authentication</h3>
-      <span style="float: right; font-size: 16px; color: #333;">▶️</span>
-    </summary>
-    <div style="padding: 15px; background: #f0f0f0; border: 1px solid #ccc; border-top: none; border-radius: 0 0 5px 5px; margin-top: -1px;">
-    <label style="display:block; font-weight:600; margin-bottom:6px;">Mobility Database Refresh Token</label>
-    <input id="mobility-refresh-token" type="password" placeholder="Paste your refresh token here" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; margin-bottom:8px;">
-    <div style="display:flex; gap:8px;">
-      <button onclick="(function(){ var t=document.getElementById('mobility-refresh-token').value; setRefreshToken(t, true); document.getElementById('mobility-auth-status').textContent='Refresh token saved (in localStorage).'; })()" style="background:#007acc; color:white; padding:6px 10px; border:none; border-radius:3px;">Save token</button>
-      <button onclick="(function(){ var t=document.getElementById('mobility-refresh-token').value; setRefreshToken(t, false); document.getElementById('mobility-auth-status').textContent='Refresh token set for session only.'; })()" style="background:#2a2a2a; color:white; padding:6px 10px; border:none; border-radius:3px;">Use for session</button>
-      <button onclick="(function(){ clearStoredRefreshToken(); document.getElementById('mobility-auth-status').textContent='Refresh token cleared.'; })()" style="background:#aa0000; color:white; padding:6px 10px; border:none; border-radius:3px;">Clear</button>
-      <button onclick="(function(){ document.getElementById('mobility-auth-status').textContent='Requesting access token...'; getValidAccessToken().then(function(tok){ document.getElementById('mobility-auth-status').textContent='Access token obtained.'; }).catch(function(err){ document.getElementById('mobility-auth-status').textContent='Token error: '+err.message; }); })()" style="background:#228822; color:white; padding:6px 10px; border:none; border-radius:3px;">Get Access Token</button>
-    </div>
-    <div id="mobility-auth-status" style="margin-top:8px; color:#444; font-size:13px;">No refresh token configured.</div>
-    <div style="margin-top:8px; font-size:12px; color:#666;">If you don't have a refresh token, sign in at <a href="https://mobilitydatabase.org/account" target="_blank">mobilitydatabase.org/account</a>. See API docs at <a href="https://mobilitydata.github.io/mobility-feed-api/SwaggerUI/index.html#/" target="_blank">Mobility Feed API (Swagger)</a>.</div>
+	  <!-- GTFS Search and Selection -->
+	  <div style="margin-bottom: 15px;">
+	    <h4 data-i18n="gtfs_search_title">Buscar conjunts de dades GTFS:</h4>
+	    <input type="text" id="gtfs-search" placeholder="Buscar per ciutat, país o operador..." style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px;">
+	    <button onclick="searchGtfsDatasets()" style="background:#007acc; color:white; padding:8px 15px; border:none; border-radius:3px; cursor:pointer; margin-right: 10px;">
+	      <i class="fa fa-search"></i> Buscar
+	    </button>
+	    <button onclick="loadAllGtfsDatasets()" style="background:#666; color:white; padding:8px 15px; border:none; border-radius:3px; cursor:pointer;">
+	      <i class="fa fa-list"></i> Mostrar tots
+	    </button>
+	  </div>
 
-    <!-- GTFS Search and Selection moved inside Mobility Database section -->
-    <hr style="margin: 20px 0; border: none; border-top: 1px solid #ccc;">
-    <h4 style="margin-bottom: 15px; color: #333;">🔍 GTFS Dataset Search</h4>
-    <div style="margin-bottom: 15px;">
-      <input type="text" id="gtfs-search" placeholder="Buscar per ciutat, país o operador..." style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px;">
-      <button onclick="searchGtfsDatasets()" style="background:#007acc; color:white; padding:8px 15px; border:none; border-radius:3px; cursor:pointer; margin-right: 10px;">
-        <i class="fa fa-search"></i> Buscar
-      </button>
-      <button onclick="loadAllGtfsDatasets()" style="background:#666; color:white; padding:8px 15px; border:none; border-radius:3px; cursor:pointer;">
-        <i class="fa fa-list"></i> Mostrar tots
-      </button>
-    </div>
+	  <!-- GTFS Results -->
+	  <div id="gtfs-results" style="display: none; margin-top: 15px;">
+	    <h4 data-i18n="gtfs_results_title">Conjunts de dades disponibles:</h4>
+	    <div id="gtfs-dataset-list" style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 10px;">
+	      <!-- Dataset list will be populated here -->
+	    </div>
+	  </div>
 
-    <!-- GTFS Results -->
-    <div id="gtfs-results" style="display: none; margin-top: 15px;">
-      <h4 data-i18n="gtfs_results_title">Conjunts de dades disponibles:</h4>
-      <div id="gtfs-dataset-list" style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 10px;">
-        <!-- Dataset list will be populated here -->
-      </div>
-    </div>
+	  <!-- GTFS Dataset Details -->
+	  <div id="gtfs-details" style="display: none; margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+	    <h4 id="gtfs-dataset-title"></h4>
+	    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 15px;">
+	      <div><strong data-i18n="gtfs_provider">Proveïdor:</strong> <span id="gtfs-provider"></span></div>
+	      <div><strong data-i18n="gtfs_country">País:</strong> <span id="gtfs-country"></span></div>
+	      <div><strong data-i18n="gtfs_location">Ubicació:</strong> <span id="gtfs-location"></span></div>
+	      <div><strong data-i18n="gtfs_last_updated">Última actualització:</strong> <span id="gtfs-last-updated"></span></div>
+	    </div>
+	    <p id="gtfs-description" style="margin-bottom: 15px;"></p>
 
-    <!-- GTFS Dataset Details -->
-    <div id="gtfs-details" style="display: none; margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
-      <h4 id="gtfs-dataset-title"></h4>
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 15px;">
-        <div><strong data-i18n="gtfs_provider">Proveïdor:</strong> <span id="gtfs-provider"></span></div>
-        <div><strong data-i18n="gtfs_country">País:</strong> <span id="gtfs-country"></span></div>
-        <div><strong data-i18n="gtfs_location">Ubicació:</strong> <span id="gtfs-location"></span></div>
-        <div><strong data-i18n="gtfs_last_updated">Última actualització:</strong> <span id="gtfs-last-updated"></span></div>
-      </div>
-      <p id="gtfs-description" style="margin-bottom: 15px;"></p>
+	    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+	      <button onclick="exploreGtfsRoutes()" style="background:#2a2a2a; color:white; padding:8px 12px; border:none; border-radius:3px; cursor:pointer;">
+	        <i class="fa fa-route"></i> Explorar rutes
+	      </button>
+	      <button onclick="exploreGtfsStops()" style="background:#2a2a2a; color:white; padding:8px 12px; border:none; border-radius:3px; cursor:pointer;">
+	        <i class="fa fa-map-marker"></i> Explorar parades
+	      </button>
+	      <button onclick="downloadGtfsData()" style="background:#007acc; color:white; padding:8px 12px; border:none; border-radius:3px; cursor:pointer;">
+	        <i class="fa fa-download"></i> Descarregar dades
+	      </button>
+	    </div>
+	  </div>
 
-      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-        <button onclick="exploreGtfsRoutes()" style="background:#2a2a2a; color:white; padding:8px 12px; border:none; border-radius:3px; cursor:pointer;">
-          <i class="fa fa-route"></i> Explorar rutes
-        </button>
-        <button onclick="exploreGtfsStops()" style="background:#2a2a2a; color:white; padding:8px 12px; border:none; border-radius:3px; cursor:pointer;">
-          <i class="fa fa-map-marker"></i> Explorar parades
-        </button>
-        <button onclick="downloadGtfsData()" style="background:#007acc; color:white; padding:8px 12px; border:none; border-radius:3px; cursor:pointer;">
-          <i class="fa fa-download"></i> Descarregar dades
-        </button>
-      </div>
-    </div>
+	  <!-- GTFS Routes/Stops Display -->
+	  <div id="gtfs-content" style="display: none; margin-top: 15px;">
+	    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+	      <h4 id="gtfs-content-title"></h4>
+	      <button onclick="backToGtfsDetails()" style="background:#666; color:white; padding:4px 8px; border:none; border-radius:3px; cursor:pointer; font-size: 12px;">
+	        <i class="fa fa-arrow-left"></i> Tornar
+	      </button>
+	    </div>
+	    <div id="gtfs-content-list" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 10px;">
+	      <!-- Content will be populated here -->
+	    </div>
+	  </div>
 
-    <!-- GTFS Routes/Stops Display -->
-    <div id="gtfs-content" style="display: none; margin-top: 15px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-        <h4 id="gtfs-content-title"></h4>
-        <button onclick="backToGtfsDetails()" style="background:#666; color:white; padding:4px 8px; border:none; border-radius:3px; cursor:pointer; font-size: 12px;">
-          <i class="fa fa-arrow-left"></i> Tornar
-        </button>
-      </div>
-      <div id="gtfs-content-list" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 10px;">
-        <!-- Content will be populated here -->
-      </div>
-    </div>
-
-    <!-- Loading indicator -->
-    <div id="gtfs-loading" style="display: none; text-align: center; margin-top: 20px;">
-      <img src="assets/img/spinner.gif" alt="Loading..." style="width: 32px; height: 32px;">
-      <p data-i18n="gtfs_loading">Carregant dades GTFS...</p>
-    </div>
-  </div>
-</details>
-
-  <!-- RENFE Real-Time Train Visualization -->
-  <details style="margin-bottom: 20px;">
-    <summary style="background: #f0f8ff; border: 1px solid #b8daff; border-radius: 5px; padding: 15px; cursor: pointer; list-style: none;">
-      <h3 style="margin: 0; color: #004085; display: inline;">🚂 Visualització en Temps Real de Trens RENFE</h3>
-      <span style="float: right; font-size: 16px; color: #004085;">▶️</span>
-    </summary>
-    <div style="padding: 15px; background: #f0f8ff; border: 1px solid #b8daff; border-top: none; border-radius: 0 0 5px 5px; margin-top: -1px;">
-      <p style="margin: 8px 0; font-size: 14px;">Mostra la posició actual dels trens RENFE al mapa en temps real:</p>
-
-    <div style="display: flex; flex-direction: column; gap: 10px; margin: 15px 0;">
-      <button onclick="startRealtimeTrains()" id="start-realtime-btn" style="background: #4caf50; color: white; padding: 12px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;"><strong>▶️ Iniciar Visualització de Trens</strong><br><small>Mostra trens al mapa cada 30 segons</small></button>
-      <button onclick="stopRealtimeTrains()" id="stop-realtime-btn" style="background: #f44336; color: white; padding: 12px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; display: none;"><strong>⏹️ Aturar Visualització</strong><br><small>Oculta els trens del mapa</small></button>
-      <button onclick="toggleTrainLegend()" id="legend-btn" style="background: #007bff; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 13px; display: inline-block;"><strong>🎨 Mostrar Llegenda</strong><br><small>Veure colors de les línies RENFE</small></button>
-      <div id="realtime-status" style="font-size: 12px; color: #666; padding: 8px; background: #f8f9fa; border-radius: 3px;">Status: Inactiu</div>
-    </div>
-
-    <div style="background: #e8f4f8; border: 1px solid #b8daff; border-radius: 5px; padding: 12px; margin: 15px 0;">
-      <p style="margin: 8px 0; font-size: 13px;"><strong>També pots executar aquest Node.js per obtenir dades en temps real:</strong></p>
-
-      <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; padding: 10px; margin: 10px 0; font-family: monospace; font-size: 11px;">
-        const express = require('express');<br>
-        const cors = require('cors');<br>
-        const fetch = require('node-fetch');<br><br>
-        const app = express();<br>
-        app.use(cors());<br><br>
-        app.get('/api/renfe-trains', async (req, res) => {<br>
-        &nbsp;&nbsp;try {<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;const response = await fetch('https://gtfsrt.renfe.com/vehicle_positions.pb');<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;const buffer = await response.arrayBuffer();<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;res.send(Buffer.from(buffer));<br>
-        &nbsp;&nbsp;} catch (error) {<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;res.status(500).json({error: 'Failed to fetch RENFE data'});<br>
-        &nbsp;&nbsp;}<br>
-        });<br><br>
-        app.listen(3001, () => console.log('Proxy server running on port 3001'));<br>
-      </div>
-
-      <p style="margin: 8px 0; font-size: 12px;"><strong>Comandes per executar:</strong></p>
-      <code style="background: #f8f9fa; padding: 4px 8px; border-radius: 3px; font-family: monospace; font-size: 11px;">npm install express cors node-fetch<br>node server.js</code>
-
-      <p style="margin: 8px 0; font-size: 12px; color: #004085;"><strong>L'aplicació detectarà automàticament el servidor proxy i mostrarà trens 100% reals!</strong></p>
-
-      <p style="margin: 8px 0; font-size: 12px; color: #666;"><strong>Nota sobre el proxy CORS:</strong> S'utilitza <code>https://api.codetabs.com/v1/proxy</code> amb límits de 5MB per petició i 5 peticions per segon (error 429 si s'excedeix).</p>
-    </div>
-
-    <div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 5px; padding: 12px; margin: 15px 0;">
-      <h5 style="margin-top: 0; color: #155724;">✅ Solució Manual: Utilitza les Dades RENFE Directament!</h5>
-      <p style="margin: 8px 0; font-size: 13px;">Ja que pots accedir manualment a les dades RENFE, aquí tens una solució directa:</p>
-
-      <div style="display: flex; flex-direction: column; gap: 8px; margin: 15px 0;">
-        <button onclick="openRenfeJson()" style="background: #28a745; color: white; padding: 12px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;"><strong>🔗 PAS 1: Obrir Dades RENFE</strong><br><small>Obre l'API RENFE en una nova pestanya</small></button>
-        <button onclick="showManualDataEntry()" style="background: #007bff; color: white; padding: 12px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;"><strong>📝 PAS 2: Introduir Dades Manualment</strong><br><small>Copia i enganxa les dades JSON aquí</small></button>
-      </div>
-
-      <div id="manual-data-entry" style="display: none; margin: 15px 0; padding: 15px; background: #f8f9fa; border-radius: 5px; border: 1px solid #dee2e6;">
-        <h5 style="margin-top: 0; color: #495057;">📋 Com Copiar i Enganxar les Dades RENFE:</h5>
-        <div style="display: flex; gap: 10px; margin: 10px 0; flex-wrap: wrap;">
-          <button onclick="copyRenfeUrl()" style="background: #28a745; color: white; padding: 8px 12px; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;"><strong>🔗 Copiar URL RENFE</strong></button>
-          <button onclick="copyJsonInstructions()" style="background: #17a2b8; color: white; padding: 8px 12px; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;"><strong>📋 Copiar Instruccions</strong></button>
-          <button onclick="clearTextarea()" style="background: #6c757d; color: white; padding: 8px 12px; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;"><strong>🗑️ Netejar</strong></button>
-          <button onclick="shareMapUrl()" style="background: #dc3545; color: white; padding: 8px 12px; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;"><strong>📤 Compartir Mapa</strong></button>
-        </div>
-
-        <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 3px; padding: 10px; margin: 10px 0; font-size: 12px;">
-          <strong>🔢 PASSOS FÀCILS:</strong><br>
-          1. Ves a la pestanya RENFE que s'ha obert<br>
-          2. Prem <strong>Ctrl+A</strong> (seleccionar tot)<br>
-          3. Prem <strong>Ctrl+C</strong> (copiar)<br>
-          4. Torna aquí i prem <strong>Ctrl+V</strong> (enganxar)<br>
-          5. Clica <strong>"Processar Dades Reals"</strong>
-        </div>
-
-        <textarea id="manual-json-data" placeholder="Enganxa aquí les dades JSON de RENFE (prem Ctrl+V)..." style="width: 100%; height: 120px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-family: monospace; font-size: 11px; resize: vertical;"></textarea>
-
-        <div style="display: flex; gap: 10px; margin-top: 10px;">
-          <button onclick="processManualJsonData()" style="background: #dc3545; color: white; padding: 10px 15px; border: none; border-radius: 3px; cursor: pointer; font-size: 14px; flex: 1;"><strong>⚡ Processar Dades Reals</strong><br><small>Mostrar trens RENFE reals al mapa</small></button>
-          <button onclick="testSampleData()" style="background: #ffc107; color: black; padding: 10px 15px; border: none; border-radius: 3px; cursor: pointer; font-size: 14px;"><strong>🧪 Provar amb Dades d'Exemple</strong><br><small>Omple amb JSON de mostra</small></button>
-        </div>
-
-        <div id="json-status" style="margin-top: 10px; padding: 8px; background: #e9ecef; border-radius: 3px; font-size: 12px; color: #495057;">Status: Preparat per enganxar dades JSON</div>
-
-      </div>
-
-
-      <p style="margin: 8px 0; font-size: 12px; color: #155724;"><strong>URL de les dades: <code>https://gtfsrt.renfe.com/vehicle_positions.json</code></strong></p>
-    </div>
-
-    <p style="font-size: 12px; color: #666; margin-top: 10px;">Llicència: <a href="https://data.renfe.com/dataset/ubicacion-vehiculos" target="_blank">CC-BY-4.0</a> | Última actualització: 2025-12-27</p>
-  </div>
-</details>
-
-  <!-- TMB Real-Time Bus Visualization -->
-  <details style="margin-bottom: 20px;">
-    <summary style="background: #fff0f0; border: 1px solid #ffb3b3; border-radius: 5px; padding: 15px; cursor: pointer; list-style: none;">
-      <h3 style="margin: 0; color: #c41e3a; display: inline;">🚌 Visualització en Temps Real d'Autobusos TMB</h3>
-      <span style="float: right; font-size: 16px; color: #c41e3a;">▶️</span>
-    </summary>
-    <div style="padding: 15px; background: #fff0f0; border: 1px solid #ffb3b3; border-top: none; border-radius: 0 0 5px 5px; margin-top: -1px;">
-    <p style="margin: 8px 0; font-size: 14px;">Mostra la posició actual dels autobusos TMB (Transports Metropolitans de Barcelona) al mapa en temps real:</p>
-
-    <div style="display: flex; flex-direction: column; gap: 10px; margin: 15px 0;">
-      <button onclick="startRealtimeTMBBuses()" id="start-tmb-realtime-btn" style="background: #c41e3a; color: white; padding: 12px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;"><strong>▶️ Iniciar Visualització d'Autobusos TMB</strong><br><small>Mostra autobusos al mapa cada 30 segons</small></button>
-      <button onclick="stopRealtimeTMBBuses()" id="stop-tmb-realtime-btn" style="background: #8B0000; color: white; padding: 12px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; display: none;"><strong>⏹️ Aturar Visualització</strong><br><small>Oculta els autobusos del mapa</small></button>
-      <button onclick="toggleTMBBusLegend()" id="tmb-legend-btn" style="background: #c41e3a; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 13px; display: inline-block;"><strong>🎨 Mostrar Llegenda</strong><br><small>Veure colors de les línies TMB</small></button>
-      <div id="tmb-realtime-status" style="font-size: 12px; color: #c41e3a; padding: 8px; background: #fff5f5; border-radius: 3px;">Status: Inactiu</div>
-    </div>
-
-    <div style="background: #ffeaea; border: 1px solid #ffb3b3; border-radius: 5px; padding: 12px; margin: 15px 0;">
-      <p style="margin: 8px 0; font-size: 13px;"><strong>Executa aquest servidor Node.js per obtenir dades reals:</strong></p>
-
-      <div style="background: #fff5f5; border: 1px solid #ffb3b3; border-radius: 3px; padding: 10px; margin: 10px 0; font-family: monospace; font-size: 11px;">
-        const express = require('express');<br>
-        const cors = require('cors');<br>
-        const fetch = require('node-fetch');<br><br>
-        const app = express();<br>
-        app.use(cors());<br><br>
-        app.get('/api/tmb-buses', async (req, res) => {<br>
-        &nbsp;&nbsp;try {<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;const response = await fetch('https://api.tmb.cat/v1/ibus/stops/nearby?app_id=YOUR_APP_ID&app_key=YOUR_APP_KEY');<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;const data = await response.json();<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;res.json(data);<br>
-        &nbsp;&nbsp;} catch (error) {<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;res.status(500).json({error: 'Failed to fetch TMB data'});<br>
-        &nbsp;&nbsp;}<br>
-        });<br><br>
-        app.listen(3003, () => console.log('TMB Proxy server running on port 3003'));<br>
-      </div>
-
-      <p style="margin: 8px 0; font-size: 12px;"><strong>Comandes per executar:</strong></p>
-      <code style="background: #fff5f5; padding: 4px 8px; border-radius: 3px; font-family: monospace; font-size: 11px;">npm install express cors node-fetch<br>node tmb-server.js</code>
-
-      <p style="margin: 8px 0; font-size: 12px; color: #c41e3a;"><strong>L'aplicació detectarà automàticament el servidor proxy i mostrarà autobusos TMB reals!</strong></p>
-    </div>
-
-    <div style="background: #ffe0e0; border: 1px solid #ffb3b3; border-radius: 5px; padding: 12px; margin: 15px 0;">
-      <h5 style="margin-top: 0; color: #c41e3a;">✅ Solució Manual: Utilitza les Dades TMB Directament!</h5>
-      <p style="margin: 8px 0; font-size: 13px;">Ja que pots accedir manualment a les dades TMB, aquí tens una solució directa:</p>
-
-      <div style="display: flex; flex-direction: column; gap: 8px; margin: 15px 0;">
-        <button onclick="openTMBJson()" style="background: #c41e3a; color: white; padding: 12px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;"><strong>🔗 PAS 1: Obrir Dades TMB</strong><br><small>Obre l'API TMB en una nova pestanya</small></button>
-        <button onclick="showTMBDataEntry()" style="background: #007bff; color: white; padding: 12px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;"><strong>📝 PAS 2: Introduir Dades Manualment</strong><br><small>Copia i enganxa les dades JSON aquí</small></button>
-      </div>
-
-      <div id="tmb-manual-data-entry" style="display: none; margin: 15px 0; padding: 15px; background: #fff5f5; border-radius: 5px; border: 1px solid #ffb3b3;">
-        <h5 style="margin-top: 0; color: #c41e3a;">📋 Com Copiar i Enganxar les Dades TMB:</h5>
-        <div style="display: flex; gap: 10px; margin: 10px 0; flex-wrap: wrap;">
-          <button onclick="copyTMBUrl()" style="background: #c41e3a; color: white; padding: 8px 12px; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;"><strong>🔗 Copiar URL TMB</strong></button>
-          <button onclick="copyTMBInstructions()" style="background: #17a2b8; color: white; padding: 8px 12px; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;"><strong>📋 Copiar Instruccions</strong></button>
-          <button onclick="clearTMBTextarea()" style="background: #6c757d; color: white; padding: 8px 12px; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;"><strong>🗑️ Netejar</strong></button>
-          <button onclick="shareTMBMapUrl()" style="background: #dc3545; color: white; padding: 8px 12px; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;"><strong>📤 Compartir Mapa</strong></button>
-        </div>
-
-        <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 3px; padding: 10px; margin: 10px 0; font-size: 12px;">
-          <strong>🔢 PASSOS FÀCILS:</strong><br>
-          1. Ves a la pestanya TMB que s'ha obert<br>
-          2. Prem <strong>Ctrl+A</strong> (seleccionar tot)<br>
-          3. Prem <strong>Ctrl+C</strong> (copiar)<br>
-          4. Torna aquí i prem <strong>Ctrl+V</strong> (enganxar)<br>
-          5. Clica <strong>"Processar Dades Reals"</strong>
-        </div>
-
-        <textarea id="tmb-manual-json-data" placeholder="Enganxa aquí les dades JSON de TMB (prem Ctrl+V)..." style="width: 100%; height: 120px; padding: 10px; border: 1px solid #ffb3b3; border-radius: 4px; font-family: monospace; font-size: 11px; resize: vertical;"></textarea>
-
-        <div style="display: flex; gap: 10px; margin-top: 10px;">
-          <button onclick="processTMBManualJsonData()" style="background: #dc3545; color: white; padding: 10px 15px; border: none; border-radius: 3px; cursor: pointer; font-size: 14px; flex: 1;"><strong>⚡ Processar Dades Reals</strong><br><small>Mostrar autobusos TMB reals al mapa</small></button>
-          <button onclick="testTMBsampleData()" style="background: #ffc107; color: black; padding: 10px 15px; border: none; border-radius: 3px; cursor: pointer; font-size: 14px;"><strong>🧪 Provar amb Dades d'Exemple</strong><br><small>Omple amb JSON de mostra</small></button>
-        </div>
-
-        <div id="tmb-json-status" style="margin-top: 10px; padding: 8px; background: #e9ecef; border-radius: 3px; font-size: 12px; color: #495057;">Status: Preparat per enganxar dades JSON</div>
-
-      </div>
-
-      <p style="margin: 8px 0; font-size: 12px; color: #c41e3a;"><strong>URL de les dades: <code>https://api.tmb.cat/v1/ibus</code></strong></p>
-      <p style="margin: 8px 0; font-size: 12px; color: #666;"><strong>Credencials TMB:</strong> app_id=8029906b, app_key=73b5ad24d1db9fa24988bf134a1523d1</p>
-    </div>
-
-    <p style="font-size: 12px; color: #c41e3a; margin-top: 10px;">Llicència: <a href="https://developer.tmb.cat/" target="_blank">Open Data TMB</a> | Última actualització: 2025-12-27</p>
-  </div>
-</details>
-
-  <!-- FGC Real-Time Train Visualization -->
-  <details style="margin-bottom: 20px;">
-    <summary style="background: #f0fff0; border: 1px solid #b8ffb8; border-radius: 5px; padding: 15px; cursor: pointer; list-style: none;">
-      <h3 style="margin: 0; color: #006400; display: inline;">🚆 Visualització en Temps Real de Trens FGC</h3>
-      <span style="float: right; font-size: 16px; color: #006400;">▶️</span>
-    </summary>
-    <div style="padding: 15px; background: #f0fff0; border: 1px solid #b8ffb8; border-top: none; border-radius: 0 0 5px 5px; margin-top: -1px;">
-    <p style="margin: 8px 0; font-size: 14px;">Mostra la posició actual dels trens FGC (Ferrocarrils de la Generalitat de Catalunya) al mapa en temps real:</p>
-
-    <div style="display: flex; flex-direction: column; gap: 10px; margin: 15px 0;">
-      <button onclick="startRealtimeFGCTrains()" id="start-fgc-realtime-btn" style="background: #228B22; color: white; padding: 12px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;"><strong>▶️ Iniciar Visualització de Trens FGC</strong><br><small>Mostra trens al mapa cada 30 segons</small></button>
-      <button onclick="stopRealtimeFGCTrains()" id="stop-fgc-realtime-btn" style="background: #8B0000; color: white; padding: 12px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; display: none;"><strong>⏹️ Aturar Visualització</strong><br><small>Oculta els trens del mapa</small></button>
-      <button onclick="toggleFGCTrainLegend()" id="fgc-legend-btn" style="background: #006400; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 13px; display: inline-block;"><strong>🎨 Mostrar Llegenda</strong><br><small>Veure colors de les línies FGC</small></button>
-      <div id="fgc-realtime-status" style="font-size: 12px; color: #006400; padding: 8px; background: #f8fff8; border-radius: 3px;">Status: Inactiu</div>
-    </div>
-
-    <div style="background: #e8ffe8; border: 1px solid #b8ffb8; border-radius: 5px; padding: 12px; margin: 15px 0;">
-
-
-      <p style="margin: 8px 0; font-size: 13px;"><strong>Executa aquest servidor Node.js per obtenir dades reals:</strong></p>
-
-      <div style="background: #f8fff8; border: 1px solid #b8ffb8; border-radius: 3px; padding: 10px; margin: 10px 0; font-family: monospace; font-size: 11px;">
-        const express = require('express');<br>
-        const cors = require('cors');<br>
-        const fetch = require('node-fetch');<br><br>
-        const app = express();<br>
-        app.use(cors());<br><br>
-        app.get('/api/fgc-trains', async (req, res) => {<br>
-        &nbsp;&nbsp;try {<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;// FGC GTFS-RT URL (quan estigui disponible)<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;const response = await fetch('https://api.fgc.cat/gtfs-rt/vehicle_positions');<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;const buffer = await response.arrayBuffer();<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;res.send(Buffer.from(buffer));<br>
-        &nbsp;&nbsp;} catch (error) {<br>
-        &nbsp;&nbsp;&nbsp;&nbsp;res.status(500).json({error: 'Failed to fetch FGC data'});<br>
-        &nbsp;&nbsp;}<br>
-        });<br><br>
-        app.listen(3002, () => console.log('FGC Proxy server running on port 3002'));<br>
-      </div>
-
-      <p style="margin: 8px 0; font-size: 12px;"><strong>Comandes per executar:</strong></p>
-      <code style="background: #f8fff8; padding: 4px 8px; border-radius: 3px; font-family: monospace; font-size: 11px;">npm install express cors node-fetch<br>node fgc-server.js</code>
-
-      <p style="margin: 8px 0; font-size: 12px; color: #006400;"><strong>L'aplicació detectarà automàticament el servidor proxy i mostrarà trens FGC reals!</strong></p>
-    </div>
-
-    <div style="background: #d4edd4; border: 1px solid #b8ffb8; border-radius: 5px; padding: 12px; margin: 15px 0;">
-      <h5 style="margin-top: 0; color: #155724;">✅ Solució Manual: Utilitza les Dades FGC Directament!</h5>
-      <p style="margin: 8px 0; font-size: 13px;">Ja que pots accedir manualment a les dades FGC, aquí tens una solució directa:</p>
-
-      <div style="display: flex; flex-direction: column; gap: 8px; margin: 15px 0;">
-        <button onclick="openFGCJson()" style="background: #28a745; color: white; padding: 12px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;"><strong>🔗 PAS 1: Obrir Dades FGC</strong><br><small>Obre l'API FGC en una nova pestanya</small></button>
-        <button onclick="showFGCDataEntry()" style="background: #007bff; color: white; padding: 12px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;"><strong>📝 PAS 2: Introduir Dades Manualment</strong><br><small>Copia i enganxa les dades JSON aquí</small></button>
-      </div>
-
-      <div id="fgc-manual-data-entry" style="display: none; margin: 15px 0; padding: 15px; background: #f8fff8; border-radius: 5px; border: 1px solid #b8ffb8;">
-        <h5 style="margin-top: 0; color: #155724;">📋 Com Copiar i Enganxar les Dades FGC:</h5>
-        <div style="display: flex; gap: 10px; margin: 10px 0; flex-wrap: wrap;">
-          <button onclick="copyFGCUrl()" style="background: #28a745; color: white; padding: 8px 12px; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;"><strong>🔗 Copiar URL FGC</strong></button>
-          <button onclick="copyFGCInstructions()" style="background: #17a2b8; color: white; padding: 8px 12px; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;"><strong>📋 Copiar Instruccions</strong></button>
-          <button onclick="clearFGCTextarea()" style="background: #6c757d; color: white; padding: 8px 12px; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;"><strong>🗑️ Netejar</strong></button>
-          <button onclick="shareFGCMapUrl()" style="background: #dc3545; color: white; padding: 8px 12px; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;"><strong>📤 Compartir Mapa</strong></button>
-        </div>
-
-        <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 3px; padding: 10px; margin: 10px 0; font-size: 12px;">
-          <strong>🔢 PASSOS FÀCILS:</strong><br>
-          1. Ves a la pestanya FGC que s'ha obert<br>
-          2. Prem <strong>Ctrl+A</strong> (seleccionar tot)<br>
-          3. Prem <strong>Ctrl+C</strong> (copiar)<br>
-          4. Torna aquí i prem <strong>Ctrl+V</strong> (enganxar)<br>
-          5. Clica <strong>"Processar Dades Reals"</strong>
-        </div>
-
-        <textarea id="fgc-manual-json-data" placeholder="Enganxa aquí les dades JSON de FGC (prem Ctrl+V)..." style="width: 100%; height: 120px; padding: 10px; border: 1px solid #90EE90; border-radius: 4px; font-family: monospace; font-size: 11px; resize: vertical;"></textarea>
-
-        <div style="display: flex; gap: 10px; margin-top: 10px;">
-          <button onclick="processFGCManualJsonData()" style="background: #dc3545; color: white; padding: 10px 15px; border: none; border-radius: 3px; cursor: pointer; font-size: 14px; flex: 1;"><strong>⚡ Processar Dades Reals</strong><br><small>Mostrar trens FGC reals al mapa</small></button>
-          <button onclick="testFGCSampleData()" style="background: #ffc107; color: black; padding: 10px 15px; border: none; border-radius: 3px; cursor: pointer; font-size: 14px;"><strong>🧪 Provar amb Dades d'Exemple</strong><br><small>Omple amb JSON de mostra</small></button>
-        </div>
-
-        <div id="fgc-json-status" style="margin-top: 10px; padding: 8px; background: #e9ecef; border-radius: 3px; font-size: 12px; color: #495057;">Status: Preparat per enganxar dades JSON</div>
-
-      </div>
-
-
-      <p style="margin: 8px 0; font-size: 12px; color: #155724;"><strong>URL de les dades: <code>https://dadesobertes.fgc.cat/api/explore/v2.1/console</code></strong></p>
-    </div>
-
-    <p style="font-size: 12px; color: #006400; margin-top: 10px;">Llicència: <a href="https://dadesobertes.fgc.cat/" target="_blank">Dades Obertes FGC</a> | Última actualització: 2025-12-27</p>
-  </div>
+	  <!-- Loading indicator -->
+	  <div id="gtfs-loading" style="display: none; text-align: center; margin-top: 20px;">
+	    <img src="assets/img/spinner.gif" alt="Loading..." style="width: 32px; height: 32px;">
+	    <p data-i18n="gtfs_loading">Carregant dades GTFS...</p>
+	  </div>
 
 	  <br><hr width="90%">
 
@@ -2300,30 +2094,6 @@ s.setAttribute('data-timestamp', +new Date());
     <script src="assets/js/tags-parsers.js"></script>
     <script src="assets/js/pois-type.js"></script>
     <script src="assets/js/routes-manager.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/protobufjs@7.2.4/dist/protobuf.min.js"></script>
-    <script>
-        // Attempt to enable CORS for GTFS-RT requests
-        // This is a workaround for development/testing
-        if (typeof XMLHttpRequest !== 'undefined') {
-            var originalOpen = XMLHttpRequest.prototype.open;
-            XMLHttpRequest.prototype.open = function(method, url) {
-                if (url && url.includes('gtfsrt.renfe.com')) {
-                    // Try to add CORS headers (won't actually work but worth attempting)
-                    this.setRequestHeader = this.setRequestHeader || function() {};
-                    try {
-                        this.withCredentials = true;
-                    } catch(e) {}
-                }
-                return originalOpen.apply(this, arguments);
-            };
-        }
-
-        // Alternative: Try using a different protocol or approach
-        window.gtfsrtCORSWorkaround = function() {
-            // This is a development workaround - in production, use a server-side proxy
-            console.log('Attempting GTFS-RT CORS workaround...');
-        };
-    </script>
     <script src="assets/js/site.functions.js"></script>
     <script src="assets/js/translations.js"></script>
     <script src="assets/js/site.js"></script>
