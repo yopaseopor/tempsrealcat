@@ -1,6 +1,53 @@
 // Bus Functions - Based on old.functions.js
 // Comprehensive bus route and station visualization
 
+// Make functions globally accessible immediately to prevent ReferenceError
+window.startRealtimeBus = function() {
+    // Will be properly defined later
+};
+window.stopRealtimeBus = function() {
+    // Will be properly defined later
+};
+window.openBusJson = function() {
+    // Will be properly defined later
+};
+window.showBusDataEntry = function() {
+    // Will be properly defined later
+};
+window.processBusManualJsonData = function() {
+    // Will be properly defined later
+};
+window.toggleBusLegend = function() {
+    // Will be properly defined later
+};
+window.copyBusUrl = function() {
+    // Will be properly defined later
+};
+window.shareBusMapUrl = function() {
+    // Will be properly defined later
+};
+window.copyBusInstructions = function() {
+    // Will be properly defined later
+};
+window.clearBusTextarea = function() {
+    // Will be properly defined later
+};
+window.testBusSampleData = function() {
+    // Will be properly defined later
+};
+window.updateBusJsonStatus = function() {
+    // Will be properly defined later
+};
+window.fetchRealtimeBus = function() {
+    // Will be properly defined later
+};
+window.displayRealtimeBus = function() {
+    // Will be properly defined later
+};
+window.createBusLegend = function() {
+    // Will be properly defined later
+};
+
 var busRealtimeInterval = null;
 var busRealtimeMarkers = [];
 var busRealtimeLayer = null;
@@ -883,3 +930,6 @@ window.copyBusInstructions = copyBusInstructions;
 window.clearBusTextarea = clearBusTextarea;
 window.testBusSampleData = testBusSampleData;
 window.updateBusJsonStatus = updateBusJsonStatus;
+window.fetchRealtimeBus = fetchRealtimeBus;
+window.displayRealtimeBus = displayRealtimeBus;
+window.createBusLegend = createBusLegend;
