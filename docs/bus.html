@@ -3,92 +3,127 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Autobusos TMB</title>
+    <title>Bus - TMB Bus Stops</title>
+    <script src="assets/js/bus.functions.js"></script>
 </head>
 <body>
     <!--BUS-->
     <div class="sidebar-pane" id="bus">
       <div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span>
       </div>
-      <h1 data-i18n="bus_title">🚌 Autobusos TMB</h1>
-      <p style="text-align:justify; margin-right:5px;" data-i18n="bus_description">Visualitza les posicions en temps real dels autobusos TMB a Barcelona. Les dades provenen directament de l'API de TMB.</p>
+      <h1 data-i18n="bus_title">🚌 Autobús TMB</h1>
+      <p style="text-align:justify; margin-right:5px;" data-i18n="bus_description">Visualitza totes les parades d'autobús TMB a Barcelona. Les dades provenen directament de l'API oficial de TMB.</p>
 
-      <!-- Real-time bus controls -->
+      <!-- Bus stops controls -->
       <div style="margin-bottom: 15px;">
-        <h3 style="margin-bottom: 10px; color: #333;" data-i18n="bus_realtime_tracking">📡 Seguiment en temps real</h3>
+        <h3 style="margin-bottom: 10px; color: #333;" data-i18n="bus_stops_visualization">📍 Visualització de parades</h3>
         <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
-          <button id="start-bus-realtime-btn" onclick="startRealtimeBus()" style="background:#2a2a2a; color:white; padding:10px 15px; border:none; border-radius:5px; cursor:pointer; font-size: 14px;">
-            <i class="fa fa-play"></i> <span data-i18n="bus_start_tracking">Inicia seguiment</span>
+          <button id="start-tmb-stops-btn" onclick="startTMBBusStops()" style="background:#2a2a2a; color:white; padding:10px 15px; border:none; border-radius:5px; cursor:pointer; font-size: 14px;">
+            <i class="fa fa-play"></i> <span data-i18n="bus_start_stops">Mostrar parades</span>
           </button>
-          <button id="stop-bus-realtime-btn" onclick="stopRealtimeBus()" style="background:#cc0000; color:white; padding:10px 15px; border:none; border-radius:5px; cursor:pointer; font-size: 14px; display: none;">
-            <i class="fa fa-stop"></i> <span data-i18n="bus_stop_tracking">Atura seguiment</span>
+          <button id="stop-tmb-stops-btn" onclick="stopTMBBusStops()" style="background:#cc0000; color:white; padding:10px 15px; border:none; border-radius:5px; cursor:pointer; font-size: 14px; display: none;">
+            <i class="fa fa-stop"></i> <span data-i18n="bus_stop_stops">Amagar parades</span>
           </button>
         </div>
-
-        <!-- Legend toggle -->
-        <button id="bus-legend-btn" onclick="toggleBusLegend()" style="background:#007acc; color:white; padding:8px 12px; border:none; border-radius:3px; cursor:pointer; font-size: 12px; display: none; margin-right: 10px;">
-          <i class="fa fa-map"></i> <span data-i18n="bus_legend">🎨 Llegenda de línies</span>
-        </button>
       </div>
 
       <!-- Status display -->
-      <div id="bus-realtime-status" style="background: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #ddd;">
+      <div id="tmb-stops-status" style="background: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #ddd;">
         <span data-i18n="bus_status">Status:</span> <span data-i18n="bus_status_inactive">Inactiu</span>
-      </div>
-
-      <!-- Manual data entry section -->
-      <div id="bus-manual-data-entry" style="display: none; margin-bottom: 15px;">
-        <h4 style="margin-bottom: 10px; color: #333;" data-i18n="bus_manual_data">📝 Introduir Dades Manualment</h4>
-        <p style="font-size: 12px; color: #666; margin-bottom: 10px;">
-          Si les dades automàtiques no funcionen, pots copiar-les manualment des de:
-        </p>
-        <button onclick="openBusJson()" style="background:#666; color:white; padding:6px 10px; border:none; border-radius:3px; cursor:pointer; font-size: 12px; margin-right: 5px;">
-          <i class="fa fa-external-link"></i> <span data-i18n="bus_open_api">Obre API TMB</span>
-        </button>
-        <button onclick="copyBusUrl()" style="background:#666; color:white; padding:6px 10px; border:none; border-radius:3px; cursor:pointer; font-size: 12px;">
-          <i class="fa fa-copy"></i> <span data-i18n="bus_copy_url">Copia URL</span>
-        </button>
-        <div style="margin-top: 10px;">
-          <textarea id="bus-manual-json-data" placeholder="Enganxa aquí les dades JSON de TMB..." style="width: 100%; height: 100px; padding: 8px; border: 1px solid #ccc; border-radius: 3px; font-family: monospace; font-size: 11px;" data-i18n="bus_paste_json"></textarea>
-        </div>
-        <div style="margin-top: 10px;">
-          <button onclick="processBusManualJsonData()" style="background:#007acc; color:white; padding:8px 12px; border:none; border-radius:3px; cursor:pointer;">
-            <i class="fa fa-play"></i> <span data-i18n="bus_process_data">Processar Dades</span>
-          </button>
-          <button onclick="clearBusTextarea()" style="background:#666; color:white; padding:8px 12px; border:none; border-radius:3px; cursor:pointer;">
-            <i class="fa fa-trash"></i> <span data-i18n="bus_clear">Neteja</span>
-          </button>
-        </div>
-        <div id="bus-json-status" style="margin-top: 10px; font-size: 12px; color: #666;">
-          <span data-i18n="bus_json_status">Status: Preparat per enganxar dades</span>
-        </div>
       </div>
 
       <!-- Instructions -->
       <div style="background: #e8f4f8; padding: 15px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #b8daff;">
         <h4 style="margin-top: 0; color: #004085;" data-i18n="bus_how_it_works">📖 Com funciona</h4>
         <ol style="font-size: 13px; color: #004085; margin: 0; padding-left: 20px;">
-          <li data-i18n="bus_step1">Inicia el seguiment: Prem "Inicia seguiment" per carregar autobusos TMB en temps real</li>
-          <li data-i18n="bus_step2">Visualitza al mapa: Els autobusos apareixeran com marcadors amb el codi de la línia</li>
-          <li data-i18n="bus_step3">Clica als marcadors: Obté informació detallada sobre cada autobús</li>
-          <li data-i18n="bus_step4">Llegenda: Mostra la llegenda per veure les línies i colors</li>
-          <li data-i18n="bus_step5">Atura quan vulguis: Prem "Atura seguiment" per netejar el mapa</li>
+          <li data-i18n="bus_step1">Mostrar parades: Prem "Mostrar parades" per carregar totes les parades d'autobús TMB al mapa</li>
+          <li data-i18n="bus_step2">Visualitza al mapa: Les parades apareixeran com marcadors amb icones de bus</li>
+          <li data-i18n="bus_step3">Clica als marcadors: Obté informació detallada sobre cada parada</li>
+          <li data-i18n="bus_step4">Amagar quan vulguis: Prem "Amagar parades" per netejar el mapa</li>
         </ol>
-      </div>
-
-      <!-- Additional options -->
-      <div style="margin-bottom: 15px;">
-        <button onclick="showBusDataEntry()" style="background:#f0f0f0; color:#333; padding:8px 12px; border:1px solid #ccc; border-radius:3px; cursor:pointer; font-size: 12px;">
-          <i class="fa fa-cog"></i> <span data-i18n="bus_advanced_options">Opcions avançades</span>
-        </button>
-        <button onclick="testBusSampleData()" style="background:#f0f0f0; color:#333; padding:8px 12px; border:1px solid #ccc; border-radius:3px; cursor:pointer; font-size: 12px; margin-left: 5px;">
-          <i class="fa fa-flask"></i> <span data-i18n="bus_sample_data">Prova amb dades d'exemple</span>
-        </button>
       </div>
 
       <!-- Coverage info -->
       <div style="background: #fff3cd; padding: 10px; border-radius: 3px; border: 1px solid #ffeaa7; font-size: 12px;">
-        <strong data-i18n="bus_coverage">ℹ️ Cobertura:</strong> Aquest servei mostra autobusos TMB de Barcelona, incloent línies regulars, Aerobus i Nitbus. Les dades s'actualitzen cada 30 segons.
+        <strong data-i18n="bus_coverage">ℹ️ Cobertura:</strong> Aquest servei mostra totes les parades d'autobús TMB a l'àrea metropolitana de Barcelona. Les dades s'actualitzen cada 10 minuts.
+      </div>
+
+      <!-- Bus Stops Table -->
+      <div style="margin-top: 20px;">
+        <h3 style="margin-bottom: 10px; color: #333;" data-i18n="bus_table_title">📋 Llistat de parades d'autobús</h3>
+
+        <!-- Table Controls -->
+        <div style="margin-bottom: 15px;">
+          <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px;">
+            <button onclick="loadTMBStopsTable()" style="background:#007acc; color:white; padding:8px 12px; border:none; border-radius:3px; cursor:pointer; font-size: 12px;">
+              <i class="fa fa-refresh"></i> <span data-i18n="bus_refresh_table">Actualitzar taula</span>
+            </button>
+            <button onclick="clearTMBTableSearch()" style="background:#666; color:white; padding:8px 12px; border:none; border-radius:3px; cursor:pointer; font-size: 12px;">
+              <i class="fa fa-eraser"></i> <span data-i18n="bus_clear_search">Netejar cerca</span>
+            </button>
+          </div>
+
+          <!-- Search -->
+          <div style="margin-bottom: 10px;">
+            <input type="text" id="tmb-table-search" placeholder="🔍 Cerca per codi, nom o carrer..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 3px; font-size: 12px;" onkeyup="searchTMBTable()">
+          </div>
+
+          <!-- Table Status -->
+          <div id="tmb-table-status" style="background: #f8f9fa; padding: 8px; border-radius: 3px; font-size: 11px; border: 1px solid #ddd;">
+            <span data-i18n="bus_table_loading">Carregant dades...</span>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div style="border: 1px solid #ddd; border-radius: 3px; overflow: hidden; margin-bottom: 15px;">
+          <table id="tmb-stops-table" style="width: 100%; border-collapse: collapse; font-size: 12px; display: none;">
+            <thead>
+              <tr style="background: #f8f9fa;">
+                <th onclick="sortTMBTable('id')" style="padding: 8px; text-align: left; border-bottom: 2px solid #ddd; cursor: pointer; font-weight: bold;">
+                  <span data-i18n="bus_table_id">ID</span> <span id="sort-id">↕️</span>
+                </th>
+                <th onclick="sortTMBTable('name')" style="padding: 8px; text-align: left; border-bottom: 2px solid #ddd; cursor: pointer; font-weight: bold;">
+                  <span data-i18n="bus_table_name">Nom de la parada</span> <span id="sort-name">↕️</span>
+                </th>
+                <th onclick="sortTMBTable('street')" style="padding: 8px; text-align: left; border-bottom: 2px solid #ddd; cursor: pointer; font-weight: bold;">
+                  <span data-i18n="bus_table_street">Carrer</span> <span id="sort-street">↕️</span>
+                </th>
+                <th onclick="sortTMBTable('arrivals')" style="padding: 8px; text-align: left; border-bottom: 2px solid #ddd; cursor: pointer; font-weight: bold;">
+                  <span data-i18n="bus_table_arrivals">Próxims autobusos</span> <span id="sort-arrivals">↕️</span>
+                </th>
+                <th style="padding: 8px; text-align: center; border-bottom: 2px solid #ddd; font-weight: bold;">
+                  <span data-i18n="bus_table_actions">Accions</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody id="tmb-stops-tbody">
+              <!-- Table rows will be populated by JavaScript -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div id="tmb-pagination" style="display: none; text-align: center; margin-bottom: 15px;">
+          <button id="tmb-prev-page" onclick="changeTMBPage(-1)" style="background:#666; color:white; padding:6px 12px; border:none; border-radius:3px; cursor:pointer; margin-right: 10px; font-size: 12px;" disabled>
+            <i class="fa fa-chevron-left"></i> <span data-i18n="bus_prev_page">Anterior</span>
+          </button>
+          <span id="tmb-page-info" style="font-size: 12px; color: #666;"></span>
+          <button id="tmb-next-page" onclick="changeTMBPage(1)" style="background:#666; color:white; padding:6px 12px; border:none; border-radius:3px; cursor:pointer; margin-left: 10px; font-size: 12px;" disabled>
+            <span data-i18n="bus_next_page">Següent</span> <i class="fa fa-chevron-right"></i>
+          </button>
+        </div>
+
+        <!-- Loading indicator -->
+        <div id="tmb-table-loading" style="text-align: center; padding: 20px; display: none;">
+          <img src="assets/img/spinner.gif" alt="Loading..." style="width: 24px; height: 24px;">
+          <p style="margin: 10px 0 0 0; font-size: 12px; color: #666;" data-i18n="bus_loading_table">Carregant dades de parades...</p>
+        </div>
+
+        <!-- No results message -->
+        <div id="tmb-no-results" style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 3px; display: none;">
+          <i class="fa fa-info-circle" style="font-size: 24px; color: #666; margin-bottom: 10px;"></i>
+          <p style="margin: 0; font-size: 12px; color: #666;" data-i18n="bus_no_results">No s'han trobat parades que coincideixin amb la cerca.</p>
+        </div>
       </div>
 
       <br><hr width="90%">
@@ -96,10 +131,8 @@
       <!-- Help section -->
       <h3 style="color: #333;" data-i18n="bus_help_title"><i class="fa fa-question-circle"></i> Ajuda</h3>
       <p style="text-align:justify; margin-right:5px; font-size: 13px;" data-i18n="bus_help_text">
-        Aquest panell et permet visualitzar la posició en temps real dels autobusos TMB a Barcelona. Les dades provenen de l'API oficial de TMB i s'actualitzen automàticament. Si tens problemes amb la càrrega automàtica, pots utilitzar l'opció de dades manuals.
+        Aquest panell et permet visualitzar totes les parades d'autobús TMB a Barcelona. Les dades provenen de l'API oficial de TMB i inclouen informació sobre la ubicació i codis de les parades.
       </p>
-      <center><button style="background:#2a2a2a; color:white; padding:5px;" class="fa fa-support"
-          onclick="copyBusInstructions()" data-i18n="bus_copy_instructions"> 📋 Copiar instruccions</button></center>
     </div>
 </body>
 </html>
