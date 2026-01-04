@@ -1,0 +1,23 @@
+{
+  "name": "openlocalmap2",
+  "version": "1.0.0",
+  "description": "Open Local Map 2 - A mapping application",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "deploy": "gh-pages -d docs"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "gh-pages": "^6.0.0",
+    "nodemon": "^3.0.1"
+  },
+  "keywords": ["map", "leaflet", "openstreetmap"],
+  "author": "yopaseopor",
+  "license": "MIT"
+}

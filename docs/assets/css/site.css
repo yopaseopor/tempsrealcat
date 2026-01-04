@@ -1,0 +1,356 @@
+body {
+    padding: 0;
+    margin: 0;
+}
+
+html, body, #map {
+    height: 100%;
+    font: 10pt "Helvetica Neue", Arial, Helvetica, sans-serif;
+}
+
+a {
+    text-decoration: none;
+}
+
+ul {
+    list-style: none;
+    padding: 0px;
+}
+
+.poi-checkbox {
+    font-size: 15px;
+}
+
+.poi-checkbox > label > img {
+    float: left;
+}
+
+.poi-checkbox > label > input {
+    margin-top: 10px;
+}
+
+.poi-checkbox > label > span {
+    margin-left: 5px;
+}
+
+.close-button {
+    float: right;
+    margin-top: 23px;
+    margin-right: 15px;
+    font-size: 25px;
+    cursor: pointer;
+}
+
+.leaflet-control-loading {
+    background: url("../img/loading.gif");
+}
+
+.item > li {
+    font-size: 15px;
+}
+
+.sidebar p {
+    font-size: 15px;
+}
+
+.sidebar img {
+    margin: 0px auto;
+    display: block;
+}
+
+.sidebar-tabs > li {
+    font-size: 28pt !important;
+    padding-top: 5px;
+}
+
+.leaflet-control-minZoomIndecator {
+    background-color: rgba(255, 0, 0, 0.5);
+    border-radius: 5px;
+    font-family: Helvetica,Arial,sans-serif;
+    font-size: 15px;
+    color: white;
+    padding: 10px;
+    z-index: 10;
+}
+
+#spinner {
+    width: 128px;
+    height: 128px;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    margin-left: -50px;
+    margin-top: -50px;
+    z-index: 10;
+}
+
+.permalink {
+    font-size: 14px;
+    text-align: center;
+}
+
+#developer > .tags > table {
+    font-size: 13px !important;
+}
+
+.leaflet-control-container > div:last-child {
+    line-height: 20px;
+    right: 5px;
+    bottom: 5px;
+}
+
+.leaflet-control-container > div:last-child > div {
+    -webkit-border-radius: 3px;
+    -moz-border-radius: 3px;
+    border-radius: 3px;
+}
+
+#info {
+    font: 10pt "Helvetica Neue", Arial, Helvetica, sans-serif;
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #2a2a2a;
+}
+
+#nom {
+    font: 10pt "Helvetica Neue", Arial, Helvetica, sans-serif;
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #2a2a2a;
+}
+
+#desc {
+    font: 10pt "Helvetica Neue", Arial, Helvetica, sans-serif;
+    font-size: 1em;
+    color: #2a2a2a;
+    border: 1px #000;
+    padding: 10px;
+    text-align:justify;
+    margin-right:5px;
+}
+
+.manual-query-btn {
+    background: #2a2a2a;
+    color: white;
+    padding: 5px 10px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.manual-query-btn:hover {
+    background: #444;
+}
+
+.manual-query-note {
+    color: #666;
+    font-size: 12px;
+    text-align: center;
+    margin-top: 5px;
+}
+
+.manual-stop-btn {
+    background: #cc0000;
+    color: white;
+    padding: 5px 10px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-left: 10px;
+}
+
+.manual-stop-btn:hover {
+    background: #aa0000;
+}
+
+/* Routes styling */
+.routes-list {
+    margin-bottom: 20px;
+}
+
+.route-item {
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 10px;
+    margin-bottom: 10px;
+    transition: background-color 0.2s;
+}
+
+.route-item:hover {
+    background-color: #f5f5f5;
+}
+
+.route-checkbox {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.route-checkbox input[type="checkbox"] {
+    margin: 0;
+    margin-right: 8px;
+}
+
+.route-checkbox label {
+    cursor: pointer;
+    font-weight: normal;
+}
+
+.route-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+    cursor: pointer;
+}
+
+.route-header i {
+    margin-right: 8px;
+    font-size: 16px;
+    color: #666;
+}
+
+.route-name {
+    font-weight: bold;
+    flex-grow: 1;
+}
+
+.route-type {
+    font-size: 12px;
+    color: #666;
+    background-color: #eee;
+    padding: 2px 6px;
+    border-radius: 3px;
+}
+
+.route-summary {
+    display: flex;
+    gap: 15px;
+    font-size: 14px;
+    color: #666;
+    cursor: pointer;
+}
+
+.route-summary span {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.route-info {
+    margin: 15px 0;
+}
+
+.route-info-item {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.route-info-item strong {
+    display: inline-block;
+    width: 120px;
+}
+
+#route-download-link {
+    text-align: center;
+    margin-top: 10px;
+}
+
+#route-download-link a {
+    color: #0066cc;
+    text-decoration: none;
+}
+
+#route-download-link a:hover {
+    text-decoration: underline;
+}
+
+#route-stops ul {
+    margin: 10px 0;
+    padding-left: 20px;
+}
+
+#route-stops li {
+    margin-bottom: 3px;
+    font-size: 14px;
+}
+
+/* No location message styling */
+.no-location-message {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+}
+
+.no-location-message i {
+    font-size: 48px;
+    color: #ccc;
+    margin-bottom: 15px;
+}
+
+.no-location-message p {
+    margin: 10px 0;
+    font-size: 16px;
+    line-height: 1.4;
+}
+
+/* Transport type buttons */
+.transport-type-btn {
+    transition: background-color 0.2s;
+}
+
+.transport-type-btn:hover {
+    background: #444 !important;
+}
+
+/* Pagination styling */
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 15px 0;
+    gap: 5px;
+}
+
+.pagination button {
+    background: #2a2a2a;
+    color: white;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 14px;
+    margin: 0 2px;
+}
+
+.pagination button:hover {
+    background: #444;
+}
+
+.pagination button.active {
+    background: #007acc;
+}
+
+.pagination button:disabled {
+    background: #666;
+    cursor: not-allowed;
+}
+
+.pagination-info {
+    font-size: 12px;
+    color: #666;
+    margin: 5px 0;
+    text-align: center;
+}
+
+/* Search input styling */
+.search-input {
+    width: 100%;
+    padding: 5px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    box-sizing: border-box;
+}

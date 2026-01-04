@@ -1,0 +1,2332 @@
+<!DOCTYPE html>
+  <head>
+  <!--MODIFICAR AQUÍ-->
+	 <title>OpenLocalMap</title>
+
+	 <meta charset="utf-8">
+	 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+	 <base href="./" id="base-href">
+	 <!--MODIFICAR AQUÍ-->
+	 <meta property="og:title" content="OpenLocalMap" />
+	 <meta property="og:type" content="website" />
+	 <!--MODIFICAR AQUÍ-->
+	 <meta property="og:url" content="https://yopaseopor.github.io/openlocalmap2" />
+	 <!--MODIFICAR AQUÍ-->
+	 <meta property="og:image" content="https://yopaseopor.github.io/openlocalmap2/assets/img/preview.jpg" />
+	 <!--MODIFICAR AQUÍ-->
+	 <meta property="og:description" content="Mapa de Vilanova i la Geltrú amb cerca de punts d'interès i altra informació." />
+    <link rel="shortcut icon" href="assets/img/favicon.ico"/>
+    <link rel="stylesheet" href="assets/leaflet/leaflet.css" />
+    <link rel="stylesheet" href="assets/css/Control.Loading.css" />
+    <link rel="stylesheet" href="assets/css/Control.Geocoder.css" />
+    <link rel="stylesheet" href="assets/css/leaflet.label.css" />
+    <link rel="stylesheet" href="assets/css/leaflet.zoomhome.css" />
+
+    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/site.css">
+    <link rel="stylesheet" href="assets/css/leaflet-sidebar.css" />
+    <link rel="stylesheet" href="assets/print/easyPrint.css" />
+    <link rel="stylesheet" href="assets/css/leaflet.elevation-0.0.4.css" />
+
+    <link href="https://api.tiles.mapbox.com/mapbox.js/plugins/leaflet-locatecontrol/v0.24.0/L.Control.Locate.css" rel="stylesheet" />
+    <!--[if lt IE 9]>
+	<link href='https://api.tiles.mapbox.com/mapbox.js/plugins/leaflet-locatecontrol/v0.21.0/L.Control.Locate.ie.css' rel='stylesheet' />
+    <![endif]-->
+  </head>
+
+  <body>
+    <div id="sidebar" class="sidebar collapsed">
+      <!-- Nav tabs -->
+      <ul class="sidebar-tabs" role="tablist">
+	<li><a href="#search" role="tab"><i class="fa fa-search"></i></a></li>
+	<li><a href="#home" role="tab"><i class="fa fa-map-marker"></i></a></li>
+	<li><a href="#routes" role="tab"><i class="fa fa-compass"></i></a></li>
+	<li><a href="#gtfs" role="tab"><i class="fa fa-clock-o"></i></a></li>
+	<li><a href="#wikipedia" role="tab"><i class="fa fa-book"></i></a></li>
+		<!--MODIFICAR AQUÍ-->
+	<li><a href="#comments" role="tab"><i class="fa fa-comments-o"></i></a></li>
+	<li><a href="#parking" role="tab"><i class="fa fa-car"></i></a></li>
+	<li><a href="#mapillary" role="tab"><i class="fa fa-road"></i></a></li>
+	<li><a href="#links" role="tab"><i class="fa fa-link"></i></a></li>
+	<li><a href="#developer" role="tab"><i class="fa fa-code"></i></a></li>
+	<li><a href="#language" role="tab"><i class="fa fa-language"></i></a></li>
+	<li><a href="#about" role="tab"><i class="fa fa-info-circle"></i></a></li>
+      </ul>
+
+      <!-- Tab panes -->
+      <div class="sidebar-content active">
+
+	<!--PUNTS D'INTERÈS-->
+	<A NAME="home_init"></A>
+	<div class="sidebar-pane" id="home">
+	  <div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span>
+	  </div>
+	  <center><button style="background:#2a2a2a; color:white; padding:5px;" class="fa fa-support"
+          onClick="location.href='#help_home'"> Ajuda (PDI)</button></center>
+	  <h1 data-i18n="home_title">Punts d'interès</h1>
+	  <p data-i18n="home_description">Seleccioneu els punts que voleu visualitzar al mapa i després tanqueu aquest panell fent clic a
+           la <b>«X»</b> per poder visualitzar-lo més bé.</p>
+	  <p class="permalink">
+	  <span class="fa fa-link"></span>
+	  <a id="permalink" href="#" data-i18n="home_permalink">Comparteix aquest mapa (enllaç)</a>
+	  </p>
+	  <center>
+	    <button id="start-query-btn" class="fa fa-search manual-query-btn" type="button" onclick="manualPoiQuery();" data-i18n="poi_manual_search">Carrega punts d'interès</button>
+	    <button id="stop-query-btn" class="fa fa-stop manual-stop-btn" type="button" onclick="stopQuery();">Atura consulta</button>
+	    <br><small class="manual-query-note" data-i18n="poi_manual_note">Les consultes es fan manualment per evitar sobrecàrrega dels servidors</small>
+	  </center>
+	  <div id="pois"></div>
+	  <center>
+	    <button class="fa fa-search manual-query-btn" type="button" onclick="manualPoiQuery();" data-i18n="poi_manual_search">Carrega punts d'interès</button>
+	    <button class="fa fa-stop manual-stop-btn" type="button" onclick="stopQuery();">Atura consulta</button>
+	    <br><small class="manual-query-note" data-i18n="poi_manual_note">Les consultes es fan manualment per evitar sobrecàrrega dels servidors</small>
+	  </center>
+	  <!--Home - ajuda -->
+	  <br><hr width="90%">
+	  <A NAME="help_home"></A>
+	  <h1 data-i18n="home_help_title"><span class="fa fa-support"></span> Ajuda</h1>
+	  <p style="text-align:justify; margin-right:5px;" data-i18n="home_help_text1">Des d'aquesta secció podeu seleccionar els punts
+	  d'interès que voleu visualitzar al mapa. Cal que seleccioneu tots aquells punts que desitgeu,
+	  marcant-ne la casella corresponent:</p>
+	  <center><img src="assets/img/help/pdis.png" width="80%"></center>
+	  <p style="text-align:justify; margin-right:5px;" data-i18n="home_help_text2">Quan els hàgiu seleccionat podeu tancar el panell
+           fent clic sobre la <b>«X»</b> que hi ha al capdamunt a l'esquerra, i en uns segons (en funció de la
+           connexió a Internet) us apareixeran els punts d'interès sobre el mapa:</p>
+	  <center><img src="assets/img/help/pdis2.png" width="90%"></center>
+	  <p style="text-align:justify; margin-right:5px;" data-i18n="home_help_text3">Ara podreu seleccionar la icona de qualsevol dels
+	   punts d'interès per veure'n més informació (de la base de dades d'OSM). Alguns camps com
+	   el correu electrònic o el lloc web són enllaços que es poden seguir, i podreu trucar directament al
+	   telèfon de contacte si utilitzeu el mapa des d'un telèfon mòbil:</p>
+	  <center><img src="assets/img/help/popup.png" width="90%"></center>
+	  <p style="text-align:justify; margin-right:5px;" data-i18n="home_help_text4">Si us aparegués un missatge com aquest:</p>
+	  <center><img src="assets/img/help/zoom.png" width="100%"></center>
+	  <p style="text-align:justify; margin-right:5px;" data-i18n="home_help_text5">Significa que no s'ha arribat al nivell mínim
+	   d'apropament per visualitzar les icones, i per tant cal que us acosteu més al mapa (amb el botó
+            <b>«+»</b> del mapa, per exemple).</p>
+	  <p style="text-align:justify; margin-right:5px;" data-i18n="home_help_text6">Si seguiu l'enllaç <b>«Informació al detall
+           (expert)»</b> que tenen tots els punts d'interès, s'obrirà automàticament el panell «Expert» amb la
+           informació de les etiquetes del punt d'interès a OpenStreetMap, i també enllaços per visualitzar
+            el punt d'interès a OSM o inclús per editar-lo:</p>
+	  <center><img src="assets/img/help/expert.png" width="90%"></center>
+	  <br>
+	  <center><button style="background:#2a2a2a; color:white; padding:5px;" class="fa fa-arrow-up"
+          onClick="location.href='#home_init'" data-i18n="home_help_back"> Inici</button></center>
+	</div>
+
+	<!--CERCA-->
+	<A NAME="search_init"></A>
+	<div class="sidebar-pane" id="search">
+	  <div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span>
+          </div>
+	  <center><button style="background:#2a2a2a; color:white; padding:5px;" class="fa fa-support"
+          onClick="location.href='#help_search'"> Ajuda (cerca)</button></center>
+	  <!--Cerca local-->
+	  <!--MODIFICAR AQUÍ-->
+	  <h1 data-i18n="search_local_title">Cerca local<br><small data-i18n="search_local_subtitle">a Vilanova i la Geltrú</small></h1>
+	  <center><p><font style="font-family: verdana; font-size: 8px;" data-i18n="search_local_description">Cerqueu una adreça, un comerç, un nom
+           de casa, una masia, una font...</font></p>
+          <p><input type="text" name="addr" value="" id="addr" class="search-input" placeholder="Introduïu la vostra cerca..." /></p>
+          <p><button class="fa fa-search" type="button" onclick="addr_search();" data-i18n="search_button"> Cerca</button> <button class="fa fa-trash" type="button" onclick="clear_layer2();" data-i18n="search_clear_button"> Neteja</button></p></center>
+	  <div id="results"/>
+	  </div>
+
+          <br><hr width="90%">
+
+	  <!--Cerca global-->
+	  <h1 data-i18n="search_global_title">Cerca global<br><small data-i18n="search_global_subtitle">a tot el Món</small></h1>
+	  <center><p><font style="font-family: verdana; font-size: 8px;" data-i18n="search_global_description">Cerqueu una població, una adreça, un
+           comerç...</font><br><br>
+	  <input type="text" name="addr2" value="" id="addr2" class="search-input" placeholder="Introduïu la vostra cerca..." /><br>
+	  <button class="fa fa-search" type="button" onclick="addr_search2();" data-i18n="search_button"> Cerca</button> <button class="fa
+           fa-trash" type="button" onclick="clear_layer3();" data-i18n="search_clear_button"> Neteja</button></p></center>
+	  <div id="results2"/>
+	  </div>
+
+     	  <br><hr width="90%">
+
+	  <!--Cerca - ajuda -->
+	  <A NAME="help_search"></A>
+	  <h1 data-i18n="search_help_title"><span class="fa fa-support"></span> Ajuda</h1>
+	  <!--MODIFICAR AQUÍ-->
+	  <p style="text-align:justify; margin-right:5px;" data-i18n="search_help_text1">Des d'aquesta secció podeu fer cerques tan
+          limitades a la zona de Vilanova i la Geltrú (cerca local) com a qualsevol lloc del Món. Per fer-ho
+           cal introduir la vostra cerca a la caixa:</p>
+	  <center><img src="assets/img/help/cerca.png" width="60%"></center>
+	  <p style="text-align:justify; margin-right:5px;" data-i18n="search_help_text2">A continuació cal prémer el botó «Cerca» i
+          apareixeran un màxim de cinc resultats (a la cerca global en seran deu), com es mostra en aquesta
+           imatge:</p>
+	  <center><img src="assets/img/help/cerca1.png" width="90%"></center>
+	  <p style="text-align:justify; margin-right:5px;" data-i18n="search_help_text3">Finalment només cal que seleccioneu el resultat que
+	  voleu visualitzar al mapa, i si no us agrada, podeu tornar a obrir aquesta secció per seleccionar-ne
+	  altre. Els resultats es mostraran a la cerca global en cercles verds els nodes i en caixes vermelles
+          les vies, i a la cerca global en cercles i caixes blaves.</p>
+	  <center><img src="assets/img/help/cerca2.png" width="90%"></center>
+	  <p style="text-align:justify; margin-right:5px;" data-i18n="search_help_text4">Les caixes i els cercles que es dibuixen al mapa es
+	  poden fer desaparèixer prement el botó «Neteja».</p>
+	  <br>
+	  <center><button style="background:#2a2a2a; color:white; padding:5px;" class="fa fa-arrow-up"
+          onClick="location.href='#search_init'" data-i18n="search_help_back"> Inici</button></center>
+	</div>
+
+	<!--MAPILLARY-->
+	<A NAME="mapillary_init"></A>
+	<div class="sidebar-pane" id="mapillary">
+	  <div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span>
+	  </div>
+	  <center><button style="background:#2a2a2a; color:white; padding:5px;" class="fa fa-support"
+          onClick="location.href='#help_mapillary'"> Ajuda (Mapillary)</button></center>
+	  <h1 data-i18n="mapillary_title">Mapillary</h1>
+	  <center><img src="assets/img/mapillary.png" width="50" height="50">
+	  <p data-i18n="mapillary_description"><b>Mapillary</b> és l'Street View lliure, està realitzat per voluntaris i les imatges es
+           distribueixen sota una llicència <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.ca"
+           target="_blank">CC BY-SA 4.0</a>.</p>
+	  <p><button type="button" onclick="refreshMapillary();" data-i18n="mapillary_random">Troba 10 llocs a l'atzar a Mapillary</button>
+          </p>
+	  <p>Per trobar nous llocs a Mapillary, canvieu la vista del mapa i torneu a fer clic al botó.</p>
+	  <p><button type="button" onclick="clear_layer();" data-i18n="mapillary_clear">Neteja els marcadors de Mapillary</button></p>
+	  </center>
+
+
+
+	  <br><hr width="90%">
+
+	  <!-- Rutes - ajuda -->
+	  <A NAME="help_rutes"></A>
+	  <h1 data-i18n="routes_help_title"><span class="fa fa-support"></span> Ajuda</h1>
+	  <p style="text-align:justify; margin-right:5px;" data-i18n="routes_help_text1">Des d'aquesta secció podeu explorar les diferents rutes disponibles a la vostra ubicació actual. Les rutes es divideixen en categories:</p>
+	  <ul style="text-align:left; margin-left:20px;">
+	    <li><strong data-i18n="routes_help_walking_title">Rutes a peu:</strong> <span data-i18n="routes_help_walking_desc">Caminades i senderisme</span></li>
+	    <li><strong data-i18n="routes_help_biking_title">Rutes en bicicleta:</strong> <span data-i18n="routes_help_biking_desc">Recorreguts per bicicleta</span></li>
+	    <li><strong data-i18n="routes_help_transport_title">Transport públic:</strong> <span data-i18n="routes_help_transport_desc">Línies d'autobús i metro</span></li>
+	  </ul>
+	  <p style="text-align:justify; margin-right:5px;" data-i18n="routes_help_click_text">Feu clic en qualsevol ruta per veure'n els detalls, parades (si s'escau) i opcions per visualitzar-la al mapa.</p>
+	  <br>
+	  <center><button style="background:#2a2a2a; color:white; padding:5px;" class="fa fa-arrow-up"
+          onClick="location.href='#rutes_init'" data-i18n="routes_help_back"> Inici</button></center>
+	</div>
+
+
+	<!--GTFS-->
+	<div class="sidebar-pane" id="gtfs">
+	  <div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span>
+	  </div>
+	  <center><button style="background:#2a2a2a; color:white; padding:5px;" class="fa fa-support"
+          onClick="location.href='#help_gtfs'"> Ajuda (GTFS)</button></center>
+  <h1 data-i18n="gtfs_title">GTFS - Dades de Transport</h1>
+  <p style="text-align:justify; margin-right:5px;" data-i18n="gtfs_description">Explora conjunts de dades GTFS de transports públics de tot el món. Selecciona un conjunt de dades per veure informació sobre rutes, parades i horaris.</p>
+
+  <!-- Mobility Database Auth UI -->
+  <details style="margin-bottom: 20px;">
+    <summary style="background: #f0f0f0; border: 1px solid #ccc; border-radius: 5px; padding: 15px; cursor: pointer; list-style: none;">
+      <h3 style="margin: 0; color: #333; display: inline;">🔑 Mobility Database Authentication</h3>
+      <span style="float: right; font-size: 16px; color: #333;">▶️</span>
+    </summary>
+    <div style="padding: 15px; background: #f0f0f0; border: 1px solid #ccc; border-top: none; border-radius: 0 0 5px 5px; margin-top: -1px;">
+    <label style="display:block; font-weight:600; margin-bottom:6px;">Mobility Database Refresh Token</label>
+    <input id="mobility-refresh-token" type="password" placeholder="Paste your refresh token here" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; margin-bottom:8px;">
+    <div style="display:flex; gap:8px;">
+      <button onclick="(function(){ var t=document.getElementById('mobility-refresh-token').value; setRefreshToken(t, true); document.getElementById('mobility-auth-status').textContent='Refresh token saved (in localStorage).'; })()" style="background:#007acc; color:white; padding:6px 10px; border:none; border-radius:3px;">Save token</button>
+      <button onclick="(function(){ var t=document.getElementById('mobility-refresh-token').value; setRefreshToken(t, false); document.getElementById('mobility-auth-status').textContent='Refresh token set for session only.'; })()" style="background:#2a2a2a; color:white; padding:6px 10px; border:none; border-radius:3px;">Use for session</button>
+      <button onclick="(function(){ clearStoredRefreshToken(); document.getElementById('mobility-auth-status').textContent='Refresh token cleared.'; })()" style="background:#aa0000; color:white; padding:6px 10px; border:none; border-radius:3px;">Clear</button>
+      <button onclick="(function(){ document.getElementById('mobility-auth-status').textContent='Requesting access token...'; getValidAccessToken().then(function(tok){ document.getElementById('mobility-auth-status').textContent='Access token obtained.'; }).catch(function(err){ document.getElementById('mobility-auth-status').textContent='Token error: '+err.message; }); })()" style="background:#228822; color:white; padding:6px 10px; border:none; border-radius:3px;">Get Access Token</button>
+    </div>
+    <div id="mobility-auth-status" style="margin-top:8px; color:#444; font-size:13px;">No refresh token configured.</div>
+    <div style="margin-top:8px; font-size:12px; color:#666;">If you don't have a refresh token, sign in at <a href="https://mobilitydatabase.org/account" target="_blank">mobilitydatabase.org/account</a>. See API docs at <a href="https://mobilitydata.github.io/mobility-feed-api/SwaggerUI/index.html#/" target="_blank">Mobility Feed API (Swagger)</a>.</div>
+
+    <!-- GTFS Search and Selection moved inside Mobility Database section -->
+    <hr style="margin: 20px 0; border: none; border-top: 1px solid #ccc;">
+    <h4 style="margin-bottom: 15px; color: #333;">🔍 GTFS Dataset Search</h4>
+    <div style="margin-bottom: 15px;">
+      <input type="text" id="gtfs-search" placeholder="Buscar per ciutat, país o operador..." style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px;">
+      <button onclick="searchGtfsDatasets()" style="background:#007acc; color:white; padding:8px 15px; border:none; border-radius:3px; cursor:pointer; margin-right: 10px;">
+        <i class="fa fa-search"></i> Buscar
+      </button>
+      <button onclick="loadAllGtfsDatasets()" style="background:#666; color:white; padding:8px 15px; border:none; border-radius:3px; cursor:pointer;">
+        <i class="fa fa-list"></i> Mostrar tots
+      </button>
+    </div>
+
+    <!-- GTFS Results -->
+    <div id="gtfs-results" style="display: none; margin-top: 15px;">
+      <h4 data-i18n="gtfs_results_title">Conjunts de dades disponibles:</h4>
+      <div id="gtfs-dataset-list" style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 10px;">
+        <!-- Dataset list will be populated here -->
+      </div>
+    </div>
+
+    <!-- GTFS Dataset Details -->
+    <div id="gtfs-details" style="display: none; margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+      <h4 id="gtfs-dataset-title"></h4>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 15px;">
+        <div><strong data-i18n="gtfs_provider">Proveïdor:</strong> <span id="gtfs-provider"></span></div>
+        <div><strong data-i18n="gtfs_country">País:</strong> <span id="gtfs-country"></span></div>
+        <div><strong data-i18n="gtfs_location">Ubicació:</strong> <span id="gtfs-location"></span></div>
+        <div><strong data-i18n="gtfs_last_updated">Última actualització:</strong> <span id="gtfs-last-updated"></span></div>
+      </div>
+      <p id="gtfs-description" style="margin-bottom: 15px;"></p>
+
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <button onclick="exploreGtfsRoutes()" style="background:#2a2a2a; color:white; padding:8px 12px; border:none; border-radius:3px; cursor:pointer;">
+          <i class="fa fa-route"></i> Explorar rutes
+        </button>
+        <button onclick="exploreGtfsStops()" style="background:#2a2a2a; color:white; padding:8px 12px; border:none; border-radius:3px; cursor:pointer;">
+          <i class="fa fa-map-marker"></i> Explorar parades
+        </button>
+        <button onclick="downloadGtfsData()" style="background:#007acc; color:white; padding:8px 12px; border:none; border-radius:3px; cursor:pointer;">
+          <i class="fa fa-download"></i> Descarregar dades
+        </button>
+      </div>
+    </div>
+
+    <!-- GTFS Routes/Stops Display -->
+    <div id="gtfs-content" style="display: none; margin-top: 15px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <h4 id="gtfs-content-title"></h4>
+        <button onclick="backToGtfsDetails()" style="background:#666; color:white; padding:4px 8px; border:none; border-radius:3px; cursor:pointer; font-size: 12px;">
+          <i class="fa fa-arrow-left"></i> Tornar
+        </button>
+      </div>
+      <div id="gtfs-content-list" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 10px;">
+        <!-- Content will be populated here -->
+      </div>
+    </div>
+
+    <!-- Loading indicator -->
+    <div id="gtfs-loading" style="display: none; text-align: center; margin-top: 20px;">
+      <img src="assets/img/spinner.gif" alt="Loading..." style="width: 32px; height: 32px;">
+      <p data-i18n="gtfs_loading">Carregant dades GTFS...</p>
+    </div>
+  </div>
+</details>
+
+  <!-- RENFE Real-Time Train Visualization -->
+  <details style="margin-bottom: 20px;">
+    <summary style="background: #f0f8ff; border: 1px solid #b8daff; border-radius: 5px; padding: 15px; cursor: pointer; list-style: none;">
+      <h3 style="margin: 0; color: #004085; display: inline;">🚂 Visualització en Temps Real de Trens RENFE</h3>
+      <span style="float: right; font-size: 16px; color: #004085;">▶️</span>
+    </summary>
+    <div style="padding: 15px; background: #f0f8ff; border: 1px solid #b8daff; border-top: none; border-radius: 0 0 5px 5px; margin-top: -1px;">
+      <p style="margin: 8px 0; font-size: 14px;">Mostra la posició actual dels trens RENFE al mapa en temps real:</p>
+
+    <div style="display: flex; flex-direction: column; gap: 10px; margin: 15px 0;">
+      <button onclick="startRealtimeTrains()" id="start-realtime-btn" style="background: #4caf50; color: white; padding: 12px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;"><strong>▶️ Iniciar Visualització de Trens</strong><br><small>Mostra trens al mapa cada 30 segons</small></button>
+      <button onclick="stopRealtimeTrains()" id="stop-realtime-btn" style="background: #f44336; color: white; padding: 12px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; display: none;"><strong>⏹️ Aturar Visualització</strong><br><small>Oculta els trens del mapa</small></button>
+      <button onclick="toggleTrainLegend()" id="legend-btn" style="background: #007bff; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 13px; display: inline-block;"><strong>🎨 Mostrar Llegenda</strong><br><small>Veure colors de les línies RENFE</small></button>
+      <div id="realtime-status" style="font-size: 12px; color: #666; padding: 8px; background: #f8f9fa; border-radius: 3px;">Status: Inactiu</div>
+    </div>
+
+    <div style="background: #e8f4f8; border: 1px solid #b8daff; border-radius: 5px; padding: 12px; margin: 15px 0;">
+      <p style="margin: 8px 0; font-size: 13px;"><strong>També pots executar aquest Node.js per obtenir dades en temps real:</strong></p>
+
+      <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px; padding: 10px; margin: 10px 0; font-family: monospace; font-size: 11px;">
+        const express = require('express');<br>
+        const cors = require('cors');<br>
+        const fetch = require('node-fetch');<br><br>
+        const app = express();<br>
+        app.use(cors());<br><br>
+        app.get('/api/renfe-trains', async (req, res) => {<br>
+        &nbsp;&nbsp;try {<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;const response = await fetch('https://gtfsrt.renfe.com/vehicle_positions.pb');<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;const buffer = await response.arrayBuffer();<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;res.send(Buffer.from(buffer));<br>
+        &nbsp;&nbsp;} catch (error) {<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;res.status(500).json({error: 'Failed to fetch RENFE data'});<br>
+        &nbsp;&nbsp;}<br>
+        });<br><br>
+        app.listen(3001, () => console.log('Proxy server running on port 3001'));<br>
+      </div>
+
+      <p style="margin: 8px 0; font-size: 12px;"><strong>Comandes per executar:</strong></p>
+      <code style="background: #f8f9fa; padding: 4px 8px; border-radius: 3px; font-family: monospace; font-size: 11px;">npm install express cors node-fetch<br>node server.js</code>
+
+      <p style="margin: 8px 0; font-size: 12px; color: #004085;"><strong>L'aplicació detectarà automàticament el servidor proxy i mostrarà trens 100% reals!</strong></p>
+
+      <p style="margin: 8px 0; font-size: 12px; color: #666;"><strong>Nota sobre el proxy CORS:</strong> S'utilitza <code>https://api.codetabs.com/v1/proxy</code> amb límits de 5MB per petició i 5 peticions per segon (error 429 si s'excedeix).</p>
+    </div>
+
+    <div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 5px; padding: 12px; margin: 15px 0;">
+      <h5 style="margin-top: 0; color: #155724;">✅ Solució Manual: Utilitza les Dades RENFE Directament!</h5>
+      <p style="margin: 8px 0; font-size: 13px;">Ja que pots accedir manualment a les dades RENFE, aquí tens una solució directa:</p>
+
+      <div style="display: flex; flex-direction: column; gap: 8px; margin: 15px 0;">
+        <button onclick="openRenfeJson()" style="background: #28a745; color: white; padding: 12px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;"><strong>🔗 PAS 1: Obrir Dades RENFE</strong><br><small>Obre l'API RENFE en una nova pestanya</small></button>
+        <button onclick="showManualDataEntry()" style="background: #007bff; color: white; padding: 12px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;"><strong>📝 PAS 2: Introduir Dades Manualment</strong><br><small>Copia i enganxa les dades JSON aquí</small></button>
+      </div>
+
+      <div id="manual-data-entry" style="display: none; margin: 15px 0; padding: 15px; background: #f8f9fa; border-radius: 5px; border: 1px solid #dee2e6;">
+        <h5 style="margin-top: 0; color: #495057;">📋 Com Copiar i Enganxar les Dades RENFE:</h5>
+        <div style="display: flex; gap: 10px; margin: 10px 0; flex-wrap: wrap;">
+          <button onclick="copyRenfeUrl()" style="background: #28a745; color: white; padding: 8px 12px; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;"><strong>🔗 Copiar URL RENFE</strong></button>
+          <button onclick="copyJsonInstructions()" style="background: #17a2b8; color: white; padding: 8px 12px; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;"><strong>📋 Copiar Instruccions</strong></button>
+          <button onclick="clearTextarea()" style="background: #6c757d; color: white; padding: 8px 12px; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;"><strong>🗑️ Netejar</strong></button>
+          <button onclick="shareMapUrl()" style="background: #dc3545; color: white; padding: 8px 12px; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;"><strong>📤 Compartir Mapa</strong></button>
+        </div>
+
+        <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 3px; padding: 10px; margin: 10px 0; font-size: 12px;">
+          <strong>🔢 PASSOS FÀCILS:</strong><br>
+          1. Ves a la pestanya RENFE que s'ha obert<br>
+          2. Prem <strong>Ctrl+A</strong> (seleccionar tot)<br>
+          3. Prem <strong>Ctrl+C</strong> (copiar)<br>
+          4. Torna aquí i prem <strong>Ctrl+V</strong> (enganxar)<br>
+          5. Clica <strong>"Processar Dades Reals"</strong>
+        </div>
+
+        <textarea id="manual-json-data" placeholder="Enganxa aquí les dades JSON de RENFE (prem Ctrl+V)..." style="width: 100%; height: 120px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-family: monospace; font-size: 11px; resize: vertical;"></textarea>
+
+        <div style="display: flex; gap: 10px; margin-top: 10px;">
+          <button onclick="processManualJsonData()" style="background: #dc3545; color: white; padding: 10px 15px; border: none; border-radius: 3px; cursor: pointer; font-size: 14px; flex: 1;"><strong>⚡ Processar Dades Reals</strong><br><small>Mostrar trens RENFE reals al mapa</small></button>
+          <button onclick="testSampleData()" style="background: #ffc107; color: black; padding: 10px 15px; border: none; border-radius: 3px; cursor: pointer; font-size: 14px;"><strong>🧪 Provar amb Dades d'Exemple</strong><br><small>Omple amb JSON de mostra</small></button>
+        </div>
+
+        <div id="json-status" style="margin-top: 10px; padding: 8px; background: #e9ecef; border-radius: 3px; font-size: 12px; color: #495057;">Status: Preparat per enganxar dades JSON</div>
+
+      </div>
+
+
+      <p style="margin: 8px 0; font-size: 12px; color: #155724;"><strong>URL de les dades: <code>https://gtfsrt.renfe.com/vehicle_positions.json</code></strong></p>
+    </div>
+
+    <p style="font-size: 12px; color: #666; margin-top: 10px;">Llicència: <a href="https://data.renfe.com/dataset/ubicacion-vehiculos" target="_blank">CC-BY-4.0</a> | Última actualització: 2025-12-27</p>
+  </div>
+</details>
+
+  <!-- TMB Real-Time Bus Visualization -->
+  <details style="margin-bottom: 20px;">
+    <summary style="background: #fff0f0; border: 1px solid #ffb3b3; border-radius: 5px; padding: 15px; cursor: pointer; list-style: none;">
+      <h3 style="margin: 0; color: #c41e3a; display: inline;">🚌 Visualització en Temps Real d'Autobusos TMB</h3>
+      <span style="float: right; font-size: 16px; color: #c41e3a;">▶️</span>
+    </summary>
+    <div style="padding: 15px; background: #fff0f0; border: 1px solid #ffb3b3; border-top: none; border-radius: 0 0 5px 5px; margin-top: -1px;">
+    <p style="margin: 8px 0; font-size: 14px;">Mostra la posició actual dels autobusos TMB (Transports Metropolitans de Barcelona) al mapa en temps real:</p>
+
+    <div style="display: flex; flex-direction: column; gap: 10px; margin: 15px 0;">
+      <button onclick="startRealtimeTMBBuses()" id="start-tmb-realtime-btn" style="background: #c41e3a; color: white; padding: 12px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;"><strong>▶️ Iniciar Visualització d'Autobusos TMB</strong><br><small>Mostra autobusos al mapa cada 30 segons</small></button>
+      <button onclick="stopRealtimeTMBBuses()" id="stop-tmb-realtime-btn" style="background: #8B0000; color: white; padding: 12px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; display: none;"><strong>⏹️ Aturar Visualització</strong><br><small>Oculta els autobusos del mapa</small></button>
+      <button onclick="toggleTMBBusLegend()" id="tmb-legend-btn" style="background: #c41e3a; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 13px; display: inline-block;"><strong>🎨 Mostrar Llegenda</strong><br><small>Veure colors de les línies TMB</small></button>
+      <div id="tmb-realtime-status" style="font-size: 12px; color: #c41e3a; padding: 8px; background: #fff5f5; border-radius: 3px;">Status: Inactiu</div>
+    </div>
+
+    <div style="background: #ffeaea; border: 1px solid #ffb3b3; border-radius: 5px; padding: 12px; margin: 15px 0;">
+      <p style="margin: 8px 0; font-size: 13px;"><strong>Executa aquest servidor Node.js per obtenir dades reals:</strong></p>
+
+      <div style="background: #fff5f5; border: 1px solid #ffb3b3; border-radius: 3px; padding: 10px; margin: 10px 0; font-family: monospace; font-size: 11px;">
+        const express = require('express');<br>
+        const cors = require('cors');<br>
+        const fetch = require('node-fetch');<br><br>
+        const app = express();<br>
+        app.use(cors());<br><br>
+        app.get('/api/tmb-buses', async (req, res) => {<br>
+        &nbsp;&nbsp;try {<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;const response = await fetch('https://api.tmb.cat/v1/ibus/stops/nearby?app_id=YOUR_APP_ID&app_key=YOUR_APP_KEY');<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;const data = await response.json();<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;res.json(data);<br>
+        &nbsp;&nbsp;} catch (error) {<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;res.status(500).json({error: 'Failed to fetch TMB data'});<br>
+        &nbsp;&nbsp;}<br>
+        });<br><br>
+        app.listen(3003, () => console.log('TMB Proxy server running on port 3003'));<br>
+      </div>
+
+      <p style="margin: 8px 0; font-size: 12px;"><strong>Comandes per executar:</strong></p>
+      <code style="background: #fff5f5; padding: 4px 8px; border-radius: 3px; font-family: monospace; font-size: 11px;">npm install express cors node-fetch<br>node tmb-server.js</code>
+
+      <p style="margin: 8px 0; font-size: 12px; color: #c41e3a;"><strong>L'aplicació detectarà automàticament el servidor proxy i mostrarà autobusos TMB reals!</strong></p>
+    </div>
+
+    <div style="background: #ffe0e0; border: 1px solid #ffb3b3; border-radius: 5px; padding: 12px; margin: 15px 0;">
+      <h5 style="margin-top: 0; color: #c41e3a;">✅ Solució Manual: Utilitza les Dades TMB Directament!</h5>
+      <p style="margin: 8px 0; font-size: 13px;">Ja que pots accedir manualment a les dades TMB, aquí tens una solució directa:</p>
+
+      <div style="display: flex; flex-direction: column; gap: 8px; margin: 15px 0;">
+        <button onclick="openTMBJson()" style="background: #c41e3a; color: white; padding: 12px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;"><strong>🔗 PAS 1: Obrir Dades TMB</strong><br><small>Obre l'API TMB en una nova pestanya</small></button>
+        <button onclick="showTMBDataEntry()" style="background: #007bff; color: white; padding: 12px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;"><strong>📝 PAS 2: Introduir Dades Manualment</strong><br><small>Copia i enganxa les dades JSON aquí</small></button>
+      </div>
+
+      <div id="tmb-manual-data-entry" style="display: none; margin: 15px 0; padding: 15px; background: #fff5f5; border-radius: 5px; border: 1px solid #ffb3b3;">
+        <h5 style="margin-top: 0; color: #c41e3a;">📋 Com Copiar i Enganxar les Dades TMB:</h5>
+        <div style="display: flex; gap: 10px; margin: 10px 0; flex-wrap: wrap;">
+          <button onclick="copyTMBUrl()" style="background: #c41e3a; color: white; padding: 8px 12px; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;"><strong>🔗 Copiar URL TMB</strong></button>
+          <button onclick="copyTMBInstructions()" style="background: #17a2b8; color: white; padding: 8px 12px; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;"><strong>📋 Copiar Instruccions</strong></button>
+          <button onclick="clearTMBTextarea()" style="background: #6c757d; color: white; padding: 8px 12px; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;"><strong>🗑️ Netejar</strong></button>
+          <button onclick="shareTMBMapUrl()" style="background: #dc3545; color: white; padding: 8px 12px; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;"><strong>📤 Compartir Mapa</strong></button>
+        </div>
+
+        <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 3px; padding: 10px; margin: 10px 0; font-size: 12px;">
+          <strong>🔢 PASSOS FÀCILS:</strong><br>
+          1. Ves a la pestanya TMB que s'ha obert<br>
+          2. Prem <strong>Ctrl+A</strong> (seleccionar tot)<br>
+          3. Prem <strong>Ctrl+C</strong> (copiar)<br>
+          4. Torna aquí i prem <strong>Ctrl+V</strong> (enganxar)<br>
+          5. Clica <strong>"Processar Dades Reals"</strong>
+        </div>
+
+        <textarea id="tmb-manual-json-data" placeholder="Enganxa aquí les dades JSON de TMB (prem Ctrl+V)..." style="width: 100%; height: 120px; padding: 10px; border: 1px solid #ffb3b3; border-radius: 4px; font-family: monospace; font-size: 11px; resize: vertical;"></textarea>
+
+        <div style="display: flex; gap: 10px; margin-top: 10px;">
+          <button onclick="processTMBManualJsonData()" style="background: #dc3545; color: white; padding: 10px 15px; border: none; border-radius: 3px; cursor: pointer; font-size: 14px; flex: 1;"><strong>⚡ Processar Dades Reals</strong><br><small>Mostrar autobusos TMB reals al mapa</small></button>
+          <button onclick="testTMBsampleData()" style="background: #ffc107; color: black; padding: 10px 15px; border: none; border-radius: 3px; cursor: pointer; font-size: 14px;"><strong>🧪 Provar amb Dades d'Exemple</strong><br><small>Omple amb JSON de mostra</small></button>
+        </div>
+
+        <div id="tmb-json-status" style="margin-top: 10px; padding: 8px; background: #e9ecef; border-radius: 3px; font-size: 12px; color: #495057;">Status: Preparat per enganxar dades JSON</div>
+
+      </div>
+
+      <p style="margin: 8px 0; font-size: 12px; color: #c41e3a;"><strong>URL de les dades: <code>https://api.tmb.cat/v1/ibus</code></strong></p>
+      <p style="margin: 8px 0; font-size: 12px; color: #666;"><strong>Credencials TMB:</strong> app_id=8029906b, app_key=73b5ad24d1db9fa24988bf134a1523d1</p>
+    </div>
+
+    <p style="font-size: 12px; color: #c41e3a; margin-top: 10px;">Llicència: <a href="https://developer.tmb.cat/" target="_blank">Open Data TMB</a> | Última actualització: 2025-12-27</p>
+  </div>
+</details>
+
+  <!-- FGC Real-Time Train Visualization -->
+  <details style="margin-bottom: 20px;">
+    <summary style="background: #f0fff0; border: 1px solid #b8ffb8; border-radius: 5px; padding: 15px; cursor: pointer; list-style: none;">
+      <h3 style="margin: 0; color: #006400; display: inline;">🚆 Visualització en Temps Real de Trens FGC</h3>
+      <span style="float: right; font-size: 16px; color: #006400;">▶️</span>
+    </summary>
+    <div style="padding: 15px; background: #f0fff0; border: 1px solid #b8ffb8; border-top: none; border-radius: 0 0 5px 5px; margin-top: -1px;">
+    <p style="margin: 8px 0; font-size: 14px;">Mostra la posició actual dels trens FGC (Ferrocarrils de la Generalitat de Catalunya) al mapa en temps real:</p>
+
+    <div style="display: flex; flex-direction: column; gap: 10px; margin: 15px 0;">
+      <button onclick="startRealtimeFGCTrains()" id="start-fgc-realtime-btn" style="background: #228B22; color: white; padding: 12px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;"><strong>▶️ Iniciar Visualització de Trens FGC</strong><br><small>Mostra trens al mapa cada 30 segons</small></button>
+      <button onclick="stopRealtimeFGCTrains()" id="stop-fgc-realtime-btn" style="background: #8B0000; color: white; padding: 12px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; display: none;"><strong>⏹️ Aturar Visualització</strong><br><small>Oculta els trens del mapa</small></button>
+      <button onclick="toggleFGCTrainLegend()" id="fgc-legend-btn" style="background: #006400; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 13px; display: inline-block;"><strong>🎨 Mostrar Llegenda</strong><br><small>Veure colors de les línies FGC</small></button>
+      <div id="fgc-realtime-status" style="font-size: 12px; color: #006400; padding: 8px; background: #f8fff8; border-radius: 3px;">Status: Inactiu</div>
+    </div>
+
+    <div style="background: #e8ffe8; border: 1px solid #b8ffb8; border-radius: 5px; padding: 12px; margin: 15px 0;">
+
+
+      <p style="margin: 8px 0; font-size: 13px;"><strong>Executa aquest servidor Node.js per obtenir dades reals:</strong></p>
+
+      <div style="background: #f8fff8; border: 1px solid #b8ffb8; border-radius: 3px; padding: 10px; margin: 10px 0; font-family: monospace; font-size: 11px;">
+        const express = require('express');<br>
+        const cors = require('cors');<br>
+        const fetch = require('node-fetch');<br><br>
+        const app = express();<br>
+        app.use(cors());<br><br>
+        app.get('/api/fgc-trains', async (req, res) => {<br>
+        &nbsp;&nbsp;try {<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;// FGC GTFS-RT URL (quan estigui disponible)<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;const response = await fetch('https://api.fgc.cat/gtfs-rt/vehicle_positions');<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;const buffer = await response.arrayBuffer();<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;res.send(Buffer.from(buffer));<br>
+        &nbsp;&nbsp;} catch (error) {<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;res.status(500).json({error: 'Failed to fetch FGC data'});<br>
+        &nbsp;&nbsp;}<br>
+        });<br><br>
+        app.listen(3002, () => console.log('FGC Proxy server running on port 3002'));<br>
+      </div>
+
+      <p style="margin: 8px 0; font-size: 12px;"><strong>Comandes per executar:</strong></p>
+      <code style="background: #f8fff8; padding: 4px 8px; border-radius: 3px; font-family: monospace; font-size: 11px;">npm install express cors node-fetch<br>node fgc-server.js</code>
+
+      <p style="margin: 8px 0; font-size: 12px; color: #006400;"><strong>L'aplicació detectarà automàticament el servidor proxy i mostrarà trens FGC reals!</strong></p>
+    </div>
+
+    <div style="background: #d4edd4; border: 1px solid #b8ffb8; border-radius: 5px; padding: 12px; margin: 15px 0;">
+      <h5 style="margin-top: 0; color: #155724;">✅ Solució Manual: Utilitza les Dades FGC Directament!</h5>
+      <p style="margin: 8px 0; font-size: 13px;">Ja que pots accedir manualment a les dades FGC, aquí tens una solució directa:</p>
+
+      <div style="display: flex; flex-direction: column; gap: 8px; margin: 15px 0;">
+        <button onclick="openFGCJson()" style="background: #28a745; color: white; padding: 12px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;"><strong>🔗 PAS 1: Obrir Dades FGC</strong><br><small>Obre l'API FGC en una nova pestanya</small></button>
+        <button onclick="showFGCDataEntry()" style="background: #007bff; color: white; padding: 12px 15px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;"><strong>📝 PAS 2: Introduir Dades Manualment</strong><br><small>Copia i enganxa les dades JSON aquí</small></button>
+      </div>
+
+      <div id="fgc-manual-data-entry" style="display: none; margin: 15px 0; padding: 15px; background: #f8fff8; border-radius: 5px; border: 1px solid #b8ffb8;">
+        <h5 style="margin-top: 0; color: #155724;">📋 Com Copiar i Enganxar les Dades FGC:</h5>
+        <div style="display: flex; gap: 10px; margin: 10px 0; flex-wrap: wrap;">
+          <button onclick="copyFGCUrl()" style="background: #28a745; color: white; padding: 8px 12px; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;"><strong>🔗 Copiar URL FGC</strong></button>
+          <button onclick="copyFGCInstructions()" style="background: #17a2b8; color: white; padding: 8px 12px; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;"><strong>📋 Copiar Instruccions</strong></button>
+          <button onclick="clearFGCTextarea()" style="background: #6c757d; color: white; padding: 8px 12px; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;"><strong>🗑️ Netejar</strong></button>
+          <button onclick="shareFGCMapUrl()" style="background: #dc3545; color: white; padding: 8px 12px; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;"><strong>📤 Compartir Mapa</strong></button>
+        </div>
+
+        <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 3px; padding: 10px; margin: 10px 0; font-size: 12px;">
+          <strong>🔢 PASSOS FÀCILS:</strong><br>
+          1. Ves a la pestanya FGC que s'ha obert<br>
+          2. Prem <strong>Ctrl+A</strong> (seleccionar tot)<br>
+          3. Prem <strong>Ctrl+C</strong> (copiar)<br>
+          4. Torna aquí i prem <strong>Ctrl+V</strong> (enganxar)<br>
+          5. Clica <strong>"Processar Dades Reals"</strong>
+        </div>
+
+        <textarea id="fgc-manual-json-data" placeholder="Enganxa aquí les dades JSON de FGC (prem Ctrl+V)..." style="width: 100%; height: 120px; padding: 10px; border: 1px solid #90EE90; border-radius: 4px; font-family: monospace; font-size: 11px; resize: vertical;"></textarea>
+
+        <div style="display: flex; gap: 10px; margin-top: 10px;">
+          <button onclick="processFGCManualJsonData()" style="background: #dc3545; color: white; padding: 10px 15px; border: none; border-radius: 3px; cursor: pointer; font-size: 14px; flex: 1;"><strong>⚡ Processar Dades Reals</strong><br><small>Mostrar trens FGC reals al mapa</small></button>
+          <button onclick="testFGCSampleData()" style="background: #ffc107; color: black; padding: 10px 15px; border: none; border-radius: 3px; cursor: pointer; font-size: 14px;"><strong>🧪 Provar amb Dades d'Exemple</strong><br><small>Omple amb JSON de mostra</small></button>
+        </div>
+
+        <div id="fgc-json-status" style="margin-top: 10px; padding: 8px; background: #e9ecef; border-radius: 3px; font-size: 12px; color: #495057;">Status: Preparat per enganxar dades JSON</div>
+
+      </div>
+
+
+      <p style="margin: 8px 0; font-size: 12px; color: #155724;"><strong>URL de les dades: <code>https://dadesobertes.fgc.cat/api/explore/v2.1/console</code></strong></p>
+    </div>
+
+    <p style="font-size: 12px; color: #006400; margin-top: 10px;">Llicència: <a href="https://dadesobertes.fgc.cat/" target="_blank">Dades Obertes FGC</a> | Última actualització: 2025-12-27</p>
+  </div>
+
+	  <br><hr width="90%">
+
+	  <!-- GTFS - ajuda -->
+	  <A NAME="help_gtfs"></A>
+	  <h1 data-i18n="gtfs_help_title"><span class="fa fa-support"></span> Ajuda (GTFS)</h1>
+	  <p style="text-align:justify; margin-right:5px;" data-i18n="gtfs_help_text1">Des d'aquesta secció pots explorar conjunts de dades GTFS (General Transit Feed Specification) de transports públics de tot el món. GTFS és un format estàndard per compartir informació de transports públics.</p>
+
+	  <p style="text-align:justify; margin-right:5px;" data-i18n="gtfs_help_text2">Per començar, pots buscar conjunts de dades per ciutat, país o operador de transport, o simplement fer clic a "Mostrar tots" per veure totes les opcions disponibles.</p>
+
+	  <p style="text-align:justify; margin-right:5px;" data-i18n="gtfs_help_text3">Quan seleccionis un conjunt de dades, podràs explorar les rutes disponibles, veure les parades al mapa i fins i tot descarregar les dades completes per al teu ús.</p>
+
+	  <p style="text-align:justify; margin-right:5px;" data-i18n="gtfs_help_text4">Les dades GTFS provenen de l'API de Mobility Database i s'actualitzen regularment pels proveïdors de transport.</p>
+
+	  <br>
+	  <center><button style="background:#2a2a2a; color:white; padding:5px;" class="fa fa-arrow-up"
+          onClick="location.href='#gtfs_init'" data-i18n="gtfs_help_back"> Inici</button></center>
+	</div>
+
+
+	<!--VIQUIPÈDIA-->
+	<div class="sidebar-pane" id="wikipedia">
+	  <div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span>
+	  </div>
+	  <A NAME="IniciWiki"></A>
+	  <!--MODIFICAR AQUÍ-->
+	  <h1 id="wikipedia_title" data-i18n="wikipedia_title">Atenció</h1>
+	  <center><p><button onclick="updateWikipediaContent();" id="wikipedia_reload" data-i18n="wikipedia_reload">Actualitza</button></p></center>
+	  <!--MODIFICAR AQUÍ-->
+	  <div id="wikidata-content">
+	    <p data-i18n="wikipedia_search_first">Primer has de cercar un lloc per obtenir informació de Wikidata. Utilitza la <i class='fa fa-search'></i> cerca per seleccionar una ubicació.</p>
+	  </div>
+	  <center><a href="#IniciWiki" data-i18n="wikipedia_back">Torna a l'inici</a></p></center></p>
+	  <script>
+		function updateWikipediaContent() {
+			var titleElement = document.getElementById('wikipedia_title');
+			var reloadButton = document.getElementById('wikipedia_reload');
+			var contentDiv = document.getElementById('wikidata-content');
+
+			// Get current language
+			var currentLang = currentLanguage || 'ca';
+			var langNames = {ca: 'Wikidata', es: 'Wikidata', en: 'Wikidata'};
+
+			// Check if there's a selected route first
+			if (typeof currentSelectedRoute !== 'undefined' && currentSelectedRoute) {
+				// Show route-specific information
+				var routeName = currentSelectedRoute.name || currentSelectedRoute.id;
+				titleElement.textContent = routeName.replace(/'/g, "\\'") + getTranslation('wikipedia_to_wikidata', currentLang);
+				reloadButton.textContent = getTranslation('wikipedia_reload', currentLang);
+
+				contentDiv.innerHTML = "<p>" + (currentLang === 'es' ? 'Cargando información de Wikidata...' : currentLang === 'en' ? 'Loading Wikidata information...' : 'Carregant informació de Wikidata...') + "</p>";
+
+				// Fetch Wikidata information for the route
+				fetchRouteWikidataInfo(currentSelectedRoute, currentLang, function(data) {
+					displayWikidataInfo(data, contentDiv, currentLang);
+					// Add the clear button after content is loaded
+					setTimeout(function() {
+						var existingHtml = contentDiv.innerHTML;
+						var clearButtonHtml = "<div style='margin-bottom: 15px; text-align: center;'><button onclick='clearRouteFromWikidata()' style='background:#666; color:white; padding:6px 12px; border:none; border-radius:3px; cursor:pointer; font-size: 12px;'>" +
+							(currentLang === 'es' ? '← Volver a ubicación' : currentLang === 'en' ? '← Back to location' : '← Tornar a ubicació') + "</button></div>";
+						contentDiv.innerHTML = clearButtonHtml + existingHtml;
+					}, 100);
+				}, function(error) {
+					showNoWikidataSuggestions(currentSelectedRoute, contentDiv, currentLang);
+					// Add clear button even on error
+					setTimeout(function() {
+						var existingHtml = contentDiv.innerHTML;
+						var clearButtonHtml = "<div style='margin-bottom: 15px; text-align: center;'><button onclick='clearRouteFromWikidata()' style='background:#666; color:white; padding:6px 12px; border:none; border-radius:3px; cursor:pointer; font-size: 12px;'>" +
+							(currentLang === 'es' ? '← Volver a ubicación' : currentLang === 'en' ? '← Back to location' : '← Tornar a ubicació') + "</button></div>";
+						contentDiv.innerHTML = clearButtonHtml + existingHtml;
+					}, 100);
+				});
+			} else if (baseLocation && baseLocation.name !== "Vilanova i la Geltrú") {
+				// Show Wikidata for searched location
+				titleElement.textContent = baseLocation.name.replace(/'/g, "\\'") + getTranslation('wikipedia_to_wikidata', currentLang);
+				reloadButton.textContent = getTranslation('wikipedia_reload', currentLang);
+
+				contentDiv.innerHTML = "<p>" + (currentLang === 'es' ? 'Cargando información de Wikidata...' : currentLang === 'en' ? 'Loading Wikidata information...' : 'Carregant informació de Wikidata...') + "</p>";
+
+				// Fetch Wikidata information for the searched location
+				fetchWikidataInfo(baseLocation, currentLang, function(data) {
+					displayWikidataInfo(data, contentDiv, currentLang);
+				}, function(error) {
+					// Show helpful message about searching first when no Wikidata info is found
+					var noInfoMsgs = {
+						ca: "No s'ha trobat informació de Wikidata per aquesta ubicació. Proveu de cercar primer el lloc utilitzant la <i class='fa fa-search'></i> cerca per obtenir millors resultats.",
+						es: "No se encontró información de Wikidata para esta ubicación. Prueba a buscar primero el lugar utilizando la <i class='fa fa-search'></i> búsqueda para obtener mejores resultados.",
+						en: "No Wikidata information found for this location. Try searching for the place first using the <i class='fa fa-search'></i> search to get better results."
+					};
+					contentDiv.innerHTML = "<p>" + (noInfoMsgs[currentLang] || noInfoMsgs.ca) + "</p>";
+				});
+			} else {
+				// No route or location selected - show message to search first
+				contentDiv.innerHTML = "<p data-i18n='wikipedia_search_first'>" + getTranslation('wikipedia_search_first', currentLang) + "</p>";
+			}
+		}
+
+		// Function to clear route selection and show location info
+		function clearRouteFromWikidata() {
+			// Clear the current selected route
+			if (typeof currentSelectedRoute !== 'undefined') {
+				currentSelectedRoute = null;
+			}
+
+			// Reset Wikidata history
+			wikidataHistory = [];
+			currentWikidataEntity = null;
+
+			// Update the Wikipedia content to show location info
+			updateWikipediaContent();
+		}
+
+		function fetchRouteWikidataInfo(route, currentLang, successCallback, errorCallback) {
+			// Try different strategies to find Wikidata information for routes
+
+			// Strategy 0: Check if route has direct wikidata tag from OSM
+			if (route.wikidata) {
+				var qid = route.wikidata.replace(/^Q/, ''); // Remove Q prefix if present
+				if (!qid.startsWith('Q')) {
+					qid = 'Q' + qid;
+				}
+				console.log('Using OSM Wikidata tag:', qid);
+				fetchWikidataEntity(qid, successCallback, errorCallback);
+				return;
+			}
+
+			// Strategy 1: If route has OSM relation ID, try to find it via P402 (OSM relation ID)
+			// This should work for all types of relations, not just municipalities
+			if (route.osm_id && route.osm_type === 'relation') {
+				var langOrder = currentLang + ",[AUTO_LANGUAGE],ca,en,es";
+				var sparqlQuery = "SELECT ?item ?itemLabel WHERE { ?item wdt:P402 \"" + route.osm_id + "\" . SERVICE wikibase:label { bd:serviceParam wikibase:language \"" + langOrder + "\". } }";
+				var url = "https://query.wikidata.org/sparql?query=" + encodeURIComponent(sparqlQuery) + "&format=json";
+
+				$.ajax({
+					url: url,
+					dataType: "json",
+					success: function(data) {
+						if (data.results && data.results.bindings && data.results.bindings.length > 0) {
+							var qid = data.results.bindings[0].item.value.split('/').pop();
+							fetchWikidataEntity(qid, successCallback, errorCallback);
+						} else {
+							// Try strategy 2: search by route name
+							searchRouteWikidataByName(route, currentLang, successCallback, errorCallback);
+						}
+					},
+					error: function() {
+						// Fallback to name search
+						searchRouteWikidataByName(route, currentLang, successCallback, errorCallback);
+					}
+				});
+			} else {
+				// Strategy 2: Search by route name directly
+				searchRouteWikidataByName(route, currentLang, successCallback, errorCallback);
+			}
+		}
+
+		function showNoWikidataSuggestions(route, contentDiv, currentLang) {
+			var routeName = route.name || route.id || 'aquesta ruta';
+			var html = "<div style='background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px;'>";
+			html += "<h3 style='margin-top: 0; color: #666;'>" + getTranslation('wikidata_no_info_found', currentLang) + "</h3>";
+			html += "<p style='margin-bottom: 15px; color: #666;'>" + getTranslation('wikidata_no_info_suggestion', currentLang).replace('{route}', routeName) + "</p>";
+
+			// Show basic OSM information if available
+			if (route.tags) {
+				html += "<div style='background: #fff; padding: 10px; border-radius: 3px; margin-bottom: 15px; border: 1px solid #ddd;'>";
+				html += "<h4 style='margin-top: 0; color: #333;'>" + getTranslation('wikidata_osm_info', currentLang) + "</h4>";
+				html += "<table style='width: 100%;'>";
+
+				var relevantTags = ['name', 'ref', 'operator', 'network', 'colour', 'color', 'description'];
+				var hasRelevantTags = false;
+
+				relevantTags.forEach(function(tag) {
+					if (route.tags[tag]) {
+						html += "<tr><td style='font-weight: bold; padding: 2px 5px;'>" + tag + ":</td><td style='padding: 2px 5px;'>" + route.tags[tag] + "</td></tr>";
+						hasRelevantTags = true;
+					}
+				});
+
+				if (!hasRelevantTags) {
+					html += "<tr><td colspan='2' style='padding: 5px; color: #666;'>" + getTranslation('wikidata_no_osm_info', currentLang) + "</td></tr>";
+				}
+
+				html += "</table>";
+				html += "</div>";
+			}
+
+			// Search suggestions
+			html += "<div style='background: #fff; padding: 10px; border-radius: 3px; border: 1px solid #ddd;'>";
+			html += "<h4 style='margin-top: 0; color: #333;'>" + getTranslation('wikidata_search_suggestions', currentLang) + "</h4>";
+			html += "<p style='margin-bottom: 10px; color: #666;'>" + getTranslation('wikidata_try_manual_search', currentLang) + "</p>";
+			// Escape special characters for onclick attribute
+			var escapedRouteName = routeName.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+			var escapedCurrentLang = currentLang.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+			html += "<button onclick='manualWikidataSearch(\"" + escapedRouteName + "\", \"" + escapedCurrentLang + "\")' style='background:#2a2a2a; color:white; padding:8px 12px; border:none; border-radius:3px; cursor:pointer; margin-right: 10px;'>" + getTranslation('wikidata_manual_search', currentLang) + "</button>";
+			html += "</div>";
+
+			html += "</div>";
+			contentDiv.innerHTML = html;
+		}
+
+		function manualWikidataSearch(searchTerm, currentLang) {
+			var searchUrl = "https://www.wikidata.org/w/api.php?action=wbsearchentities&search=" + encodeURIComponent(searchTerm) + "&language=" + currentLang + "&limit=10&type=item&format=json&origin=*";
+
+			$.ajax({
+				url: searchUrl,
+				dataType: "json",
+				success: function(data) {
+					if (data.search && data.search.length > 0) {
+						showManualSearchResults(data.search, currentLang);
+					} else {
+						alert(getTranslation('wikidata_no_search_results', currentLang));
+					}
+				},
+				error: function() {
+					alert(getTranslation('wikidata_search_error', currentLang));
+				}
+			});
+		}
+
+		function showManualSearchResults(results, currentLang) {
+			var contentDiv = document.getElementById('wikidata-content');
+			var html = "<div style='background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px;'>";
+			html += "<h3 style='margin-top: 0; color: #333;'>" + getTranslation('wikidata_search_results', currentLang) + "</h3>";
+			html += "<p style='margin-bottom: 15px; color: #666;'>" + getTranslation('wikidata_select_result', currentLang) + "</p>";
+			html += "<div style='display: grid; gap: 10px;'>";
+
+			results.forEach(function(result, index) {
+				if (index >= 5) return; // Limit to 5 results
+
+				var label = (result.labels && result.labels[currentLang]) ? result.labels[currentLang].value :
+				           (result.labels && result.labels.en) ? result.labels.en.value :
+				           result.label || result.id;
+
+				var description = (result.descriptions && result.descriptions[currentLang]) ? result.descriptions[currentLang].value :
+				                 (result.descriptions && result.descriptions.en) ? result.descriptions.en.value :
+				                 result.description || "";
+
+				var escapedResultId = result.id.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+				html += "<div style='background: #fff; border: 1px solid #ddd; border-radius: 5px; padding: 12px; cursor: pointer; transition: background-color 0.2s;' onclick='selectManualWikidataResult(\"" + escapedResultId + "\")' onmouseover='this.style.backgroundColor=\"#f0f8ff\"' onmouseout='this.style.backgroundColor=\"#fff\"'>";
+				html += "<div style='font-weight: bold; color: #0066cc; margin-bottom: 4px;'>" + label + "</div>";
+				if (description) {
+					html += "<div style='color: #666; font-size: 14px;'>" + description + "</div>";
+				}
+				html += "<div style='color: #999; font-size: 12px; margin-top: 4px;'>Wikidata: " + result.id + "</div>";
+				html += "</div>";
+			});
+
+			html += "</div>";
+			var escapedCurrentLangForBack = currentLang.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+			html += "<button onclick='showNoWikidataSuggestions(currentSelectedRoute, document.getElementById(\"wikidata-content\"), \"" + escapedCurrentLangForBack + "\")' style='margin-top: 15px; background:#666; color:white; padding:8px 12px; border:none; border-radius:3px; cursor:pointer;'>" + getTranslation('wikidata_back', currentLang) + "</button>";
+			html += "</div>";
+
+			contentDiv.innerHTML = html;
+		}
+
+		function selectManualWikidataResult(qid) {
+			var contentDiv = document.getElementById('wikidata-content');
+			var currentLang = currentLanguage || 'ca';
+
+			contentDiv.innerHTML = "<p>" + (currentLang === 'es' ? 'Cargando información...' : currentLang === 'en' ? 'Loading information...' : 'Carregant informació...') + "</p>";
+
+			fetchWikidataEntity(qid, function(data) {
+				displayWikidataInfo(data, contentDiv, currentLang);
+			}, function(error) {
+				contentDiv.innerHTML = "<p>" + (currentLang === 'es' ? 'Error cargando datos: ' : currentLang === 'en' ? 'Error loading data: ' : 'Error carregant dades: ') + error + "</p>";
+			});
+		}
+
+		function searchRouteWikidataByName(route, currentLang, successCallback, errorCallback) {
+			var routeName = route.name || route.id || '';
+			
+			// Create multiple search variations for better results
+			var searchVariations = [];
+			
+			// Original route name
+			if (routeName) {
+				searchVariations.push(routeName);
+			}
+			
+			// Cleaned version (remove only parentheses content)
+			var cleanedName = routeName.replace(/\(.*?\)/g, '').trim();
+			if (cleanedName !== routeName && cleanedName) {
+				searchVariations.push(cleanedName);
+			}
+			
+			// Try different language-specific variations
+			if (routeName.toLowerCase().indexOf('r2') !== -1) {
+				// For R2 routes, try with proper accents
+				if (currentLang === 'ca') {
+					searchVariations.push('línia R2 sud');
+					searchVariations.push('linia R2 sud');
+				} else if (currentLang === 'es') {
+					searchVariations.push('línea R2 sud');
+					searchVariations.push('linea R2 sud');
+				} else {
+					searchVariations.push('líne R2 sud');
+					searchVariations.push('line R2 sud');
+				}
+			}
+			
+			// Remove duplicates and empty strings
+			searchVariations = searchVariations.filter(function(item, index) {
+				return item && item.trim() && searchVariations.indexOf(item) === index;
+			});
+			
+			// Try each search variation until we find results
+			var tryNextSearch = function(index) {
+				if (index >= searchVariations.length) {
+					errorCallback(getTranslatedText("No s'ha trobat cap element a Wikidata", currentLang));
+					return;
+				}
+				
+				var searchTerm = searchVariations[index];
+				var searchUrl = "https://www.wikidata.org/w/api.php?action=wbsearchentities&search=" + encodeURIComponent(searchTerm) + "&language=" + currentLang + "&limit=5&type=item&format=json&origin=*";
+
+				$.ajax({
+					url: searchUrl,
+					dataType: "json",
+					success: function(data) {
+						var filteredResults = filterRouteWikidataResults(data.search || [], route, currentLang);
+
+						if (filteredResults.length > 0) {
+							var qid = filteredResults[0].id;
+							fetchWikidataEntity(qid, successCallback, errorCallback);
+						} else {
+							// Try next variation
+							tryNextSearch(index + 1);
+						}
+					},
+					error: function() {
+						// Try next variation
+						tryNextSearch(index + 1);
+					}
+				});
+			};
+			
+			// Start with first search variation
+			tryNextSearch(0);
+		}
+
+		function searchRouteWikidataByNameOriginal(route, currentLang, successCallback, errorCallback) {
+			var routeName = route.name || route.id || '';
+			var searchUrl = "https://www.wikidata.org/w/api.php?action=wbsearchentities&search=" + encodeURIComponent(routeName) + "&language=" + currentLang + "&limit=5&type=item&format=json&origin=*";
+
+			$.ajax({
+				url: searchUrl,
+				dataType: "json",
+				success: function(data) {
+					var filteredResults = filterRouteWikidataResults(data.search || [], route, currentLang);
+
+					if (filteredResults.length > 0) {
+						var qid = filteredResults[0].id;
+						fetchWikidataEntity(qid, successCallback, errorCallback);
+					} else {
+						errorCallback(getTranslatedText("No s'ha trobat cap element a Wikidata", currentLang));
+					}
+				},
+				error: function() {
+					errorCallback(getTranslatedText("Error en la cerca a Wikidata", currentLang));
+				}
+			});
+		}
+
+		function filterRouteWikidataResults(results, route, currentLang) {
+			if (!results || results.length === 0) return [];
+
+			var filtered = results.filter(function(result) {
+				var label = result.label || "";
+				var description = result.description || "";
+
+				// Skip astronomical objects
+				if (description.toLowerCase().indexOf('crater') !== -1 ||
+					description.toLowerCase().indexOf('asteroid') !== -1 ||
+					description.toLowerCase().indexOf('venus') !== -1 ||
+					description.toLowerCase().indexOf('moon') !== -1 ||
+					description.toLowerCase().indexOf('planet') !== -1) {
+					return false;
+				}
+
+				// Skip disambiguation pages
+				if (description.toLowerCase().indexOf('disambiguation') !== -1 ||
+					description.toLowerCase().indexOf('desambiguación') !== -1 ||
+					description.toLowerCase().indexOf('desambiguació') !== -1) {
+					return false;
+				}
+
+				// Include route-related items (expanded keywords)
+				var routeKeywords = [
+					'route', 'ruta', 'camí', 'camino', 'path', 'trail', 'pista', 
+					'senderista', 'hiking', 'cycling', 'bici', 'bicycle', 'walking',
+					'footpath', 'track', 'way', 'via', 'voie', 'weg',
+					'railway', 'railroad', 'train', 'metro', 'subway', 'tram',
+					'tren', 'ferrocarril', 'ferrocarril', 'metro', 'tranvía',
+					'line', 'línea', 'línia', 'linea', 'commuter', 'rodalies',
+					'cercanías', 'suburbano', 'rail', 'transport', 'public'
+				];
+
+				var hasRouteKeyword = routeKeywords.some(function(keyword) {
+					return description.toLowerCase().indexOf(keyword) !== -1 || 
+						   label.toLowerCase().indexOf(keyword) !== -1;
+				});
+
+				// Include if it has route keywords or if it's a very good match
+				var searchTermLower = (route.name || route.id || '').toLowerCase();
+				var labelLower = label.toLowerCase();
+
+				var exactMatch = labelLower === searchTermLower;
+				var containsMatch = labelLower.indexOf(searchTermLower) !== -1;
+
+				// More permissive matching for transport routes
+				return hasRouteKeyword || exactMatch || (containsMatch && description.length > 5);
+			});
+
+			// Sort by relevance
+			filtered.sort(function(a, b) {
+				var aLabel = (a.label || "").toLowerCase();
+				var bLabel = (b.label || "").toLowerCase();
+				var searchLower = (route.name || route.id || '').toLowerCase();
+
+				// Exact matches first
+				var aExact = aLabel === searchLower;
+				var bExact = bLabel === searchLower;
+				if (aExact && !bExact) return -1;
+				if (bExact && !aExact) return 1;
+
+				// Route-related items next
+				var routeKeywords = ['route', 'ruta', 'camí', 'path', 'trail', 'hiking', 'cycling', 'railway', 'train', 'line', 'línea', 'línia'];
+				var aHasRouteKeyword = routeKeywords.some(function(kw) {
+					return (a.description || '').toLowerCase().indexOf(kw) !== -1;
+				});
+				var bHasRouteKeyword = routeKeywords.some(function(kw) {
+					return (b.description || '').toLowerCase().indexOf(kw) !== -1;
+				});
+
+				if (aHasRouteKeyword && !bHasRouteKeyword) return -1;
+				if (bHasRouteKeyword && !aHasRouteKeyword) return 1;
+
+				// Starts with search term
+				var aStarts = aLabel.indexOf(searchLower) === 0;
+				var bStarts = bLabel.indexOf(searchLower) === 0;
+				if (aStarts && !bStarts) return -1;
+				if (bStarts && !aStarts) return 1;
+
+				return 0;
+			});
+
+			return filtered.slice(0, 3); // Return top 3 most relevant results
+		}
+
+		// Debug function to test R2 sud search (can be called from browser console)
+		function testR2SudSearch() {
+			var testRoute = {
+				name: 'R2 sud',
+				id: 'R2 sud',
+				osm_id: '5758580',
+				osm_type: 'relation'
+			};
+			
+			console.log('Testing R2 sud search...');
+			fetchRouteWikidataInfo(testRoute, 'ca', function(data) {
+				console.log('Success! Found:', data);
+			}, function(error) {
+				console.error('Error:', error);
+			});
+		}
+
+		// Debug function to test direct Q114215437 display
+		function testQ114215437() {
+			console.log('Testing Q114215437 display...');
+			fetchWikidataEntity('Q114215437', function(data) {
+				console.log('Success! Entity data:', data);
+				var contentDiv = document.getElementById('wikidata-content');
+				displayWikidataInfo(data, contentDiv, 'ca');
+			}, function(error) {
+				console.error('Error:', error);
+			});
+		}
+
+		function fetchWikidataInfo(location, currentLang, successCallback, errorCallback) {
+			var osmId = location.osm_id;
+			var osmType = location.osm_type;
+
+			if (osmId && osmType === 'relation' && (location.type === 'city' || location.type === 'municipality')) {
+				// For municipalities with OSM relation ID, query Wikidata by P402 (OSM relation ID)
+				var langOrder = currentLang + ",[AUTO_LANGUAGE],ca,en,es";
+				var sparqlQuery = "SELECT ?item ?itemLabel WHERE { ?item wdt:P402 \"" + osmId + "\" . SERVICE wikibase:label { bd:serviceParam wikibase:language \"" + langOrder + "\". } }";
+				var url = "https://query.wikidata.org/sparql?query=" + encodeURIComponent(sparqlQuery) + "&format=json";
+
+				$.ajax({
+					url: url,
+					dataType: "json",
+					success: function(data) {
+						if (data.results.bindings.length > 0) {
+							var qid = data.results.bindings[0].item.value.split('/').pop();
+							fetchWikidataEntity(qid, successCallback, errorCallback);
+						} else {
+							// Fallback to search by name
+							searchWikidataByName(location.name, currentLang, successCallback, errorCallback);
+						}
+					},
+					error: function() {
+						errorCallback("Error en la consulta SPARQL");
+					}
+				});
+			} else {
+				// For other locations, search by name
+				searchWikidataByName(location.name, currentLang, successCallback, errorCallback);
+			}
+		}
+
+		function searchWikidataByName(name, currentLang, successCallback, errorCallback) {
+			// Extract main name by splitting on commas and taking first part
+			var mainName = name.split(',')[0].trim();
+
+			// Use current language for search with better fallback logic
+			var searchLang = currentLang || 'ca';
+			var fallbackLangs = ['ca', 'es', 'en'];
+
+			// First, try to search in the current language
+			var url = "https://www.wikidata.org/w/api.php?action=wbsearchentities&search=" + encodeURIComponent(mainName) + "&language=" + searchLang + "&limit=10&type=item&format=json&origin=*";
+
+			$.ajax({
+				url: url,
+				dataType: "json",
+				success: function(data) {
+					var filteredResults = filterRelevantWikidataResults(data.search || [], mainName, currentLang);
+
+					if (filteredResults.length > 0) {
+						if (filteredResults.length === 1) {
+							// Only one relevant result, proceed directly
+							var qid = filteredResults[0].id;
+							fetchWikidataEntity(qid, successCallback, errorCallback);
+						} else {
+							// Multiple relevant results, show selection
+							showWikidataSelection(filteredResults, currentLang, successCallback, errorCallback);
+						}
+					} else {
+						errorCallback(getTranslatedText("No s'ha trobat cap element a Wikidata", currentLang));
+					}
+				},
+				error: function() {
+					errorCallback(getTranslatedText("Error en la cerca a Wikidata", currentLang));
+				}
+			});
+		}
+
+		function filterRelevantWikidataResults(results, searchName, currentLang) {
+			if (!results || results.length === 0) return [];
+
+			// Filter out obviously irrelevant results
+			var filtered = results.filter(function(result) {
+				var label = result.label || "";
+				var description = result.description || "";
+
+				// Skip astronomical objects (Venus crater, etc.)
+				if (description.toLowerCase().indexOf('crater') !== -1 ||
+					description.toLowerCase().indexOf('asteroid') !== -1 ||
+					description.toLowerCase().indexOf('venus') !== -1 ||
+					description.toLowerCase().indexOf('moon') !== -1 ||
+					description.toLowerCase().indexOf('planet') !== -1) {
+					return false;
+				}
+
+				// Skip if it's a disambiguation page
+				if (description.toLowerCase().indexOf('disambiguation') !== -1 ||
+					description.toLowerCase().indexOf('desambiguación') !== -1 ||
+					description.toLowerCase().indexOf('desambiguació') !== -1) {
+					return false;
+				}
+
+			// Include if label contains the search term (case insensitive)
+			var searchTermLower = searchName.toLowerCase();
+			var labelLower = label.toLowerCase();
+
+			// Exact match or contains the search term
+			if (labelLower === searchTermLower || labelLower.indexOf(searchTermLower) !== -1) {
+				return true;
+			}
+
+			// Also include if description mentions it
+			if (description.toLowerCase().indexOf(searchTermLower) !== -1) {
+				return true;
+			}
+
+			// Include Wikipedia categories that match
+			if (labelLower.indexOf('category:') !== -1 && labelLower.indexOf(searchTermLower) !== -1) {
+				return true;
+			}
+
+			// Include municipality-related items even if they don't exactly match
+			if ((description.toLowerCase().indexOf('municipality') !== -1 ||
+				 description.toLowerCase().indexOf('municipio') !== -1 ||
+				 description.toLowerCase().indexOf('municipi') !== -1) &&
+				labelLower.length > 3) {
+				return true;
+			}
+
+			return false;
+			});
+
+			// Sort by relevance
+			filtered.sort(function(a, b) {
+				var aLabel = (a.label || "").toLowerCase();
+				var bLabel = (b.label || "").toLowerCase();
+				var aDesc = (a.description || "").toLowerCase();
+				var bDesc = (b.description || "").toLowerCase();
+				var searchLower = searchName.toLowerCase();
+
+				// Exact matches first
+				var aExact = aLabel === searchLower;
+				var bExact = bLabel === searchLower;
+				if (aExact && !bExact) return -1;
+				if (bExact && !aExact) return 1;
+
+				// Municipality/city matches next
+				var aIsMunicipality = aDesc.indexOf('municipality') !== -1 || aDesc.indexOf('municipio') !== -1 || aDesc.indexOf('municipi') !== -1 || aDesc.indexOf('city') !== -1 || aDesc.indexOf('ciutat') !== -1 || aDesc.indexOf('ciudad') !== -1;
+				var bIsMunicipality = bDesc.indexOf('municipality') !== -1 || bDesc.indexOf('municipio') !== -1 || bDesc.indexOf('municipi') !== -1 || bDesc.indexOf('city') !== -1 || bDesc.indexOf('ciutat') !== -1 || bDesc.indexOf('ciudad') !== -1;
+
+				if (aIsMunicipality && !bIsMunicipality) return -1;
+				if (bIsMunicipality && !aIsMunicipality) return 1;
+
+				// Starts with search term
+				var aStarts = aLabel.indexOf(searchLower) === 0;
+				var bStarts = bLabel.indexOf(searchLower) === 0;
+				if (aStarts && !bStarts) return -1;
+				if (bStarts && !aStarts) return 1;
+
+				return 0;
+			});
+
+			return filtered.slice(0, 10); // Return top 10 most relevant results to include more options
+		}
+
+		var wikidataCallbacks = null;
+
+		function showWikidataSelection(results, currentLang, successCallback, errorCallback) {
+			wikidataCallbacks = {success: successCallback, error: errorCallback};
+			var html = "<div style='background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px;'>";
+			html += "<h3 style='margin-top: 0; color: #333;'>" + getTranslation('wikidata_multiple_results') + "</h3>";
+			html += "<p style='margin-bottom: 15px; color: #666;'>" + getTranslation('wikidata_select_one') + "</p>";
+			html += "<div style='display: grid; gap: 10px;'>";
+
+			results.forEach(function(result, index) {
+				// Get label in current language or fallback to English
+				var label = (result.labels && result.labels[currentLang]) ? result.labels[currentLang].value :
+				           (result.labels && result.labels.en) ? result.labels.en.value :
+				           result.label || result.id;
+
+				// Get description in current language or fallback to English
+				var description = (result.descriptions && result.descriptions[currentLang]) ? result.descriptions[currentLang].value :
+				                 (result.descriptions && result.descriptions.en) ? result.descriptions.en.value :
+				                 result.description || "";
+
+				var escapedResultId = result.id.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+				html += "<div style='background: #fff; border: 1px solid #ddd; border-radius: 5px; padding: 12px; cursor: pointer; transition: background-color 0.2s;' onclick='selectWikidataResult(\"" + escapedResultId + "\")' onmouseover='this.style.backgroundColor=\"#f0f8ff\"' onmouseout='this.style.backgroundColor=\"#fff\"'>";
+				html += "<div style='font-weight: bold; color: #0066cc; margin-bottom: 4px;'>" + label + "</div>";
+				if (description) {
+					html += "<div style='color: #666; font-size: 14px;'>" + description + "</div>";
+				}
+				html += "<div style='color: #999; font-size: 12px; margin-top: 4px;'>Wikidata: " + result.id + "</div>";
+				html += "</div>";
+			});
+
+			html += "</div></div>";
+			document.getElementById('wikidata-content').innerHTML = html;
+		}
+
+		function selectWikidataResult(qid) {
+			if (wikidataCallbacks) {
+				fetchWikidataEntity(qid, wikidataCallbacks.success, wikidataCallbacks.error);
+				wikidataCallbacks = null;
+			}
+		}
+
+		function fetchWikidataEntity(qid, successCallback, errorCallback) {
+			var currentLang = currentLanguage || 'ca';
+			// Request data with all language variants, all sitelinks, and full claims with nested entities
+			var url = "https://www.wikidata.org/w/api.php?action=wbgetentities&ids=" + qid + "&props=labels|descriptions|claims|sitelinks&languages=" + currentLang + "|ca|es|en&format=json&origin=*";
+
+			$.ajax({
+				url: url,
+				dataType: "json",
+				success: function(data) {
+					if (data.entities && data.entities[qid]) {
+						// Enhance claims with nested entity information
+						var entity = data.entities[qid];
+						enhanceEntityWithNestedData(entity, currentLang);
+						successCallback(entity);
+					} else {
+						errorCallback("No s'han trobat dades per a l'element " + qid);
+					}
+				},
+				error: function() {
+					errorCallback("Error carregant les dades de l'element Wikidata");
+				}
+			});
+		}
+
+		function enhanceEntityWithNestedData(entity, currentLang) {
+			if (!entity.claims) return;
+
+			// For each claim that references another entity, add the nested entity data
+			Object.keys(entity.claims).forEach(function(propertyId) {
+				var claims = entity.claims[propertyId];
+				claims.forEach(function(claim) {
+					if (claim.mainsnak && claim.mainsnak.datavalue &&
+						claim.mainsnak.datavalue.type === 'wikibase-entityid' &&
+						claim.mainsnak.datavalue.value) {
+
+						// Initialize nested entity structure if it doesn't exist
+						if (!claim.mainsnak.datavalue.value.labels) {
+							claim.mainsnak.datavalue.value.labels = {};
+						}
+						if (!claim.mainsnak.datavalue.value.descriptions) {
+							claim.mainsnak.datavalue.value.descriptions = {};
+						}
+
+						// For now, we'll rely on the labels that come with the entity data
+						// In a full implementation, you would fetch complete data for each related entity
+						// But for performance reasons, we use what's available in the API response
+
+						// If no labels are available in the nested entity, set fallback to QID
+						var entityId = claim.mainsnak.datavalue.value.id;
+						if (!claim.mainsnak.datavalue.value.labels[currentLang] &&
+							!claim.mainsnak.datavalue.value.labels.en &&
+							!claim.mainsnak.datavalue.value.labels.ca &&
+							!claim.mainsnak.datavalue.value.labels.es) {
+							// Create a basic label structure as fallback
+							claim.mainsnak.datavalue.value.labels[currentLang] = {
+								language: currentLang,
+								value: entityId // Use QID as fallback
+							};
+						}
+					}
+				});
+			});
+		}
+
+		function displayWikidataInfo(entity, contentDiv, currentLang) {
+			var claims = entity.claims || {};
+
+			// Check if this is a transport route (has transport-related properties)
+			var isTransportRoute = claims.P31 && claims.P31.some(function(claim) {
+				return claim.mainsnak.datavalue.value.id === 'Q124130104' || // Instance of: railway line
+					   claim.mainsnak.datavalue.value.id === 'Q55654238' || // Instance of: commuter rail line
+					   (claims.P154 && claims.P154.length > 0) || // Has logo
+					   (claims.P1671 && claims.P1671.length > 0) || // Has route code
+					   (claims.P16 && claims.P16.length > 0); // Part of transport network
+			});
+
+			if (isTransportRoute) {
+				displayTransportRouteInfo(entity, contentDiv, currentLang);
+			} else {
+				displayLocationInfo(entity, contentDiv, currentLang);
+			}
+
+			// Add related entities section if there are related items
+			addRelatedEntitiesSection(entity, contentDiv, currentLang);
+		}
+
+		function displayTransportRouteInfo(entity, contentDiv, currentLang) {
+			var claims = entity.claims || {};
+			var html = "<div style='margin-bottom: 20px;'>";
+
+			// Add back button if there's history
+			if (wikidataHistory.length > 0) {
+				html += "<div style='margin-bottom: 15px;'>";
+				html += "<button onclick='goBackToPreviousEntity()' style='background:#666; color:white; padding:6px 12px; border:none; border-radius:3px; cursor:pointer; font-size: 12px;'>&larr; " + (currentLang === 'es' ? 'Volver' : currentLang === 'en' ? 'Back' : 'Torna') + "</button>";
+				html += "</div>";
+			}
+
+			// Helper function to extract entity labels from Wikidata nested data
+		// Cache for entity labels to avoid repeated API calls
+		var entityLabelCache = {};
+
+		function getEntityLabel(entityData, preferredLang) {
+			if (!entityData) return '';
+
+			var entityId = entityData.id;
+			if (!entityId) return '';
+
+			// Check cache first
+			if (entityLabelCache[entityId] && entityLabelCache[entityId][preferredLang]) {
+				return entityLabelCache[entityId][preferredLang];
+			}
+
+			// Try to get from entity data directly
+			if (entityData.labels) {
+				// Try preferred language first
+				if (entityData.labels[preferredLang] && entityData.labels[preferredLang].value) {
+					cacheEntityLabel(entityId, preferredLang, entityData.labels[preferredLang].value);
+					return entityData.labels[preferredLang].value;
+				}
+
+				// Try English as fallback
+				if (entityData.labels.en && entityData.labels.en.value) {
+					cacheEntityLabel(entityId, preferredLang, entityData.labels.en.value);
+					return entityData.labels.en.value;
+				}
+
+				// Try Catalan as another fallback
+				if (entityData.labels.ca && entityData.labels.ca.value) {
+					cacheEntityLabel(entityId, preferredLang, entityData.labels.ca.value);
+					return entityData.labels.ca.value;
+				}
+
+				// Try Spanish as another fallback
+				if (entityData.labels.es && entityData.labels.es.value) {
+					cacheEntityLabel(entityId, preferredLang, entityData.labels.es.value);
+					return entityData.labels.es.value;
+				}
+			}
+
+			// Last resort: return the entity ID
+			return entityId;
+		}
+
+		function cacheEntityLabel(entityId, lang, label) {
+			if (!entityLabelCache[entityId]) {
+				entityLabelCache[entityId] = {};
+			}
+			entityLabelCache[entityId][lang] = label;
+		}
+
+			// Header with title and logo
+			html += "<div style='display: flex; align-items: flex-start; margin-bottom: 15px;'>";
+			html += "<div style='flex: 1;'>";
+
+			if (entity.labels) {
+				var title = entity.labels[currentLang] ? entity.labels[currentLang].value : (entity.labels.en ? entity.labels.en.value : entity.id);
+				html += "<h2 style='margin: 0 0 10px 0;'>" + title + "</h2>";
+			}
+
+			html += "<p style='margin: 5px 0;'><strong>" + getTranslation('wikidata_item', currentLang) + "</strong> <a href='https://www.wikidata.org/wiki/" + entity.id + "' target='_blank'>" + entity.id + "</a></p>";
+
+			if (entity.descriptions) {
+				var description = entity.descriptions[currentLang] ? entity.descriptions[currentLang].value : (entity.descriptions.en ? entity.descriptions.en.value : "");
+				if (description) {
+					html += "<p style='margin: 5px 0; font-style: italic;'>" + description + "</p>";
+				}
+			}
+
+			html += "</div>";
+
+			// Route logo (P154)
+			if (claims.P154 && claims.P154.length > 0) {
+				var logoFile = claims.P154[0].mainsnak.datavalue.value;
+				var logoUrl = "https://commons.wikimedia.org/wiki/Special:FilePath/" + encodeURIComponent(logoFile) + "?width=120";
+				html += "<div style='margin-left: 20px;'><img src='" + logoUrl + "' alt='Route Logo' style='max-width:120px; max-height:80px; border: 1px solid #ccc; border-radius: 4px;'></div>";
+			}
+
+			html += "</div></div>";
+
+			// Route Information
+			html += "<div style='background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px;'>";
+			html += "<h3 style='margin-top: 0; color: #333;'>" + getTranslation('wikidata_route_info', currentLang) + "</h3>";
+			html += "<div style='display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;'>";
+
+			// Route code (P1671)
+			if (claims.P1671 && claims.P1671.length > 0) {
+				var routeCode = claims.P1671[0].mainsnak.datavalue.value;
+				html += "<div><strong>" + getTranslation('wikidata_route_code', currentLang) + "</strong><br><span style='font-size: 1.2em; font-weight: bold; color: #0066cc;'>" + routeCode + "</span></div>";
+			}
+
+			// Route color (P465)
+			if (claims.P465 && claims.P465.length > 0) {
+				var routeColor = claims.P465[0].mainsnak.datavalue.value;
+				html += "<div><strong>" + getTranslation('wikidata_route_color', currentLang) + "</strong><br><div style='display: flex; align-items: center;'><div style='width: 30px; height: 20px; background-color: #" + routeColor + "; border: 1px solid #ccc; margin-right: 10px;'></div><span>#" + routeColor + "</span></div></div>";
+			}
+
+			// Transport network (P16)
+			if (claims.P16 && claims.P16.length > 0) {
+				var transportNetworkEntity = claims.P16[0].mainsnak.datavalue.value;
+				var transportNetworkLabel = getEntityLabel(transportNetworkEntity, currentLang);
+				var displayText = (transportNetworkLabel && transportNetworkLabel !== transportNetworkEntity.id) ?
+					transportNetworkLabel + " (" + transportNetworkEntity.id + ")" : transportNetworkEntity.id;
+				var escapedId = transportNetworkEntity.id.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+				html += "<div><strong>" + getTranslation('wikidata_transport_network', currentLang) + "</strong><br><a href='#' onclick='loadWikidataEntity(\"" + escapedId + "\")' style='color: #0066cc; cursor: pointer;'>" + displayText + "</a></div>";
+			}
+
+			// Operator (P137)
+			if (claims.P137 && claims.P137.length > 0) {
+				var operatorEntity = claims.P137[0].mainsnak.datavalue.value;
+				var operatorLabel = getEntityLabel(operatorEntity, currentLang);
+				var displayText = (operatorLabel && operatorLabel !== operatorEntity.id) ?
+					operatorLabel + " (" + operatorEntity.id + ")" : operatorEntity.id;
+				var escapedId = operatorEntity.id.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+				html += "<div><strong>" + getTranslation('wikidata_operator', currentLang) + "</strong><br><a href='#' onclick='loadWikidataEntity(\"" + escapedId + "\")' style='color: #0066cc; cursor: pointer;'>" + displayText + "</a></div>";
+			}
+
+			// Part of transport network (P361)
+			if (claims.P361 && claims.P361.length > 0) {
+				var networkEntity = claims.P361[0].mainsnak.datavalue.value;
+				var networkLabel = getEntityLabel(networkEntity, currentLang);
+				var displayText = (networkLabel && networkLabel !== networkEntity.id) ?
+					networkLabel + " (" + networkEntity.id + ")" : networkEntity.id;
+				var escapedId = networkEntity.id.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+				html += "<div><strong>" + (getTranslation('wikidata_part_of', currentLang) || 'Part of') + " " + getTranslation('wikidata_transport_network', currentLang).toLowerCase() + "</strong><br><a href='#' onclick='loadWikidataEntity(\"" + escapedId + "\")' style='color: #0066cc; cursor: pointer;'>" + displayText + "</a></div>";
+			}
+
+			// Country (P17)
+			if (claims.P17 && claims.P17.length > 0) {
+				var countryEntity = claims.P17[0].mainsnak.datavalue.value;
+				var countryLabel = getEntityLabel(countryEntity, currentLang);
+				var displayText = (countryLabel && countryLabel !== countryEntity.id) ?
+					countryLabel + " (" + countryEntity.id + ")" : countryEntity.id;
+				var escapedId = countryEntity.id.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+				html += "<div><strong>" + getTranslation('wikidata_country', currentLang) + "</strong><br><a href='#' onclick='loadWikidataEntity(\"" + escapedId + "\")' style='color: #0066cc; cursor: pointer;'>" + displayText + "</a></div>";
+			}
+
+			html += "</div></div>";
+
+			// Wikipedia articles - enhanced for transport routes
+			html += "<div style='background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px;'>";
+			html += "<h3 style='margin-top: 0; color: #333;'>" + getTranslation('wikidata_wikipedia_articles', currentLang) + "</h3>";
+			html += "<div style='display: flex; flex-direction: column; gap: 10px;'>";
+
+			var sitelinks = entity.sitelinks || {};
+			var wikiLinks = [currentLang + 'wiki', 'cawiki', 'eswiki', 'enwiki', 'frwiki', 'itwiki', 'ptwiki'];
+			var hasWikiLinks = false;
+
+			wikiLinks.forEach(function(wiki) {
+				if (sitelinks[wiki]) {
+					var lang = wiki.replace('wiki', '');
+					var title = sitelinks[wiki].title;
+					var url = "https://" + lang + ".wikipedia.org/wiki/" + encodeURIComponent(title.replace(/ /g, '_'));
+					var langName = getLanguageName(lang);
+
+					// Check if this might be the main article for this route
+					var isMainArticle = (lang === currentLang) ||
+									   (title.toLowerCase().indexOf('r2') !== -1 && title.toLowerCase().indexOf('rodalia') !== -1) ||
+									   (title.toLowerCase().indexOf('línia') !== -1 || title.toLowerCase().indexOf('línea') !== -1 || title.toLowerCase().indexOf('line') !== -1);
+
+					var emphasis = isMainArticle ? "font-weight: bold; color: #0066cc;" : "color: #0066cc;";
+					html += "<a href='" + url + "' target='_blank' style='text-decoration: underline; " + emphasis + "'>" + langName.charAt(0).toUpperCase() + langName.slice(1) + ": " + title + "</a>";
+					hasWikiLinks = true;
+				}
+			});
+
+			// Also show operator's Wikipedia articles if available
+			if (claims.P137 && claims.P137.length > 0 && claims.P137[0].mainsnak.datavalue.value.sitelinks) {
+				var operatorSitelinks = claims.P137[0].mainsnak.datavalue.value.sitelinks;
+				var operatorName = claims.P137[0].mainsnak.datavalue.value.labels ?
+					(claims.P137[0].mainsnak.datavalue.value.labels[currentLang] ||
+					 claims.P137[0].mainsnak.datavalue.value.labels.en ||
+					 claims.P137[0].mainsnak.datavalue.value.labels.ca ||
+					 claims.P137[0].mainsnak.datavalue.value.labels.es ||
+					 'Operator') : 'Operator';
+
+				html += "<div style='margin-top: 10px; padding-top: 10px; border-top: 1px solid #ddd;'>";
+				html += "<strong style='color: #666; font-size: 14px;'>" + operatorName + " articles:</strong><br>";
+
+				var operatorHasLinks = false;
+				wikiLinks.forEach(function(wiki) {
+					if (operatorSitelinks[wiki]) {
+						var lang = wiki.replace('wiki', '');
+						var title = operatorSitelinks[wiki].title;
+						var url = "https://" + lang + ".wikipedia.org/wiki/" + encodeURIComponent(title.replace(/ /g, '_'));
+						var langName = getLanguageName(lang);
+
+						html += "<a href='" + url + "' target='_blank' style='text-decoration: underline; color: #0066cc; font-size: 13px; margin-left: 10px;'>" + langName.charAt(0).toUpperCase() + langName.slice(1) + ": " + title + "</a><br>";
+						hasWikiLinks = true;
+						operatorHasLinks = true;
+					}
+				});
+
+				if (!operatorHasLinks) {
+					html += "<span style='color: #999; font-size: 13px; margin-left: 10px;'>No articles available</span>";
+				}
+				html += "</div>";
+			}
+
+			if (!hasWikiLinks) {
+				html += "<p style='margin: 0; color: #666;'>" + getTranslation('wikidata_no_wikipedia_articles', currentLang) + "</p>";
+			}
+
+			html += "</div></div>";
+
+			// External links and resources
+			var hasLinks = false;
+			html += "<div style='background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px;'>";
+			html += "<h3 style='margin-top: 0; color: #333;'>" + getTranslation('wikidata_links_resources', currentLang) + "</h3>";
+			html += "<div style='display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;'>";
+
+			// Official website
+			if (claims.P856 && claims.P856.length > 0) {
+				var website = claims.P856[0].mainsnak.datavalue.value;
+				html += "<div><strong>" + getTranslation('wikidata_official_website', currentLang) + "</strong><br><a href='" + website + "' target='_blank' style='color: #0066cc;'>" + website + "</a></div>";
+				hasLinks = true;
+			}
+
+			// Wikimedia Commons category
+			if (entity.labels) {
+				var title = entity.labels[currentLang] ? entity.labels[currentLang].value : (entity.labels.en ? entity.labels.en.value : entity.id);
+				var commonsCategory = "Category:" + title.replace(/ /g, '_');
+				html += "<div><strong>Wikimedia Commons</strong><br><a href='https://commons.wikimedia.org/wiki/" + encodeURIComponent(commonsCategory) + "' target='_blank' style='color: #0066cc;'>" + commonsCategory + "</a></div>";
+				hasLinks = true;
+			}
+
+			if (!hasLinks) {
+				html += "<p style='margin: 0; color: #666;'>" + getTranslation('wikidata_no_links', currentLang) + "</p>";
+			}
+
+			html += "</div></div>";
+
+			contentDiv.innerHTML = html;
+		}
+
+		function displayLocationInfo(entity, contentDiv, currentLang) {
+			var claims = entity.claims || {};
+			var html = "<div style='margin-bottom: 20px;'>";
+
+			// Add back button if there's history
+			if (wikidataHistory.length > 0) {
+				html += "<div style='margin-bottom: 15px;'>";
+				html += "<button onclick='goBackToPreviousEntity()' style='background:#666; color:white; padding:6px 12px; border:none; border-radius:3px; cursor:pointer; font-size: 12px;'>&larr; " + (currentLang === 'es' ? 'Volver' : currentLang === 'en' ? 'Back' : 'Torna') + "</button>";
+				html += "</div>";
+			}
+
+			// Header with title and main image
+			html += "<div style='display: flex; align-items: flex-start; margin-bottom: 15px;'>";
+			html += "<div style='flex: 1;'>";
+
+			if (entity.labels) {
+				var title = entity.labels[currentLang] ? entity.labels[currentLang].value : (entity.labels.en ? entity.labels.en.value : entity.id);
+				html += "<h2 style='margin: 0 0 10px 0;'>" + title + "</h2>";
+			}
+
+			html += "<p style='margin: 5px 0;'><strong>" + getTranslation('wikidata_item', currentLang) + "</strong> <a href='https://www.wikidata.org/wiki/" + entity.id + "' target='_blank'>" + entity.id + "</a></p>";
+
+			if (entity.descriptions) {
+				var description = entity.descriptions[currentLang] ? entity.descriptions[currentLang].value : (entity.descriptions.en ? entity.descriptions.en.value : "");
+				if (description) {
+					html += "<p style='margin: 5px 0; font-style: italic;'>" + description + "</p>";
+				}
+			}
+
+			html += "</div>";
+
+			// Main image
+			if (claims.P18 && claims.P18.length > 0) {
+				var imageFile = claims.P18[0].mainsnak.datavalue.value;
+				var imageUrl = "https://commons.wikimedia.org/wiki/Special:FilePath/" + encodeURIComponent(imageFile) + "?width=200";
+				html += "<div style='margin-left: 20px;'><img src='" + imageUrl + "' alt='Image' style='max-width:200px; max-height:150px; border: 1px solid #ccc; border-radius: 4px;'></div>";
+			}
+
+			html += "</div></div>";
+
+			// Basic information section
+			html += "<div style='background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px;'>";
+			html += "<h3 style='margin-top: 0; color: #333;'>" + getTranslation('wikidata_basic_info', currentLang) + "</h3>";
+			html += "<div style='display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;'>";
+
+			// Population
+			if (claims.P1082 && claims.P1082.length > 0) {
+				var population = claims.P1082[0].mainsnak.datavalue.value.amount;
+				html += "<div><strong>" + getTranslation('wikidata_population', currentLang) + "</strong><br>" + parseInt(population).toLocaleString() + "</div>";
+			}
+
+			// Area
+			if (claims.P2046 && claims.P2046.length > 0) {
+				var area = claims.P2046[0].mainsnak.datavalue.value.amount;
+				html += "<div><strong>" + getTranslation('wikidata_area', currentLang) + "</strong><br>" + parseFloat(area).toFixed(2) + " km²</div>";
+			}
+
+			// Coordinates
+			if (claims.P625 && claims.P625.length > 0) {
+				var coords = claims.P625[0].mainsnak.datavalue.value;
+				html += "<div><strong>" + getTranslation('wikidata_coordinates', currentLang) + "</strong><br>" + coords.latitude.toFixed(4) + ", " + coords.longitude.toFixed(4) + "</div>";
+			}
+
+			// Elevation
+			if (claims.P2044 && claims.P2044.length > 0) {
+				var elevation = claims.P2044[0].mainsnak.datavalue.value.amount;
+				html += "<div><strong>" + getTranslation('wikidata_elevation', currentLang) + "</strong><br>" + parseInt(elevation) + " m</div>";
+			}
+
+			html += "</div></div>";
+
+			// Flags and symbols
+			var hasFlags = false;
+			html += "<div style='background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px;'>";
+			html += "<h3 style='margin-top: 0; color: #333;'>" + getTranslation('wikidata_flags_symbols', currentLang) + "</h3>";
+			html += "<div style='display: flex; gap: 15px; flex-wrap: wrap;'>";
+
+			// Flag
+			if (claims.P41 && claims.P41.length > 0) {
+				var flagFile = claims.P41[0].mainsnak.datavalue.value;
+				var flagUrl = "https://commons.wikimedia.org/wiki/Special:FilePath/" + encodeURIComponent(flagFile) + "?width=100";
+				html += "<div><strong>" + getTranslation('wikidata_flag', currentLang) + "</strong><br><img src='" + flagUrl + "' alt='Flag' style='height: 60px; border: 1px solid #ccc;'></div>";
+				hasFlags = true;
+			}
+
+			// Coat of arms
+			if (claims.P94 && claims.P94.length > 0) {
+				var armsFile = claims.P94[0].mainsnak.datavalue.value;
+				var armsUrl = "https://commons.wikimedia.org/wiki/Special:FilePath/" + encodeURIComponent(armsFile) + "?width=80";
+				html += "<div><strong>" + getTranslation('wikidata_coat_arms', currentLang) + "</strong><br><img src='" + armsUrl + "' alt='Coat of arms' style='height: 60px; border: 1px solid #ccc;'></div>";
+				hasFlags = true;
+			}
+
+			if (!hasFlags) {
+				html += "<p style='margin: 0; color: #666;'>" + getTranslation('wikidata_no_info', currentLang) + "</p>";
+			}
+
+			html += "</div></div>";
+
+			// Location map
+			if (claims.P242 && claims.P242.length > 0) {
+				html += "<div style='background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px;'>";
+				html += "<h3 style='margin-top: 0; color: #333;'>" + getTranslation('wikidata_location_map', currentLang) + "</h3>";
+				var mapFile = claims.P242[0].mainsnak.datavalue.value;
+				var mapUrl = "https://commons.wikimedia.org/wiki/Special:FilePath/" + encodeURIComponent(mapFile) + "?width=300";
+				html += "<img src='" + mapUrl + "' alt='Location map' style='max-width:100%; border: 1px solid #ccc; border-radius: 4px;'>";
+				html += "</div>";
+			}
+
+			// Links and websites
+			var hasLinks = false;
+			html += "<div style='background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px;'>";
+			html += "<h3 style='margin-top: 0; color: #333;'>" + getTranslation('wikidata_links', currentLang) + "</h3>";
+			html += "<div style='display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;'>";
+
+			// Wikimedia Commons category
+			var commonsCategory = "Category:" + title.replace(/ /g, '_');
+			html += "<div><strong>Wikimedia Commons</strong><br><a href='https://commons.wikimedia.org/wiki/" + encodeURIComponent(commonsCategory) + "' target='_blank' style='color: #0066cc;'>" + commonsCategory + "</a></div>";
+
+			// Wikipedia category in current language
+			var wikiCategory = (currentLang === 'ca' ? 'Categoria:' : currentLang === 'es' ? 'Categoría:' : 'Category:') + title.replace(/ /g, '_');
+			var wikiLang = currentLang || 'ca';
+			html += "<div><strong>Wikipedia " + getTranslation('wikidata_wikipedia_in', currentLang).replace('Viquipèdia en ', '').replace('Wikipedia en ', '').replace('Wikipedia in ', '') + "</strong><br><a href='https://" + wikiLang + ".wikipedia.org/wiki/" + encodeURIComponent(wikiCategory) + "' target='_blank' style='color: #0066cc;'>" + wikiCategory + "</a></div>";
+			hasLinks = true;
+
+			// Official website
+			if (claims.P856 && claims.P856.length > 0) {
+				var website = claims.P856[0].mainsnak.datavalue.value;
+				html += "<div><strong>" + getTranslation('wikidata_official_website', currentLang) + "</strong><br><a href='" + website + "' target='_blank' style='color: #0066cc;'>" + website + "</a></div>";
+				hasLinks = true;
+			}
+
+			// Facebook
+			if (claims.P2013 && claims.P2013.length > 0) {
+				var facebook = claims.P2013[0].mainsnak.datavalue.value;
+				html += "<div><strong>Facebook</strong><br><a href='https://facebook.com/" + facebook + "' target='_blank' style='color: #0066cc;'>/" + facebook + "</a></div>";
+				hasLinks = true;
+			}
+
+			// Twitter
+			if (claims.P2002 && claims.P2002.length > 0) {
+				var twitter = claims.P2002[0].mainsnak.datavalue.value;
+				html += "<div><strong>Twitter</strong><br><a href='https://twitter.com/" + twitter + "' target='_blank' style='color: #0066cc;'>@" + twitter + "</a></div>";
+				hasLinks = true;
+			}
+
+			// Instagram
+			if (claims.P2003 && claims.P2003.length > 0) {
+				var instagram = claims.P2003[0].mainsnak.datavalue.value;
+				html += "<div><strong>Instagram</strong><br><a href='https://instagram.com/" + instagram + "' target='_blank' style='color: #0066cc;'>@" + instagram + "</a></div>";
+				hasLinks = true;
+			}
+
+			html += "</div></div>";
+
+			// Administrative information
+			var hasAdmin = false;
+			html += "<div style='background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px;'>";
+			html += "<h3 style='margin-top: 0; color: #333;'>" + getTranslation('wikidata_admin_info', currentLang) + "</h3>";
+			html += "<div style='display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;'>";
+
+			// Country
+			if (claims.P17 && claims.P17.length > 0) {
+				var countryId = claims.P17[0].mainsnak.datavalue.value.id;
+				html += "<div><strong>" + getTranslation('wikidata_country', currentLang) + "</strong><br><a href='https://www.wikidata.org/wiki/" + countryId + "' target='_blank' style='color: #0066cc;'>" + (claims.P17[0].mainsnak.datavalue.value.labels ? claims.P17[0].mainsnak.datavalue.value.labels[currentLang] || claims.P17[0].mainsnak.datavalue.value.labels.en : countryId) + "</a></div>";
+				hasAdmin = true;
+			}
+
+			// Administrative division
+			if (claims.P131 && claims.P131.length > 0) {
+				var adminId = claims.P131[0].mainsnak.datavalue.value.id;
+				html += "<div><strong>" + getTranslation('wikidata_admin_division', currentLang) + "</strong><br><a href='https://www.wikidata.org/wiki/" + adminId + "' target='_blank' style='color: #0066cc;'>" + (claims.P131[0].mainsnak.datavalue.value.labels ? claims.P131[0].mainsnak.datavalue.value.labels[currentLang] || claims.P131[0].mainsnak.datavalue.value.labels.en : adminId) + "</a></div>";
+				hasAdmin = true;
+			}
+
+			// Postal code
+			if (claims.P281 && claims.P281.length > 0) {
+				var postalCode = claims.P281[0].mainsnak.datavalue.value;
+				html += "<div><strong>" + getTranslation('wikidata_postal_code', currentLang) + "</strong><br>" + postalCode + "</div>";
+				hasAdmin = true;
+			}
+
+			if (!hasAdmin) {
+				html += "<p style='margin: 0; color: #666; grid-column: 1 / -1;'>" + getTranslation('wikidata_no_admin_info', currentLang) + "</p>";
+			}
+
+			html += "</div></div>";
+
+			// Wikipedia articles
+			html += "<div style='background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px;'>";
+			html += "<h3 style='margin-top: 0; color: #333;'>" + getTranslation('wikidata_wikipedia_articles', currentLang) + "</h3>";
+			html += "<div style='display: flex; flex-wrap: wrap; gap: 10px;'>";
+
+			var sitelinks = entity.sitelinks || {};
+			var wikiLinks = [currentLang + 'wiki', 'cawiki', 'eswiki', 'enwiki', 'frwiki', 'itwiki', 'ptwiki'];
+			var hasWikiLinks = false;
+
+			wikiLinks.forEach(function(wiki) {
+				if (sitelinks[wiki]) {
+					var lang = wiki.replace('wiki', '');
+					var title = sitelinks[wiki].title;
+					var url = "https://" + lang + ".wikipedia.org/wiki/" + encodeURIComponent(title.replace(/ /g, '_'));
+					html += "<a href='" + url + "' target='_blank' style='color: #0066cc; text-decoration: underline; margin-right: 15px;'>" + getLanguageName(lang) + " (" + title + ")</a>";
+					hasWikiLinks = true;
+				}
+			});
+
+			if (!hasWikiLinks) {
+				html += "<p style='margin: 0; color: #666;'>" + getTranslation('wikidata_no_wikipedia_articles', currentLang) + "</p>";
+			}
+
+			html += "</div></div>";
+
+			contentDiv.innerHTML = html;
+		}
+
+		// Helper function to extract entity labels from Wikidata nested data (global scope)
+		function getEntityLabel(entityData, preferredLang) {
+			if (!entityData) return '';
+
+			var entityId = entityData.id;
+			if (!entityId) return '';
+
+			// Check cache first
+			if (typeof entityLabelCache !== 'undefined' && entityLabelCache[entityId] && entityLabelCache[entityId][preferredLang]) {
+				return entityLabelCache[entityId][preferredLang];
+			}
+
+			// Try to get from entity data directly
+			if (entityData.labels) {
+				// Try preferred language first
+				if (entityData.labels[preferredLang] && entityData.labels[preferredLang].value) {
+					if (typeof entityLabelCache !== 'undefined') {
+						if (!entityLabelCache[entityId]) entityLabelCache[entityId] = {};
+						entityLabelCache[entityId][preferredLang] = entityData.labels[preferredLang].value;
+					}
+					return entityData.labels[preferredLang].value;
+				}
+
+				// Try English as fallback
+				if (entityData.labels.en && entityData.labels.en.value) {
+					if (typeof entityLabelCache !== 'undefined') {
+						if (!entityLabelCache[entityId]) entityLabelCache[entityId] = {};
+						entityLabelCache[entityId][preferredLang] = entityData.labels.en.value;
+					}
+					return entityData.labels.en.value;
+				}
+
+				// Try Catalan as another fallback
+				if (entityData.labels.ca && entityData.labels.ca.value) {
+					if (typeof entityLabelCache !== 'undefined') {
+						if (!entityLabelCache[entityId]) entityLabelCache[entityId] = {};
+						entityLabelCache[entityId][preferredLang] = entityData.labels.ca.value;
+					}
+					return entityData.labels.ca.value;
+				}
+
+				// Try Spanish as another fallback
+				if (entityData.labels.es && entityData.labels.es.value) {
+					if (typeof entityLabelCache !== 'undefined') {
+						if (!entityLabelCache[entityId]) entityLabelCache[entityId] = {};
+						entityLabelCache[entityId][preferredLang] = entityData.labels.es.value;
+					}
+					return entityData.labels.es.value;
+				}
+			}
+
+			// Last resort: return the entity ID
+			return entityId;
+		}
+
+		// Global cache for entity labels
+		var entityLabelCache = {};
+
+		function addRelatedEntitiesSection(entity, contentDiv, currentLang) {
+			var claims = entity.claims || {};
+			var relatedEntities = [];
+
+			// Check for comprehensive related properties - expanded for better coverage
+			var relatedProperties = [
+				{property: 'P361', label: getTranslation('wikidata_part_of', currentLang) || 'Part of'}, // part of
+				{property: 'P137', label: getTranslation('wikidata_operator', currentLang) || 'Operator'}, // operator
+				{property: 'P17', label: getTranslation('wikidata_country', currentLang) || 'Country'}, // country
+				{property: 'P131', label: getTranslation('wikidata_admin_division', currentLang) || 'Administrative division'}, // located in the administrative territorial entity
+				{property: 'P131', label: getTranslation('wikidata_located_in', currentLang) || 'Located in'}, // located in (duplicate for different label)
+				{property: 'P150', label: getTranslation('wikidata_contains', currentLang) || 'Contains'}, // contains administrative territorial entity
+				{property: 'P31', label: getTranslation('wikidata_instance_of', currentLang) || 'Instance of'}, // instance of
+				{property: 'P279', label: getTranslation('wikidata_subclass_of', currentLang) || 'Subclass of'}, // subclass of
+				{property: 'P16', label: getTranslation('wikidata_transport_network', currentLang) || 'Transport network'}, // transport network
+				{property: 'P1269', label: getTranslation('wikidata_facility', currentLang) || 'Facility'}, // facility
+				{property: 'P206', label: getTranslation('wikidata_located_next_to', currentLang) || 'Located next to'}, // located next to body of water
+				{property: 'P206', label: getTranslation('wikidata_water_body', currentLang) || 'Water body'}, // located next to body of water (duplicate for different label)
+				{property: 'P625', label: getTranslation('wikidata_coordinates', currentLang) || 'Coordinates'}, // coordinate location (not a relation but useful)
+				{property: 'P856', label: getTranslation('wikidata_website', currentLang) || 'Website'}, // official website (not a relation but useful)
+				// Additional administrative properties for better coverage
+				{property: 'P30', label: getTranslation('wikidata_continent', currentLang) || 'Continent'}, // continent
+				{property: 'P27', label: getTranslation('wikidata_nationality', currentLang) || 'Country of citizenship'}, // country of citizenship
+				{property: 'P37', label: getTranslation('wikidata_official_language', currentLang) || 'Official language'}, // official language
+				{property: 'P36', label: getTranslation('wikidata_capital', currentLang) || 'Capital'}, // capital
+				{property: 'P122', label: getTranslation('wikidata_basic_form', currentLang) || 'Basic form of government'} // basic form of government
+			];
+
+			relatedProperties.forEach(function(prop) {
+				if (claims[prop.property] && claims[prop.property].length > 0) {
+					claims[prop.property].forEach(function(claim) {
+						if (claim.mainsnak && claim.mainsnak.datavalue && claim.mainsnak.datavalue.value && claim.mainsnak.datavalue.value.id) {
+							var relatedId = claim.mainsnak.datavalue.value.id;
+							var relatedLabel = prop.label;
+
+							// Avoid adding the same entity multiple times
+							var exists = relatedEntities.some(function(rel) { return rel.id === relatedId; });
+							if (!exists && relatedId !== entity.id) {
+								relatedEntities.push({
+									id: relatedId,
+									label: relatedLabel,
+									entity: claim.mainsnak.datavalue.value
+								});
+							}
+						}
+					});
+				}
+			});
+
+			// If we have related entities, add them to the content
+			if (relatedEntities.length > 0) {
+				var relatedHtml = "<div style='background: #f0f8ff; padding: 15px; border-radius: 5px; border: 1px solid #b8daff; margin-top: 15px;'>";
+				relatedHtml += "<h3 style='margin-top: 0; color: #004085;'>" + (getTranslation('wikidata_related_entities', currentLang) || 'Related entities') + "</h3>";
+				relatedHtml += "<p style='margin-bottom: 10px; color: #004085;'>" + (getTranslation('wikidata_related_description', currentLang) || 'Click on any related Wikidata item to view its full information:') + "</p>";
+				relatedHtml += "<div style='display: grid; gap: 8px;'>";
+
+				relatedEntities.slice(0, 6).forEach(function(rel) { // Limit to 6 related entities
+					// Use dynamic label extraction
+					var entityLabel = getEntityLabel(rel.entity, currentLang);
+
+					// If still no label, try to get it from the main entity labels (fallback)
+					if (!entityLabel && entity.labels && entity.labels[rel.id]) {
+						entityLabel = entity.labels[rel.id].value || '';
+					}
+
+					// Format as "Name" if name is available, otherwise "QID"
+					var displayLabel = entityLabel ? entityLabel : rel.id;
+
+					// Escape special characters for onclick attribute
+					var escapedId = rel.id.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+					var escapedLang = currentLang.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+					relatedHtml += "<div style='background: #fff; border: 1px solid #d1ecf1; border-radius: 3px; padding: 10px; cursor: pointer;' onclick='fetchRelatedEntity(\"" + escapedId + "\", \"" + escapedLang + "\")'>";
+					relatedHtml += "<div style='font-weight: bold; color: #0066cc; margin-bottom: 2px;'>" + displayLabel + "</div>";
+					relatedHtml += "<div style='color: #666; font-size: 12px; margin-bottom: 2px;'>" + rel.label + "</div>";
+					relatedHtml += "<div style='color: #999; font-size: 11px;'>" + getTranslation('wikidata_click_to_load', currentLang) + "</div>";
+					relatedHtml += "</div>";
+				});
+
+				relatedHtml += "</div>";
+				relatedHtml += "</div>";
+
+				// Append to existing content
+				var existingHtml = contentDiv.innerHTML;
+				contentDiv.innerHTML = existingHtml + relatedHtml;
+			}
+		}
+
+		function fetchRelatedEntity(qid, currentLang) {
+			loadWikidataEntity(qid);
+		}
+
+		function getTranslation(key, currentLang) {
+			// Use the existing translation system from the loaded translation files
+			if (typeof window['translations_' + currentLang] !== 'undefined' && 
+				window['translations_' + currentLang][key]) {
+				return window['translations_' + currentLang][key];
+			}
+			
+			// Fallback to Catalan if current language translation not found
+			if (typeof window.translations_ca !== 'undefined' && 
+				window.translations_ca[key]) {
+				return window.translations_ca[key];
+			}
+			
+			// Final fallback to key itself
+			return key;
+		}
+
+		function getTranslatedText(text, lang) {
+			var translations = {
+				ca: {
+					"Error carregant dades de Wikidata: ": "Error carregant dades de Wikidata: ",
+					"No s'ha trobat cap element a Wikidata": "No s'ha trobat cap element a Wikidata",
+					"Error en la cerca a Wikidata": "Error en la cerca a Wikidata"
+				},
+				es: {
+					"Error carregant dades de Wikidata: ": "Error cargando datos de Wikidata: ",
+					"No s'ha trobat cap element a Wikidata": "No se encontró ningún elemento en Wikidata",
+					"Error en la cerca a Wikidata": "Error en la búsqueda de Wikidata"
+				},
+				en: {
+					"Error carregant dades de Wikidata: ": "Error loading Wikidata data: ",
+					"No s'ha trobat cap element a Wikidata": "No Wikidata item found",
+					"Error en la cerca a Wikidata": "Error searching Wikidata"
+				}
+			};
+
+			return translations[lang] ? translations[lang][text] || text : text;
+		}
+
+		function getLanguageName(lang) {
+			return lang.toUpperCase();
+		}
+
+		// Global variables for Wikidata navigation history
+		var wikidataHistory = [];
+		var currentWikidataEntity = null;
+
+		function loadWikidataEntity(qid) {
+			var currentLang = currentLanguage || 'ca';
+			var contentDiv = document.getElementById('wikidata-content');
+
+			// Store current entity in history if we have one
+			if (currentWikidataEntity) {
+				wikidataHistory.push(currentWikidataEntity);
+			}
+
+			contentDiv.innerHTML = "<p>" + (currentLang === 'es' ? 'Cargando entidad...' : currentLang === 'en' ? 'Loading entity...' : 'Carregant entitat...') + "</p>";
+
+			fetchWikidataEntity(qid, function(data) {
+				currentWikidataEntity = data;
+				displayWikidataInfo(data, contentDiv, currentLang);
+			}, function(error) {
+				contentDiv.innerHTML = "<p>" + (currentLang === 'es' ? 'Error cargando entidad: ' : currentLang === 'en' ? 'Error loading entity: ' : 'Error carregant entitat: ') + error + "</p>";
+			});
+		}
+
+		function goBackToPreviousEntity() {
+			if (wikidataHistory.length > 0) {
+				var previousEntity = wikidataHistory.pop();
+				currentWikidataEntity = previousEntity;
+				var currentLang = currentLanguage || 'ca';
+				var contentDiv = document.getElementById('wikidata-content');
+				displayWikidataInfo(previousEntity, contentDiv, currentLang);
+			}
+		}
+
+		// Update Wikipedia content when base location changes
+		// This will be called when baseLocation is updated
+	  </script>
+	  </div>
+	  
+	  	 	<!--COMMENTS DISQUS-->
+	<div class="sidebar-pane" id="comments">
+	  <div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span>
+	  </div>
+	  <!-- MODIFICAR AQUÍ -->
+	  	  <h1>Comentaris</h1>
+	  	  <!-- START DISQS -->		
+		<div id="disqus_thread"></div>
+<script>
+
+/**
+*  RECOMMENDED CONFIGURATION VARIABLES: EDIT AND UNCOMMENT THE SECTION BELOW TO INSERT DYNAMIC VALUES FROM YOUR PLATFORM OR CMS.
+*  LEARN WHY DEFINING THESE VARIABLES IS IMPORTANT: https://disqus.com/admin/universalcode/#configuration-variables*/
+/*
+var disqus_config = function () {
+this.page.url = PAGE_URL;  // Replace PAGE_URL with your page's canonical URL variable
+this.page.identifier = PAGE_IDENTIFIER; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
+};
+*/
+(function() { // DON'T EDIT BELOW THIS LINE
+var d = document, s = d.createElement('script');
+<!--MODIFICAR AQUÍ-->
+s.src = 'https://openlocalmap.disqus.com/embed.js';
+s.setAttribute('data-timestamp', +new Date());
+(d.head || d.body).appendChild(s);
+})();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<script id="dsq-count-scr" src="//openlocalmap.disqus.com/count.js" async></script>
+	  </div>
+<!-- FINAL DISQS -->
+	  
+	  
+	  
+	<!--OSRM ROUTING-->
+	<div class="sidebar-pane" id="parking">
+	  <div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span>
+	  </div>
+	  <a name="IniciRouting"></a>
+	  <h1>Calculadora de Rutes</h1>
+	  <p style="text-align:justify; margin-right:5px;">Calcula rutes per cotxe, bicicleta o a peu utilitzant el servei OSRM (Open Source Routing Machine). Les rutes es centren en la vostra ubicació actual.</p>
+
+	  <!-- Route Type Selection -->
+	  <div style="margin-bottom: 15px;">
+	    <h4>Tipus de ruta:</h4>
+	    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+	      <button id="route-car" class="route-type-btn active" onclick="setRouteType('driving')" style="background:#2a2a2a; color:white; padding:8px 12px; border:none; border-radius:3px; cursor:pointer;">
+	        <i class="fa fa-car"></i> Cotxe
+	      </button>
+	      <button id="route-bike" class="route-type-btn" onclick="setRouteType('cycling')" style="background:#2a2a2a; color:white; padding:8px 12px; border:none; border-radius:3px; cursor:pointer;">
+	        <i class="fa fa-bicycle"></i> Bicicleta
+	      </button>
+	      <button id="route-walk" class="route-type-btn" onclick="setRouteType('walking')" style="background:#2a2a2a; color:white; padding:8px 12px; border:none; border-radius:3px; cursor:pointer;">
+	        <i class="fa fa-walking"></i> A peu
+	      </button>
+	    </div>
+	  </div>
+
+	  <!-- Route Input -->
+	  <div style="margin-bottom: 15px;">
+	    <h4>Punts de la ruta:</h4>
+	    <div style="margin-bottom: 10px;">
+	      <label>Origen:</label>
+	      <input type="text" id="route-start" placeholder="Clic al mapa o introdueix adreça" style="width: 100%; padding: 5px; margin-top: 3px;">
+	    </div>
+	    <div style="margin-bottom: 10px;">
+	      <label>Destí:</label>
+	      <input type="text" id="route-end" placeholder="Clic al mapa o introdueix adreça" style="width: 100%; padding: 5px; margin-top: 3px;">
+	    </div>
+	    <div style="display: flex; gap: 10px;">
+	      <button onclick="calculateRoute()" style="background:#007acc; color:white; padding:8px 15px; border:none; border-radius:3px; cursor:pointer;">
+	        <i class="fa fa-route"></i> Calcular Ruta
+	      </button>
+	      <button onclick="clearRoute()" style="background:#666; color:white; padding:8px 15px; border:none; border-radius:3px; cursor:pointer;">
+	        <i class="fa fa-trash"></i> Neteja
+	      </button>
+	    </div>
+	  </div>
+
+	  <!-- Route Results -->
+	  <div id="route-results" style="display: none; margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+	    <h4>Resultats de la ruta:</h4>
+	    <div id="route-info"></div>
+	  </div>
+
+	  <!-- Instructions -->
+	  <div style="margin-top: 15px; padding: 10px; background: #e8f4f8; border-radius: 5px; font-size: 14px;">
+	    <strong>Instruccions:</strong>
+	    <ul style="margin: 5px 0; padding-left: 20px;">
+	      <li>Selecciona el tipus de ruta (cotxe, bicicleta o a peu)</li>
+	      <li>Introdueix origen i destí, o fes clic al mapa</li>
+	      <li>Prem "Calcular Ruta" per veure el resultat</li>
+	    </ul>
+	  </div>
+
+	  <center><a href="#IniciRouting">Torna a l'inici</a></center>
+	</div>
+	  
+	<!-- ENLLAÇOS D'INTERÈS -->
+	<div class="sidebar-pane" id="links">
+	<div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span></div>
+	  <h1>Enllaços d'interès</h1>
+	  <p>
+	    <ul>
+		<div class="item">
+		<li><strong>Comunitat catalana d'OSM:</strong> <a href="https://osmand.net/">OSMcatalà</a>
+		  <p style="text-align:justify; margin-right:5px;"><img width="75px" height="75px" align="right" src="assets/img/osmcatala.png">Trobareu informació i detalls sobre la comunitat catalana d'OSM a la pàgina del projecte al wiki d'OSM: <a href="https://wiki.openstreetmap.org/wiki/WikiProject_Catalan" target="_blank">Project Catalan</a>. També podeu interactuar-hi a través de la <a href="https://lists.openstreetmap.org/listinfo/talk-cat" target="_blank">llista de correu</a> o a través del compte <a href="https://twitter.com/osmcatala" target="_blank">@osmcatala</a> a Twitter.</p>
+		</li>
+	      </div>
+
+		<div class="item">
+		<li><strong>OSM al vostre mòbil:</strong> <a href="https://osmand.net/">OsmAnd</a>
+		  <p style="text-align:justify; margin-right:5px;"><img width="75px" height="75px" align="right" src="assets/img/osmand.png">L'<b>OsmAnd</b> és una de les aplicacions més completes per utilitzar OpenStreetMap al vostre telèfon intel·ligent, entre les seves funcionalitats en destaca l'ús de mapes fora de línia. L'OsmAnd està disponible per a Android i iPhone. A més a més, l'OsmAnd està completament <a href="https://www.softcatala.org/wiki/Projectes/OsmAnd" target="_blank">traduït al català per Softcatalà</a> i cada dilluns aquesta associació en genera un mapa per l'OsmAnd dels Països Catalans. En trobareu més informació a la <a href="https://www.softcatala.org/wiki/Projectes/Mapes_en_catal%C3%A0" target="_blank">pàgina del projecte</a> i <a href="https://www.softcatala.org/wiki/Projectes/Mapes_en_catal%C3%A0" target="_blank">baixada directa del fitxer</a> (aprox. 270 MB).</p>
+		</li>
+	      </div>
+
+	      <div class="item">
+		<li><strong>Càlcul de rutes:</strong> <a href="https://graphhopper.com/maps/">GraphHopper</a>
+		  <p style="text-align:justify; margin-right:5px;"><img hpace="5px" width="75px" height="75px" align="right" src="assets/img/graphhopper.png"><b>GraphHopper</b> us permet obtenir una ruta després de seleccionar un punt de partida i una destinació. A més a més, se li poden afegir punts intermedis. Permet calcular la ruta en cotxe, bicicleta i a peu; s'obté un perfil d'alçades i es pot exportar la ruta a un fitxer GPX.</p>
+		</li>
+	      </div>
+	      <div class="item">
+		<li><strong>Mapes per Garmin:</strong> <a href="https://mapas.alternativaslibres.es/descargas.php">alternativaslibres.es</a>
+		  <p style="text-align:justify; margin-right:5px;">Mapes preparats per copiar als dispositius Garmin i disposar de tot el poder d'OpenStreetMap al vostre GPS.</p>
+		</li>
+	      </div>
+	      
+		<div class="item">
+		<li><strong>Creeu els vostres mapes fàcilment:</strong> <a href="https://umap.openstreetmap.fr/es/">uMap</a>
+		  <p style="text-align:justify; margin-right:5px;"><img hpace="5px" width="75px" height="75px" align="right" src="assets/img/umap.png"><b>uMap</b> us permet crear mapes amb capes d'OpenStreetMap en un minut i fer-ne un <i>embed</i> (codi HTML generat automàticament per ser inserit) al vostre lloc web.</p>
+		</li>
+	      </div>
+
+		<div class="item">
+		<li><strong>Mapa en 3D:</strong> <a href="https://www.f4map.com/">F4Map</a>
+		<!-- MODIFICAR AQUÍ -->
+		  <p style="text-align:justify; margin-right:5px;"><img hpace="5px" width="75px" height="75px" align="right" src="assets/img/f4map.png">El lloc web (demo) d'<b>F4Map</b> us permet recrear un escenari d'OpenStreetMap en 3D. A les opcions gràfiques hi podreu seleccionar opcions com utilitzar les dades d'elevació del terreny, l'hora del dia o les condicions climatològiques. El navegador web ha de ser capaç de treballar amb <a href="https://www.khronos.org/webgl/" target="_blank">WebGL</a> per la correcta visualització.<br><br><img width="100%" src="assets/img/f4map-imatge.png"><center><a href="https://demo.f4map.com/#lat=41.2213651&lon=1.7190071&zoom=17&camera.theta=58.483" target="_blank">Ves al mapa de Vilanova i la Geltrú en 3D</a></center></p>
+		</li>
+	      </div>
+
+	    </ul>
+	  </p>
+	</div>
+
+
+	<!-- EXPERT -->
+	<div class="sidebar-pane" id="developer">
+	  <div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span>
+	  </div>
+	  <h1>Mode expert</h1>
+	  <p style="text-align:justify; margin-right:5px;">Aquest panell mostra la informació de què disposa
+	   OpenStreetMap sobre cada element, i facilita enllaços per poder col·laborar amb el projecte.</p>
+
+	  <p style="text-align:justify; margin-right:5px;">Per visualitzar les etiquetes d'un element cal fer
+	   clic en algun dels punts d'interès del mapa, després de seleccionar-los des de l'apartat «Punts
+	   d'interès».</p>
+
+	  <p style="text-align:justify; margin-right:5px;">També podeu crear la vostra pròpia consulta amb
+	  OverpassAPI per cercar un punt d'interès que <em>no
+	  sigui</em> a la llista. Per fer-ho cal marcar la casella:</p>
+
+	  <div>
+	    <label><input id="expert-mode" type="checkbox"/><span>Consulta personalitzada amb OverpassAPI</span></label>
+	    <form id="expert-form" style="display: none;">
+	      <input id="expert-query" style="width: 100%;" name="query" type="text" placeholder="[internet_access=wlan][amenity=fuel]"/>
+	    </form>
+	  </div>
+	  <p class="tags"></p>
+	 
+	<h2>Notes d'OpenStreetMap</h2>
+	<p style="text-align:justify; margin-right:5px;">Des d'aquí podreu visualitzar les 
+	<a href="https://wiki.openstreetmap.org/wiki/Ca:Notes" target="_blank">notes d'OSM</a> al mapa, i
+	 accedir directament a la pàgina d'OSM de la nota. Les notes són anotacions ràpides per notificar
+	 d'errors a la zona. Podeu afegir-ne des de la 
+	 <!--MODIFICAR AQUÍ-->
+	<a href="https://www.openstreetmap.org/#map=9/41.5446/2.0132&layers=N" target="_blank">pàgina d'OSM</a>.
+	<p><button type="button" onclick="addnotes();">Mostra notes d'OSM al mapa</button></p>
+	<p><button type="button" onclick="clearnotes();">Oculta notes d'OSM al mapa</button></p>
+	</div>
+
+	<!--LANGUAGE-->
+	<div class="sidebar-pane" id="language">
+	  <div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span>
+	  </div>
+	  <h1 data-i18n="language_title">Idioma</h1>
+	  <p data-i18n="language_select">Seleccionar idioma:</p>
+	  <center>
+	    <button onclick="setLanguage('en')" data-i18n="language_english">English</button>
+	    <button onclick="setLanguage('es')" data-i18n="language_spanish">Español</button>
+	    <button onclick="setLanguage('ca')" data-i18n="language_catalan">Català</button>
+	  </center>
+	</div>
+
+	<!--QUANT A-->
+	<div class="sidebar-pane" id="about">
+	  <div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span>
+	  </div>
+	  <h1>Quant a...</h1>
+	  <!--MODIFICAR AQUÍ-->
+	  <p style="text-align:justify; margin-right:5px;"><img align="right" src="assets/img/konfraria.jpeg">Aquest és un mapa de la nostra ciutat creat a partir d'un projecte de l'associació sense ànim de lucre <a href="https://www.konfraria.org" target="_blank">la Konfraria de la Vila del Pingüí de la Palma (de Cervelló)</a>, que a més a més ha participat activament en el grup d'<a href="https://wiki.openstreetmap.org/wiki/WikiProject_Catalan" target="_blank">OSM en català</a> així com en la incorporació de dades al mapa de la Palma de Cervelló al projecte <a href="" target="_blank">OpenStreetMap</a>. Trobareu un resum de les activitats més rellevants a la <a href="https://wiki.openstreetmap.org/wiki/User:KonfrareAlbert" target="_blank">pàgina de l'usuari KonfrareAlbert</a>, i també informació sobre la importació del cadastre a la pàgina de <a href="https://wiki.openstreetmap.org/wiki/Palma_de_Cervell%C3%B3" target="_blank">la Palma de Cervelló al wiki d'OSM</a>. Trobareu més informació sobre la Konfraria, i el nostre contacte en <a href="https://www.lapalmadecervello.cat/entitats/cultura/la-konfraria-de-la-vila-del-pingui" target="_blank">aquest enllaç</a>.</p>
+
+	  <p style="text-align:justify; margin-right:5px;"><img align="right" src="assets/img/github.png"><b>Codi del projecte:</b><br><a href="https://github.com/osm-catalan/openlocalmap" target="_blank">OpenLocalMap</a> (llicència GPL) a GitHub.</p>
+
+	  <p style="text-align:justify; margin-right:5px;">Aquest lloc web és un <i><a href="https://ca.wikipedia.org/wiki/Fork" target="_blank">fork</a></i> del projecte <b>osm-pois</b> de <b><i>Manuel Kaufmann</b></i>, del que n'hem aprofitat gran part del codi (<a href="https://upoi.org" target="_blank">POIs</a> al blog d'Humitos, codi d'osm-pois a <a href="https://github.com/humitos/osm-pois" target="_blank">GitHub</a> amb llicència <a href="https://www.gnu.org/licenses/gpl-2.0.html" target="_blank">GPL</a>, Twitter: <a href="https://twitter.com/reydelhumo" target="_blank">@reydelhumo</a>).</p>
+
+	 <p>Eines que s'utilitzen per fer funcionar aquest lloc web:</p>
+
+	  <ul class="item">
+	    <li><a href="https://leafletjs.com/" target="_blank">Leafletjs</a> © Vladimir Agafonkin</li>
+	    <li>Connectors de Leaflet:
+	      <ol>
+		<li><a href="https://github.com/ebrelsford/Leaflet.loading" target="_blank">Leaflet.loading</a> © Eric Brelsford</li>
+		<li><a href="https://github.com/Turbo87/sidebar-v2/" target="_blank">L.control.sidebar</a> © Tobias Bieniek</li>
+		<li><a href="https://www.mapbox.com/mapbox.js/plugins/#leaflet-locatecontrol" target="_blank">L.Control.Locate</a> © Mapbox</li>
+		<li><a href="https://github.com/makinacorpus/Leaflet.RestoreView" target="_blank">Leaflet.RestoreView</a> © Makina Corpus</li>
+		<li><a href="https://github.com/kartenkarsten/leaflet-layer-overpass" target="_blank">L.OverPassLayer</a> © kartenkarsten</li>
+		<li><a href="https://github.com/mlevans/leaflet-hash" target="_blank">L.Hash</a> © Michael Lawrence Evans</li>
+		<li><a href="https://github.com/Leaflet/Leaflet.label" target="_blank">Leaflet.label</a> © Leaflet</li>
+		<li><a href="https://github.com/osmlab/leaflet-osm-notes" target="_blank">Leaflet-osm-notes</a> © Tom MacWright</li>
+		<li><a href="https://github.com/torfuspolymorphus/leaflet.zoomhome" target="_blank">Leaflet.zoomhome</a> © Torf</li>
+		<li><a href="https://github.com/rowanwins/leaflet-easyPrint" target="_blank">leaflet-easyPrint</a> © Rowan Winsemius</li>
+		<li><a href="https://github.com/mpetazzoni/leaflet-gpx" target="_blank">leaflet-gpx</a> © Maxime Petazzoni</li>
+		<li><a href="https://github.com/MrMufflon/Leaflet.Elevation" target="_blank">Leaflet.elevation</a> © Felix Bache</li>
+		<li><a href="https://github.com/ypid/opening_hours.js" target="_blank">opening_hours.js</a> © Robin Schneider</li>
+	      </ol>
+	    </li>
+	    <li><a href="https://fortawesome.github.io/Font-Awesome/" target="_blank">Font-Awesome</a> © Dave Gandy</li>
+	    <li><a href="https://mapicons.nicolasmollet.com/" target="_blank">Map Icons</a> © Nicolas Mollet</li>
+	    <li><a href="https://jquery.com" target="_blank">jQuery</a> © The jQuery Foundation</li>
+	    <li><a href="https://github.com/medialize/URI.js" target="_blank">URI.js</a> © Medialize</li>
+	    <li><a href="https://github.com/janl/mustache.js" target="_blank">Mustache</a> © Jan Lehnardt</li>
+	    <li><a href="https://www.mapillary.com/" target="_blank">Mapillary</a> © Mapillary</li>
+	    <li><a href="https://graphhopper.com/" target="_blank">Graphhopper</a> © Graphhopper</li>
+	    <li><a href="https://project-osrm.org/" target="_blank">OSRM (Open Source Routing Machine)</a> © Project OSRM contributors</li>
+	  </ul>
+
+	  <p style="text-align:justify; margin-right:5px;">També cal agrair a <b>Konfrare Albert (que és qui ha permés la personalització extrema de la seva eina)</b>  ,  (<a href="https://twitter.com/la_konfraria" target="_blank">@la_konfraria</a>) , <b>Xavier Barnada</b> (<a href="https://twitter.com/Xevib" target="_blank">@Xevib</a>) i a <b>Marco Antonio</b> (<a href="https://twitter.com/51114u9" target="_blank">@51114u9</a>) la seva ajuda i contribucions.</p>
+	  <p style="text-align:justify; margin-right:5px;">Per últim remarcar que NO TENIM RES A VEURE ni AMB l'organització d'OPENSTREETMAP ni pretenem fer servir la seva marca.</p>
+	  <p style="text-align:justify; margin-right:5px;">Sense aquestes eines i ajudes seria impossible que funcionés aquest lloc web, a tots ells, moltes gràcies.</p>
+      
+	</div>
+       </div>
+      </div>
+    </div>
+
+    <div id="map" class="sidebar-map"></div>
+
+    <div id="spinner" style="display: none;">
+      <img src="assets/img/spinner.gif">
+    </div>
+
+    <!-- Javascripts -->
+    <script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+    <script src="assets/leaflet/leaflet.js"></script>
+    <script src="assets/js/thunderforest.js"></script>
+    <script src="assets/js/leaflet-osm-notes.js"></script>
+    <script src="assets/js/leaflet.zoomhome.js"></script>
+    <script src="assets/js/leaflet.label.js"></script>
+    <script src="assets/js/leaflet.restoreview.js"></script>
+    <script src="assets/js/leaflet-sidebar.js"></script>
+    <script src="assets/js/Control.Loading.js"></script>
+    <script src="https://code.jquery.com/jquery-1.8.0.min.js"></script>
+    <script src="assets/print/jQuery.print.js"></script>
+    <script src="assets/print/leaflet.easyPrint.js"></script>
+    <script src="assets/js/leaflet.elevation-0.0.4.src.js"></script>
+    <script src="assets/js/gpx.js"></script>  
+    <script src="assets/js/URI.js"></script>
+    <script src="assets/js/suncalc.js"></script>
+    <script src="assets/js/opening_hours.js"></script> 
+    <script src="assets/js/OverPassLayer.js"></script>
+    <script src="https://api.tiles.mapbox.com/mapbox.js/plugins/leaflet-locatecontrol/v0.24.0/L.Control.Locate.js"></script>
+    <script src="assets/js/leaflet-hash.js"></script>
+    <script src="assets/js/mustache.js"></script>
+    <script src="assets/js/tags-parsers.js"></script>
+    <script src="assets/js/pois-type.js"></script>
+    <script src="assets/js/routes-manager.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/protobufjs@7.2.4/dist/protobuf.min.js"></script>
+    <script>
+        // Attempt to enable CORS for GTFS-RT requests
+        // This is a workaround for development/testing
+        if (typeof XMLHttpRequest !== 'undefined') {
+            var originalOpen = XMLHttpRequest.prototype.open;
+            XMLHttpRequest.prototype.open = function(method, url) {
+                if (url && url.includes('gtfsrt.renfe.com')) {
+                    // Try to add CORS headers (won't actually work but worth attempting)
+                    this.setRequestHeader = this.setRequestHeader || function() {};
+                    try {
+                        this.withCredentials = true;
+                    } catch(e) {}
+                }
+                return originalOpen.apply(this, arguments);
+            };
+        }
+
+        // Alternative: Try using a different protocol or approach
+        window.gtfsrtCORSWorkaround = function() {
+            // This is a development workaround - in production, use a server-side proxy
+            console.log('Attempting GTFS-RT CORS workaround...');
+        };
+    </script>
+    <script src="assets/js/site.functions.js"></script>
+    <script src="assets/js/translations.js"></script>
+    <script src="assets/js/site.js"></script>
+
+  </body>
+</html>
