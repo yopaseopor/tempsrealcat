@@ -528,6 +528,25 @@ window.translations_en = {
     bus_arrived: "Arrived",
     bus_overdue: "Overdue",
 
+    // Metro (TMB) translations
+    metro_title: "🚇 TMB Metro",
+    metro_description: "Visualize all TMB metro stations in Barcelona. Data comes directly from the official TMB API.",
+    metro_stops_visualization: "📍 Station Visualization",
+    metro_start_stops: "Show Stations",
+    metro_stop_stops: "Hide Stations",
+    metro_status: "Status:",
+    metro_status_inactive: "Inactive",
+    metro_status_loading: "Loading metro stations...",
+    metro_step1: "Show stations: Click \"Show Stations\" to load all TMB metro stations on the map",
+    metro_step2: "View on map: Stations will appear as markers with metro icons and colors by line",
+    metro_step3: "Click markers: Get detailed information about each station",
+    metro_step4: "Hide when desired: Click \"Hide Stations\" to clear the map",
+    metro_coverage: "ℹ️ Coverage: This service shows all TMB metro stations in the Barcelona metropolitan area. Data updates every 10 minutes.",
+    metro_help_title: "Help",
+    metro_help_text: "This panel allows you to visualize all TMB metro stations in Barcelona. Data comes from the official TMB API and includes information about location and station codes. Each station is shown with the color corresponding to its metro line.",
+    metro_error_loading: "Error getting TMB stations:",
+    metro_status_active: "🚇 Showing {count} metro stations",
+
     // FGC translations
     fgc_title: "🚆 FGC - Ferrocarrils de la Generalitat de Catalunya",
     fgc_description: "Visualize real-time positions of FGC trains in Catalunya. Data comes directly from FGC's open API.",

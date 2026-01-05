@@ -471,7 +471,91 @@ function loadBusContent() {
         });
 }
 
-// Initialize train, FGC, and Bus content loading when tabs are clicked
+// Function to load external HTML content for Metro tab
+function loadMetroContent() {
+    const metroPane = document.getElementById('metro');
+
+    // Check if content is already loaded (look for the specific Metro title)
+    if (metroPane.querySelector('h1[data-i18n="metro_title"]')) {
+        return; // Content already loaded
+    }
+
+    // Load the metro.html content
+    fetch('metro.html')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to load metro.html');
+            }
+            return response.text();
+        })
+        .then(html => {
+            // Extract the sidebar-pane content from the HTML
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const metroContent = doc.querySelector('#metro');
+
+            if (metroContent) {
+                // Clear existing content and add new content
+                metroPane.innerHTML = metroContent.innerHTML;
+
+                // Update language for the new content
+                updateLanguage();
+
+                console.log('Metro content loaded successfully');
+            } else {
+                console.error('Could not find #metro content in metro.html');
+                metroPane.innerHTML = '<div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span></div><h1>Error loading Metro content</h1>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading Metro content:', error);
+            metroPane.innerHTML = '<div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span></div><h1>Error loading Metro content</h1><p>' + error.message + '</p>';
+        });
+}
+
+// Function to load external HTML content for Bicycle tab
+function loadBicycleContent() {
+    const bicyclePane = document.getElementById('bicycle');
+
+    // Check if content is already loaded (look for the specific Bicycle title)
+    if (bicyclePane.querySelector('h1[data-i18n="bicycle_title"]')) {
+        return; // Content already loaded
+    }
+
+    // Load the bicycle.html content
+    fetch('bicycle.html')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to load bicycle.html');
+            }
+            return response.text();
+        })
+        .then(html => {
+            // Extract the sidebar-pane content from the HTML
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const bicycleContent = doc.querySelector('#bicycle');
+
+            if (bicycleContent) {
+                // Clear existing content and add new content
+                bicyclePane.innerHTML = bicycleContent.innerHTML;
+
+                // Update language for the new content
+                updateLanguage();
+
+                console.log('Bicycle content loaded successfully');
+            } else {
+                console.error('Could not find #bicycle content in bicycle.html');
+                bicyclePane.innerHTML = '<div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span></div><h1>Error loading Bicycle content</h1>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading Bicycle content:', error);
+            bicyclePane.innerHTML = '<div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span></div><h1>Error loading Bicycle content</h1><p>' + error.message + '</p>';
+        });
+}
+
+// Initialize train, FGC, Bus, and Metro content loading when tabs are clicked
 document.addEventListener('DOMContentLoaded', function() {
     // Add event listener to train tab
     const trainTab = document.querySelector('a[href="#train"]');
@@ -497,6 +581,24 @@ document.addEventListener('DOMContentLoaded', function() {
         busTab.addEventListener('click', function(e) {
             // Load Bus content after a short delay to ensure tab is active
             setTimeout(loadBusContent, 100);
+        });
+    }
+
+    // Add event listener to Metro tab
+    const metroTab = document.querySelector('a[href="#metro"]');
+    if (metroTab) {
+        metroTab.addEventListener('click', function(e) {
+            // Load Metro content after a short delay to ensure tab is active
+            setTimeout(loadMetroContent, 100);
+        });
+    }
+
+    // Add event listener to Bicycle tab
+    const bicycleTab = document.querySelector('a[href="#bicycle"]');
+    if (bicycleTab) {
+        bicycleTab.addEventListener('click', function(e) {
+            // Load Bicycle content after a short delay to ensure tab is active
+            setTimeout(loadBicycleContent, 100);
         });
     }
 

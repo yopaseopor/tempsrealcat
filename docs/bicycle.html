@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bicycle - Cycling Infrastructure</title>
+</head>
+<body>
+    <!--BICYCLE-->
+    <div class="sidebar-pane" id="bicycle">
+      <div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span>
+      </div>
+      <h1 data-i18n="bicycle_title">🚴 Ciclisme</h1>
+      <p style="text-align:justify; margin-right:5px;" data-i18n="bicycle_description">Visualitza infraestructura ciclista, estacions de Bicing i rutes per a bicicletes a la zona de Barcelona i Catalunya.</p>
+
+      <!-- Cycling infrastructure controls -->
+      <div style="margin-bottom: 15px;">
+        <h3 style="margin-bottom: 10px; color: #333;" data-i18n="bicycle_infrastructure">🚲 Infraestructura ciclista</h3>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
+          <button id="start-bicycle-infrastructure-btn" onclick="startBicycleInfrastructure()" style="background:#2a2a2a; color:white; padding:10px 15px; border:none; border-radius:5px; cursor:pointer; font-size: 14px;">
+            <i class="fa fa-play"></i> <span data-i18n="bicycle_start_infrastructure">Mostrar infraestructura</span>
+          </button>
+          <button id="stop-bicycle-infrastructure-btn" onclick="stopBicycleInfrastructure()" style="background:#cc0000; color:white; padding:10px 15px; border:none; border-radius:5px; cursor:pointer; font-size: 14px; display: none;">
+            <i class="fa fa-stop"></i> <span data-i18n="bicycle_stop_infrastructure">Amagar infraestructura</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Bicing stations controls -->
+      <div style="margin-bottom: 15px;">
+        <h3 style="margin-bottom: 10px; color: #333;" data-i18n="bicycle_bicing">🚲 Bicing</h3>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
+          <button id="start-bicing-stations-btn" onclick="startBicingStations()" style="background:#2a2a2a; color:white; padding:10px 15px; border:none; border-radius:5px; cursor:pointer; font-size: 14px;">
+            <i class="fa fa-play"></i> <span data-i18n="bicycle_start_bicing">Mostrar estacions Bicing</span>
+          </button>
+          <button id="stop-bicing-stations-btn" onclick="stopBicingStations()" style="background:#cc0000; color:white; padding:10px 15px; border:none; border-radius:5px; cursor:pointer; font-size: 14px; display: none;">
+            <i class="fa fa-stop"></i> <span data-i18n="bicycle_stop_bicing">Amagar estacions Bicing</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Status displays -->
+      <div id="bicycle-infrastructure-status" style="background: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 10px; border: 1px solid #ddd;">
+        <span data-i18n="bicycle_status">Status:</span> <span data-i18n="bicycle_status_inactive">Inactiu</span>
+      </div>
+      <div id="bicing-stations-status" style="background: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #ddd;">
+        <span data-i18n="bicycle_status">Status:</span> <span data-i18n="bicycle_status_inactive">Inactiu</span>
+      </div>
+
+      <!-- Instructions -->
+      <div style="background: #e8f4f8; padding: 15px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #b8daff;">
+        <h4 style="margin-top: 0; color: #004085;" data-i18n="bicycle_how_it_works">📖 Com funciona</h4>
+        <ol style="font-size: 13px; color: #004085; margin: 0; padding-left: 20px;">
+          <li data-i18n="bicycle_step1">Infraestructura ciclista: Mostra carrils bici, vies ciclistes i aparcaments per bicicletes</li>
+          <li data-i18n="bicycle_step2">Estacions Bicing: Visualitza estacions de Bicing amb disponibilitat en temps real</li>
+          <li data-i18n="bicycle_step3">Clica als marcadors: Obté informació detallada sobre cada element</li>
+          <li data-i18n="bicycle_step4">Amagar quan vulguis: Prem els botons d'aturar per netejar el mapa</li>
+        </ol>
+      </div>
+
+      <!-- Coverage info -->
+      <div style="background: #fff3cd; padding: 10px; border-radius: 3px; border: 1px solid #ffeaa7; font-size: 12px;">
+        <strong data-i18n="bicycle_coverage">ℹ️ Cobertura:</strong> Aquest servei mostra infraestructura ciclista i estacions Bicing a Barcelona i àrea metropolitana. Les dades s'actualitzen cada 5 minuts per a Bicing.
+      </div>
+
+      <br><hr width="90%">
+
+      <!-- Help section -->
+      <h3 style="color: #333;" data-i18n="bicycle_help_title"><i class="fa fa-question-circle"></i> Ajuda</h3>
+      <p style="text-align:justify; margin-right:5px; font-size: 13px;" data-i18n="bicycle_help_text">
+        Aquest panell et permet visualitzar la infraestructura ciclista de Barcelona i les estacions de Bicing amb informació en temps real sobre disponibilitat de bicicletes i ancoratges lliures.
+      </p>
+    </div>
+</body>
+</html>

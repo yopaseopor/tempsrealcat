@@ -39,9 +39,11 @@
 	<li><a href="#search" role="tab"><i class="fa fa-search"></i></a></li>
 	<li><a href="#home" role="tab"><i class="fa fa-map-marker"></i></a></li>
 	<li><a href="#routes" role="tab"><i class="fa fa-compass"></i></a></li>
+	<li><a href="#bicycle" role="tab"><i class="fa fa-bicycle"></i></a></li>
 	<li><a href="#train" role="tab"><i class="fa fa-train"></i></a></li>
 	<li><a href="#fgc" role="tab"><i class="fa fa-chevron-circle-right"></i></a></li>
 	<li><a href="#bus" role="tab"><i class="fa fa-bus"></i></a></li>
+	<li><a href="#metro" role="tab"><i class="fa fa-subway"></i></a></li>
 	<li><a href="#gtfs" role="tab"><i class="fa fa-clock-o"></i></a></li>
 	<li><a href="#wikipedia" role="tab"><i class="fa fa-book"></i></a></li>
 		<!--MODIFICAR AQUÍ-->
@@ -294,6 +296,14 @@
           onClick="location.href='#rutes_init'" data-i18n="routes_help_back"> Inici</button></center>
 	</div>
 
+	<!--BICYCLE-->
+	<div class="sidebar-pane" id="bicycle">
+	  <div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span>
+	  </div>
+	  <h1>Bicycle</h1>
+	  <!-- Empty for now -->
+	</div>
+
 	<!--TRAIN-->
 	<div class="sidebar-pane" id="train">
 	  <!-- Content will be loaded dynamically from train.html -->
@@ -309,6 +319,11 @@
 	<!--BUS-->
 	<div class="sidebar-pane" id="bus">
 	  <!-- Content will be loaded dynamically from bus.html -->
+	</div>
+
+	<!--METRO-->
+	<div class="sidebar-pane" id="metro">
+	  <!-- Content will be loaded dynamically from metro.html -->
 	</div>
 
 	<!--GTFS-->
@@ -2119,6 +2134,7 @@ s.setAttribute('data-timestamp', +new Date());
     <script src="assets/js/renfe.functions.js"></script>
     <script src="assets/js/fgc.functions.js"></script>
     <script src="assets/js/bus.functions.js"></script>
+    <script src="assets/js/metro.functions.js"></script>
 
   </body>
 </html>

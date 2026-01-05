@@ -528,6 +528,25 @@ window.translations_es = {
     bus_arrived: "Llegado",
     bus_overdue: "Retrasado",
 
+    // Metro (TMB) translations
+    metro_title: "🚇 Metro TMB",
+    metro_description: "Visualiza todas las estaciones de metro TMB en Barcelona. Los datos provienen directamente de la API oficial de TMB.",
+    metro_stops_visualization: "📍 Visualización de estaciones",
+    metro_start_stops: "Mostrar estaciones",
+    metro_stop_stops: "Ocultar estaciones",
+    metro_status: "Estado:",
+    metro_status_inactive: "Inactivo",
+    metro_status_loading: "Cargando estaciones de metro...",
+    metro_step1: "Mostrar estaciones: Pulsa \"Mostrar estaciones\" para cargar todas las estaciones de metro TMB en el mapa",
+    metro_step2: "Visualiza en el mapa: Las estaciones aparecerán como marcadores con iconos de metro y colores por línea",
+    metro_step3: "Haz clic en los marcadores: Obtén información detallada sobre cada estación",
+    metro_step4: "Ocultar cuando quieras: Pulsa \"Ocultar estaciones\" para limpiar el mapa",
+    metro_coverage: "ℹ️ Cobertura: Este servicio muestra todas las estaciones de metro TMB en el área metropolitana de Barcelona. Los datos se actualizan cada 10 minutos.",
+    metro_help_title: "Ayuda",
+    metro_help_text: "Este panel te permite visualizar todas las estaciones de metro TMB en Barcelona. Los datos provienen de la API oficial de TMB e incluyen información sobre la ubicación y códigos de las estaciones. Cada estación se muestra con el color correspondiente a su línea de metro.",
+    metro_error_loading: "Error obteniendo estaciones TMB:",
+    metro_status_active: "🚇 Mostrando {count} estaciones de metro TMB",
+
     // FGC translations
     fgc_title: "🚆 FGC - Ferrocarriles de la Generalidad de Catalunya",
     fgc_description: "Visualiza las posiciones en tiempo real de los trenes FGC en Catalunya. Los datos provienen directamente de la API abierta de FGC.",
