@@ -9,35 +9,35 @@ function get_poi(element) {
 
     // TODO: improve this
     var type = ''
-    if (e.tags.internet_access) type = 'internet_access';
-    if (e.tags.highway) {
-        if (type == '') type = e.tags.highway;
+    if (element.tags.internet_access) type = 'internet_access';
+    if (element.tags.highway) {
+        if (type == '') type = element.tags.highway;
     }
-    if (e.tags.amenity) {
-        if (type == '') type = e.tags.amenity;
+    if (element.tags.amenity) {
+        if (type == '') type = element.tags.amenity;
     }
-    if (e.tags.tourism) {
-        if (type == '') type = e.tags.tourism;
+    if (element.tags.tourism) {
+        if (type == '') type = element.tags.tourism;
     }
-    if (e.tags.shop) {
-        if (e.tags.car_repair == 'wheel_repair') type = 'wheel_repair';
-        if (type == '') type = e.tags.shop;
+    if (element.tags.shop) {
+        if (element.tags.car_repair == 'wheel_repair') type = 'wheel_repair';
+        if (type == '') type = element.tags.shop;
     }
-    if (e.tags.sport) {
-        if (e.tags.shooting == 'paintball') type = 'paintball';
-        if (type == '') type = e.tags.shooting;
+    if (element.tags.sport) {
+        if (element.tags.shooting == 'paintball') type = 'paintball';
+        if (type == '') type = element.tags.shooting;
     }
-    if (e.tags.leisure) {
-        if (type == '') type = e.tags.leisure;
+    if (element.tags.leisure) {
+        if (type == '') type = element.tags.leisure;
     }
-    if (e.tags.office) {
-        if (type == '') type = e.tags.office;
+    if (element.tags.office) {
+        if (type == '') type = element.tags.office;
     }
-    if (e.tags.craft) {
-        if (type == '') type = e.tags.craft;
+    if (element.tags.craft) {
+        if (type == '') type = element.tags.craft;
     }
-    if (e.tags.historic) {
-        if (type == '') type = e.tags.historic;
+    if (element.tags.historic) {
+        if (type == '') type = element.tags.historic;
     }
 
     var poi = pois[type];
@@ -48,7 +48,11 @@ function get_poi(element) {
 // https://github.com/kartenkarsten/leaflet-layer-overpass
 function callback(data) {
     if (spinner > 0) spinner -= 1;
-    if (spinner == 0) $('#spinner').hide();
+    if (spinner == 0) {
+        $('#spinner').hide();
+        // Query completed
+        onPoiQueryComplete();
+    }
 
     for(i=0; i < data.elements.length; i++) {
         e = data.elements[i];
@@ -162,11 +166,15 @@ function show_overpass_layer() {
         var opl = new L.OverPassLayer({
             query: query,
             callback: callback,
-            minzoom: 14
+            minzoom: 14,
+            autoQuery: false // Disable auto-querying on map move
         });
 
         if (typeof iconLayer !== 'undefined' && iconLayer && typeof iconLayer.addLayer === 'function') {
             iconLayer.addLayer(opl);
+            currentOverPassLayer = opl; // Store reference for cancellation
+            // Manually trigger the query
+            opl.onMoveEnd();
         } else {
             console.warn('iconLayer is not available; cannot add OverPassLayer');
         }
@@ -279,6 +287,17 @@ function manualPoiQuery() {
     iconLayer.clearLayers();
     build_overpass_query();
     show_overpass_layer();
+}
+
+// Update the query completion handler to reset state
+function onPoiQueryComplete() {
+    isQueryRunning = false;
+    updateQueryButton();
+    $('#spinner').hide();
+    if (window.queryTimeout) {
+        clearTimeout(window.queryTimeout);
+        window.queryTimeout = null;
+    }
 }
 
 function stopQuery() {

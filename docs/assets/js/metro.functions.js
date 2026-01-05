@@ -246,7 +246,7 @@ function fetchTMBRealtimeMetroForStation(stationCode) {
                 });
 
                 if (stationData && stationData.linies_trajectes && Array.isArray(stationData.linies_trajectes)) {
-                    console.log('🚇 Found linies_trajectes for station', stationCode);
+                    console.log('🚇 Found linies_trajectes for station', stationCode, ':', stationData.linies_trajectes.length, 'trajectories');
 
                     stationData.linies_trajectes.forEach(function(lineTrajectory) {
                         try {
@@ -257,12 +257,18 @@ function fetchTMBRealtimeMetroForStation(stationCode) {
                             var destination = lineTrajectory.desti_trajecte || '';
                             var color = lineTrajectory.color_linia || '#666666';
 
+                            console.log('📊 Line info - codi_linia:', lineTrajectory.codi_linia, 'nom_linia:', lineTrajectory.nom_linia, 'color:', color);
+
                             // Process upcoming trains for this line/direction
                             if (lineTrajectory.propers_trens && Array.isArray(lineTrajectory.propers_trens)) {
+                                console.log('🚂 Found', lineTrajectory.propers_trens.length, 'propers_trens for line', line);
+
                                 lineTrajectory.propers_trens.forEach(function(train, trainIndex) {
                                     try {
                                         var serviceCode = train.codi_servei || ('train_' + trainIndex);
                                         var arrivalTimestamp = train.temps_arribada || 0;
+
+                                        console.log('🕒 Train', trainIndex, '- codi_servei:', serviceCode, 'temps_arribada:', arrivalTimestamp);
 
                                         // Convert timestamp to minutes from now
                                         var now = Date.now();
@@ -306,6 +312,24 @@ function fetchTMBRealtimeMetroForStation(stationCode) {
                             console.warn('Error processing line trajectory for station', stationCode, ':', trajectoryError, lineTrajectory);
                         }
                     });
+
+                    // Store the first line found as the primary line for this station
+                    if (stationData.linies_trajectes.length > 0 && stationData.linies_trajectes[0].codi_linia) {
+                        var primaryLine = stationData.linies_trajectes[0].codi_linia;
+                        console.log('📍 Setting primary line for station', stationCode, 'to', primaryLine);
+
+                        // Update the line information in the arrivals for consistency
+                        arrivals.forEach(function(arrival) {
+                            if (!arrival.primaryLine) {
+                                arrival.primaryLine = primaryLine;
+                            }
+                        });
+
+                        // Return the primary line along with arrivals so it can be used to update the station
+                        return { arrivals: arrivals, primaryLine: primaryLine };
+                    }
+
+                    return { arrivals: arrivals, primaryLine: null };
                 } else {
                     console.warn('🚇 No station data or linies_trajectes found for station', stationCode);
                 }
@@ -375,8 +399,19 @@ function displayTMBMetroStops(stops) {
     stops.forEach(function(stop) {
         if (stop.codi_estacio || stop.id) {
             var stationCode = stop.codi_estacio || stop.id;
-            var promise = fetchTMBRealtimeMetroForStation(stationCode).then(function(arrivals) {
-                stop.realtimeArrivals = arrivals || [];
+            var promise = fetchTMBRealtimeMetroForStation(stationCode).then(function(result) {
+                // Handle both old format (array) and new format ({arrivals, primaryLine})
+                if (result && typeof result === 'object' && result.arrivals) {
+                    stop.realtimeArrivals = result.arrivals || [];
+                    // Update station line if we got it from real-time API
+                    if (result.primaryLine && (!stop.line || stop.line === 'Unknown')) {
+                        stop.line = result.primaryLine;
+                        console.log('✅ Updated station', stationCode, 'line to', result.primaryLine);
+                    }
+                } else {
+                    // Fallback for old format
+                    stop.realtimeArrivals = result || [];
+                }
                 return stop;
             });
             realtimePromises.push(promise);
@@ -531,8 +566,10 @@ function displayTMBMetroStops(stops) {
                         '</div>';
                 }
 
-                // Add data fetch timestamp
+                // Add refresh button and data timestamp
                 popupContent += '<div style="font-size: 10px; color: #888; margin-top: 8px; text-align: center; border-top: 1px solid #eee; padding-top: 6px;">' +
+                    '<button onclick="refreshTMBMetroStationData({codi_estacio: \'' + (stop.codi_estacio || stop.id) + '\', nom_estacio: \'' + (stop.nom_estacio || 'Sense nom').replace(/'/g, '\\\'') + '\', lat: ' + stop.lat + ', lng: ' + stop.lng + '})" ' +
+                    'style="background: #28a745; color: white; border: none; padding: 3px 6px; border-radius: 3px; cursor: pointer; font-size: 9px; margin-right: 8px;">🔄 Actualitzar</button>' +
                     '<em>Dades actualitzades a les ' + dataFetchedAt.toLocaleTimeString() + '</em>' +
                     '</div>';
 
@@ -642,8 +679,642 @@ function startTMBMetroArrivalCountdown(elementId, arrival, scheduledTime) {
     window.tmbMetroCountdownIntervals.push(intervalId);
 }
 
+// TMB Metro Stops Table Management
+var tmbMetroStopsTableData = [];
+var currentTMBMetroTablePage = 1;
+var itemsPerTMBMetroTablePage = 25; // 25 items per page for better readability
+var filteredTMBMetroTableData = [];
+var currentTMBMetroTableSortColumn = 'id'; // Default sort column
+var currentTMBMetroTableSortDirection = 'asc'; // 'asc' or 'desc'
+
+// Load TMB metro stops table
+function loadTMBMetroStopsTable() {
+    console.log('📋 Loading TMB metro stops table...');
+
+    // Show loading indicator
+    document.getElementById('tmb-metro-table-loading').style.display = 'block';
+    document.getElementById('tmb-metro-stops-table').style.display = 'none';
+    document.getElementById('tmb-metro-no-results').style.display = 'none';
+    document.getElementById('tmb-metro-pagination').style.display = 'none';
+
+    updateTMBMetroTableStatus('Carregant estacions de metro...');
+
+    // Check if we already have the data from the map visualization
+    if (allTMBMetroStops && allTMBMetroStops.length > 0) {
+        console.log('✅ Using cached TMB metro stops data:', allTMBMetroStops.length, 'stops');
+        populateTMBMetroTable(allTMBMetroStops);
+    } else {
+        // Fetch fresh data
+        fetchAllTMBMetroStops().then(function(stops) {
+            allTMBMetroStops = stops; // Cache for future use
+            populateTMBMetroTable(stops);
+        }).catch(function(error) {
+            console.error('❌ Error loading TMB metro stops for table:', error);
+            updateTMBMetroTableStatus('Error carregant dades');
+            document.getElementById('tmb-metro-table-loading').style.display = 'none';
+            alert('Error carregant les dades d\'estacions TMB: ' + error.message);
+        });
+    }
+}
+
+// Populate table with TMB metro stops data
+function populateTMBMetroTable(stops) {
+    console.log('📊 Populating TMB metro table with', stops.length, 'stops');
+
+    // Fetch real-time data for all stops to show upcoming metros in table
+    var realtimePromises = stops.map(function(stop) {
+        if (stop.codi_estacio || stop.id) {
+            var stationCode = stop.codi_estacio || stop.id;
+            return fetchTMBRealtimeMetroForStation(stationCode).then(function(result) {
+                // Handle both old format (array) and new format ({arrivals, primaryLine})
+                if (result && typeof result === 'object' && result.arrivals) {
+                    stop.realtimeArrivals = result.arrivals || [];
+                    // Update station line if we got it from real-time API
+                    if (result.primaryLine && (!stop.line || stop.line === 'Unknown')) {
+                        stop.line = result.primaryLine;
+                        console.log('✅ Updated station', stationCode, 'line to', result.primaryLine);
+                    }
+                } else {
+                    // Fallback for old format
+                    stop.realtimeArrivals = result || [];
+                }
+                return stop;
+            });
+        } else {
+            stop.realtimeArrivals = [];
+            return Promise.resolve(stop);
+        }
+    });
+
+    Promise.all(realtimePromises).then(function(stopsWithRealtime) {
+        console.log('✅ Fetched real-time data for', stopsWithRealtime.length, 'metro stops');
+
+        tmbMetroStopsTableData = stopsWithRealtime;
+        filteredTMBMetroTableData = [...tmbMetroStopsTableData];
+
+        currentTMBMetroTablePage = 1;
+        displayTMBMetroTablePage();
+
+        // Hide loading, show table
+        document.getElementById('tmb-metro-table-loading').style.display = 'none';
+        document.getElementById('tmb-metro-stops-table').style.display = 'table';
+        document.getElementById('tmb-metro-pagination').style.display = 'block';
+
+        updateTMBMetroTableStatus('Trobat ' + stopsWithRealtime.length + ' estacions de metro amb dades temps real');
+        updateTMBMetroTableSortIndicators();
+
+        console.log('✅ TMB metro table populated successfully with real-time data');
+    }).catch(function(error) {
+        console.error('❌ Error fetching real-time data for table:', error);
+        // Still show the table with static data
+        stops.forEach(function(stop) {
+            stop.realtimeArrivals = [];
+        });
+        tmbMetroStopsTableData = stops;
+        filteredTMBMetroTableData = [...tmbMetroStopsTableData];
+
+        currentTMBMetroTablePage = 1;
+        displayTMBMetroTablePage();
+
+        document.getElementById('tmb-metro-table-loading').style.display = 'none';
+        document.getElementById('tmb-metro-stops-table').style.display = 'table';
+        document.getElementById('tmb-metro-pagination').style.display = 'block';
+
+        updateTMBMetroTableStatus('Trobat ' + stops.length + ' estacions (sense dades temps real)');
+        updateTMBMetroTableSortIndicators();
+    });
+}
+
+// Display current page of TMB metro table
+function displayTMBMetroTablePage() {
+    var tbodyElement = document.getElementById('tmb-metro-stops-tbody');
+    var noResultsElement = document.getElementById('tmb-metro-no-results');
+
+    if (!tbodyElement) return;
+
+    // Clear any existing countdown intervals for table elements before recreating
+    if (window.tmbMetroCountdownIntervals) {
+        window.tmbMetroCountdownIntervals.forEach(function(intervalId) {
+            clearInterval(intervalId);
+        });
+        window.tmbMetroCountdownIntervals = [];
+    }
+
+    var startIndex = (currentTMBMetroTablePage - 1) * itemsPerTMBMetroTablePage;
+    var endIndex = startIndex + itemsPerTMBMetroTablePage;
+    var stopsToShow = filteredTMBMetroTableData.slice(startIndex, endIndex);
+
+    tbodyElement.innerHTML = '';
+
+    if (stopsToShow.length === 0) {
+        if (noResultsElement) {
+            noResultsElement.style.display = 'block';
+        }
+        return;
+    }
+
+    if (noResultsElement) {
+        noResultsElement.style.display = 'none';
+    }
+
+    stopsToShow.forEach(function(stop) {
+        var row = document.createElement('tr');
+        row.style.borderBottom = '1px solid #eee';
+
+        // ID column
+        var idCell = document.createElement('td');
+        idCell.style.padding = '8px';
+        idCell.style.fontWeight = 'bold';
+        idCell.style.color = '#333';
+        idCell.textContent = stop.codi_estacio || stop.id || '';
+        row.appendChild(idCell);
+
+        // Name column
+        var nameCell = document.createElement('td');
+        nameCell.style.padding = '8px';
+        nameCell.textContent = stop.nom_estacio || 'Sense nom';
+        row.appendChild(nameCell);
+
+        // Line column
+        var lineCell = document.createElement('td');
+        lineCell.style.padding = '8px';
+        lineCell.style.fontWeight = 'bold';
+
+        // Get line color
+        var lineColor = stop.color || tmbMetroLineColors[stop.line] || '#666666';
+        lineCell.innerHTML = '<span style="background: ' + lineColor + '; color: white; padding: 2px 6px; border-radius: 3px; font-size: 11px;">L' + stop.line + '</span>';
+        row.appendChild(lineCell);
+
+        // Next metros column
+        var arrivalsCell = document.createElement('td');
+        arrivalsCell.style.padding = '8px';
+
+        if (stop.realtimeArrivals && stop.realtimeArrivals.length > 0) {
+            var arrivalsHtml = '<div style="font-size: 11px;">';
+            var nextArrivals = stop.realtimeArrivals.slice(0, 2); // Show up to 2 next arrivals
+
+            nextArrivals.forEach(function(arrival, index) {
+                var arrivalId = 'table-metro-arrival-' + stop.codi_estacio + '-' + index;
+                var scheduledTime = arrival.scheduledTime;
+                var countdownStr = getTMBMetroCountdownString(arrival, scheduledTime);
+
+                arrivalsHtml += '<div style="margin-bottom: 2px; padding: 2px 4px; background: #f0f0f0; border-radius: 2px;">' +
+                    '<span style="font-weight: bold; color: ' + lineColor + ';">L' + arrival.line + '</span> ' +
+                    '<span id="' + arrivalId + '" style="font-family: monospace; font-weight: bold; margin-right: 4px;">' + countdownStr + '</span>';
+                if (arrival.destination) {
+                    arrivalsHtml += ' → ' + arrival.destination.substring(0, 12);
+                    if (arrival.destination.length > 12) arrivalsHtml += '...';
+                }
+                arrivalsHtml += '</div>';
+
+                // Start live countdown update for this table arrival
+                startTMBMetroArrivalCountdown(arrivalId, arrival, scheduledTime);
+            });
+
+            if (stop.realtimeArrivals.length > 2) {
+                arrivalsHtml += '<div style="font-size: 10px; color: #666; text-align: center;">+' + (stop.realtimeArrivals.length - 2) + ' més...</div>';
+            }
+
+            arrivalsHtml += '</div>';
+            arrivalsCell.innerHTML = arrivalsHtml;
+        } else {
+            arrivalsCell.innerHTML = '<span style="color: #999; font-style: italic; font-size: 11px;">Sense dades temps real</span>';
+        }
+        row.appendChild(arrivalsCell);
+
+        // Actions column
+        var actionsCell = document.createElement('td');
+        actionsCell.style.padding = '8px';
+        actionsCell.style.textAlign = 'center';
+
+        // Zoom button
+        var zoomBtn = document.createElement('button');
+        zoomBtn.textContent = '📍';
+        zoomBtn.title = 'Centrar al mapa';
+        zoomBtn.style.background = '#007acc';
+        zoomBtn.style.color = 'white';
+        zoomBtn.style.border = 'none';
+        zoomBtn.style.padding = '4px 6px';
+        zoomBtn.style.borderRadius = '3px';
+        zoomBtn.style.cursor = 'pointer';
+        zoomBtn.style.fontSize = '10px';
+        zoomBtn.style.marginRight = '4px';
+        zoomBtn.onclick = function() {
+            zoomToTMBMetroStop(stop);
+        };
+        actionsCell.appendChild(zoomBtn);
+
+        // Refresh button (same behavior as popup)
+        var refreshBtn = document.createElement('button');
+        refreshBtn.textContent = '🔄';
+        refreshBtn.title = 'Actualitzar dades d\'aquesta estació';
+        refreshBtn.style.background = '#28a745';
+        refreshBtn.style.color = 'white';
+        refreshBtn.style.border = 'none';
+        refreshBtn.style.padding = '4px 6px';
+        refreshBtn.style.borderRadius = '3px';
+        refreshBtn.style.cursor = 'pointer';
+        refreshBtn.style.fontSize = '10px';
+        refreshBtn.onclick = function() {
+            refreshTMBMetroStationData({
+                codi_estacio: stop.codi_estacio || stop.id,
+                nom_estacio: stop.nom_estacio || 'Sense nom',
+                lat: stop.lat,
+                lng: stop.lng
+            });
+        };
+        actionsCell.appendChild(refreshBtn);
+
+        row.appendChild(actionsCell);
+
+        tbodyElement.appendChild(row);
+    });
+
+    updateTMBMetroTablePaginationControls();
+}
+
+// Update TMB metro table status display
+function updateTMBMetroTableStatus(status) {
+    var statusElement = document.getElementById('tmb-metro-table-status');
+    if (statusElement) {
+        statusElement.textContent = '📊 ' + status;
+    }
+}
+
+// Search TMB metro table
+function searchTMBMetroTable() {
+    var searchInput = document.getElementById('tmb-metro-table-search');
+    if (!searchInput) return;
+
+    var searchTerm = searchInput.value.toLowerCase().trim();
+    filteredTMBMetroTableData = tmbMetroStopsTableData.filter(function(stop) {
+        var searchableText = [
+            stop.codi_estacio || stop.id || '',
+            stop.nom_estacio || '',
+            'l' + (stop.line || ''),
+            stop.line || ''
+        ].join(' ').toLowerCase();
+
+        return searchableText.includes(searchTerm);
+    });
+
+    currentTMBMetroTablePage = 1;
+    displayTMBMetroTablePage();
+}
+
+// Clear TMB metro table search
+function clearTMBMetroTableSearch() {
+    var searchInput = document.getElementById('tmb-metro-table-search');
+    if (searchInput) {
+        searchInput.value = '';
+    }
+    filteredTMBMetroTableData = [...tmbMetroStopsTableData];
+    currentTMBMetroTablePage = 1;
+    displayTMBMetroTablePage();
+}
+
+// Sort TMB metro table
+function sortTMBMetroTable(column) {
+    // Toggle sort direction if same column, otherwise default to ascending
+    if (currentTMBMetroTableSortColumn === column) {
+        currentTMBMetroTableSortDirection = currentTMBMetroTableSortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentTMBMetroTableSortColumn = column;
+        currentTMBMetroTableSortDirection = 'asc';
+    }
+
+    // Sort the filtered data
+    filteredTMBMetroTableData.sort(function(a, b) {
+        var aVal, bVal;
+
+        switch(column) {
+            case 'id':
+                aVal = (a.codi_estacio || a.id || '').toString().toLowerCase();
+                bVal = (b.codi_estacio || b.id || '').toString().toLowerCase();
+                break;
+            case 'name':
+                aVal = (a.nom_estacio || '').toString().toLowerCase();
+                bVal = (b.nom_estacio || '').toString().toLowerCase();
+                break;
+            case 'line':
+                aVal = parseInt(a.line || 0);
+                bVal = parseInt(b.line || 0);
+                break;
+            case 'arrivals':
+                aVal = (a.realtimeArrivals && a.realtimeArrivals.length > 0) ? a.realtimeArrivals[0].timeToArrival || 999 : 999;
+                bVal = (b.realtimeArrivals && b.realtimeArrivals.length > 0) ? b.realtimeArrivals[0].timeToArrival || 999 : 999;
+                break;
+            default:
+                return 0;
+        }
+
+        if (currentTMBMetroTableSortDirection === 'asc') {
+            if (typeof aVal === 'number' && typeof bVal === 'number') {
+                return aVal - bVal;
+            } else {
+                return aVal.localeCompare ? aVal.localeCompare(bVal, 'ca', {numeric: true, sensitivity: 'base'}) : (aVal > bVal ? 1 : aVal < bVal ? -1 : 0);
+            }
+        } else {
+            if (typeof aVal === 'number' && typeof bVal === 'number') {
+                return bVal - aVal;
+            } else {
+                return bVal.localeCompare ? bVal.localeCompare(aVal, 'ca', {numeric: true, sensitivity: 'base'}) : (bVal > aVal ? 1 : aVal < aVal ? -1 : 0);
+            }
+        }
+    });
+
+    // Reset to first page when sorting
+    currentTMBMetroTablePage = 1;
+
+    // Update sort indicators
+    updateTMBMetroTableSortIndicators();
+
+    // Redisplay the table
+    displayTMBMetroTablePage();
+}
+
+// Update sort indicators in table headers
+function updateTMBMetroTableSortIndicators() {
+    // Reset all indicators
+    var indicators = ['metro-sort-id', 'metro-sort-name', 'metro-sort-line', 'metro-sort-arrivals'];
+    indicators.forEach(function(id) {
+        var element = document.getElementById(id);
+        if (element) {
+            element.textContent = '↕️';
+        }
+    });
+
+    // Set active indicator
+    var activeId = 'metro-sort-' + currentTMBMetroTableSortColumn;
+    var activeElement = document.getElementById(activeId);
+    if (activeElement) {
+        activeElement.textContent = currentTMBMetroTableSortDirection === 'asc' ? '⬆️' : '⬇️';
+    }
+}
+
+// Update TMB metro table pagination controls
+function updateTMBMetroTablePaginationControls() {
+    var prevButton = document.getElementById('tmb-metro-prev-page');
+    var nextButton = document.getElementById('tmb-metro-next-page');
+    var pageInfo = document.getElementById('tmb-metro-page-info');
+
+    var totalPages = Math.ceil(filteredTMBMetroTableData.length / itemsPerTMBMetroTablePage);
+
+    if (prevButton) {
+        prevButton.disabled = currentTMBMetroTablePage <= 1;
+    }
+
+    if (nextButton) {
+        nextButton.disabled = currentTMBMetroTablePage >= totalPages;
+    }
+
+    if (pageInfo) {
+        pageInfo.textContent = 'Pàgina ' + currentTMBMetroTablePage + ' de ' + Math.max(1, totalPages) +
+                              ' (' + filteredTMBMetroTableData.length + ' estacions)';
+    }
+}
+
+// Change TMB metro table page
+function changeTMBMetroPage(direction) {
+    var totalPages = Math.ceil(filteredTMBMetroTableData.length / itemsPerTMBMetroTablePage);
+    currentTMBMetroTablePage += direction;
+
+    if (currentTMBMetroTablePage < 1) currentTMBMetroTablePage = 1;
+    if (currentTMBMetroTablePage > totalPages) currentTMBMetroTablePage = totalPages;
+
+    displayTMBMetroTablePage();
+}
+
+// Zoom to TMB metro stop on map
+function zoomToTMBMetroStop(stop) {
+    if (stop.lat && stop.lng && !isNaN(stop.lat) && !isNaN(stop.lng)) {
+        map.setView([stop.lat, stop.lng], 18); // High zoom level to focus on the stop
+        console.log('🗺️ Zoomed to TMB metro stop:', stop.codi_estacio || stop.id, 'at', stop.lat, stop.lng);
+
+        // If map visualization is active, also trigger popup
+        if (tmbMetroStopsMarkers && tmbMetroStopsMarkers.length > 0) {
+            // Find the marker for this stop and open its popup
+            tmbMetroStopsMarkers.forEach(function(marker) {
+                if (marker && marker.getLatLng) {
+                    var markerLatLng = marker.getLatLng();
+                    if (Math.abs(markerLatLng.lat - stop.lat) < 0.0001 &&
+                        Math.abs(markerLatLng.lng - stop.lng) < 0.0001) {
+                        marker.openPopup();
+                    }
+                }
+            });
+        }
+    } else {
+        console.warn('❌ Cannot zoom to TMB metro stop - invalid coordinates:', stop.codi_estacio || stop.id, stop.lat, stop.lng);
+        alert('No es poden obtenir les coordenades d\'aquesta estació.');
+    }
+}
+
+// Refresh data for a specific TMB metro station
+function refreshTMBMetroStationData(stop) {
+    if (!stop || (!stop.codi_estacio && !stop.id)) {
+        console.warn('❌ Invalid stop data for refresh:', stop);
+        return;
+    }
+
+    var stationCode = stop.codi_estacio || stop.id;
+    var stationName = stop.nom_estacio || 'Sense nom';
+
+    console.log('🔄 Refreshing data for metro station:', stationCode, stationName);
+
+    // Show loading state in the button (if called from button click)
+    var refreshBtn = event ? event.target : null;
+    if (refreshBtn) {
+        var originalText = refreshBtn.textContent;
+        refreshBtn.textContent = '⏳';
+        refreshBtn.disabled = true;
+        refreshBtn.style.background = '#666';
+    }
+
+    // Fetch fresh real-time data for this station
+    fetchTMBRealtimeMetroForStation(stationCode).then(function(result) {
+        console.log('✅ Refreshed data for station', stationCode, ':', result);
+
+        // Handle both old format (array) and new format ({arrivals, primaryLine})
+        if (result && typeof result === 'object' && result.arrivals) {
+            stop.realtimeArrivals = result.arrivals || [];
+            // Update station line if we got it from real-time API
+            if (result.primaryLine && (!stop.line || stop.line === 'Unknown')) {
+                stop.line = result.primaryLine;
+                console.log('✅ Updated station', stationCode, 'line to', result.primaryLine);
+            }
+        } else {
+            // Fallback for old format
+            stop.realtimeArrivals = result || [];
+        }
+
+        stop.lastRefresh = new Date();
+
+        console.log('🔄 Updated stop object:', stop);
+
+        // Update table if it's currently displayed
+        if (tmbMetroStopsTableData && tmbMetroStopsTableData.length > 0) {
+            // Find and update the station in the table data
+            var tableIndex = tmbMetroStopsTableData.findIndex(function(tableStop) {
+                return (tableStop.codi_estacio || tableStop.id) === stationCode;
+            });
+
+            if (tableIndex !== -1) {
+                tmbMetroStopsTableData[tableIndex] = stop;
+                filteredTMBMetroTableData = [...tmbMetroStopsTableData];
+                displayTMBMetroTablePage(); // Refresh the current table page
+                console.log('✅ Updated table data for station', stationCode);
+            }
+        }
+
+        // Update map markers if they exist
+        if (tmbMetroStopsMarkers && tmbMetroStopsMarkers.length > 0) {
+            console.log('🔄 Looking for map marker for station', stationCode);
+
+            // Find the marker for this station and update its popup
+            var foundMarker = false;
+            tmbMetroStopsMarkers.forEach(function(marker, markerIndex) {
+                if (marker && marker.getLatLng && marker.getPopup) {
+                    var markerLatLng = marker.getLatLng();
+                    var distance = Math.sqrt(
+                        Math.pow(markerLatLng.lat - stop.lat, 2) +
+                        Math.pow(markerLatLng.lng - stop.lng, 2)
+                    );
+
+                    // Use a small tolerance for coordinate matching
+                    if (distance < 0.001) { // About 100 meters tolerance
+                        console.log('🎯 Found marker for station', stationCode, 'at index', markerIndex);
+
+                        // Clear any existing countdown intervals for this station
+                        var existingCountdowns = document.querySelectorAll('[id^="tmb-metro-arrival-' + stationCode + '"]');
+                        existingCountdowns.forEach(function(element) {
+                            var elementId = element.id;
+                            // Stop any existing countdown for this element
+                            if (window.tmbMetroCountdownIntervals) {
+                                window.tmbMetroCountdownIntervals = window.tmbMetroCountdownIntervals.filter(function(intervalId) {
+                                    if (document.getElementById(elementId)) {
+                                        clearInterval(intervalId);
+                                        return false;
+                                    }
+                                    return true;
+                                });
+                            }
+                        });
+
+                        // Create updated popup content
+                        var lineColor = stop.color || tmbMetroLineColors[stop.line] || '#666666';
+                        var popupContent = '<div style="font-family: Arial, sans-serif; min-width: 250px;">' +
+                            '<h4 style="margin: 0 0 8px 0; color: ' + lineColor + '; border-bottom: 2px solid ' + lineColor + '; padding-bottom: 4px;">' +
+                            '🚇 ' + (stop.nom_estacio || 'Estació Metro') + '</h4>' +
+                            '<div style="background: ' + lineColor + '20; border: 1px solid ' + lineColor + '; border-radius: 4px; padding: 10px; margin: 8px 0;">' +
+                            '<strong>Nom:</strong> ' + (stop.nom_estacio || 'Sense nom') + '<br>' +
+                            '<strong>Codi:</strong> ' + (stop.codi_estacio || stop.id) + '<br>' +
+                            '<strong>Línia:</strong> L' + (stop.line || 'Desconeguda') + '<br>' +
+                            '<strong>Posició:</strong> ' + stop.lat.toFixed(4) + ', ' + stop.lng.toFixed(4) +
+                            '</div>';
+
+                        // Add real-time arrivals section
+                        if (stop.realtimeArrivals && stop.realtimeArrivals.length > 0) {
+                            console.log('📊 Adding arrivals section with', stop.realtimeArrivals.length, 'arrivals');
+                            popupContent += '<div style="background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px; padding: 10px; margin: 8px 0;">' +
+                                '<h5 style="margin: 0 0 8px 0; color: #0066cc;">🚇 Próxims metros</h5>' +
+                                '<div style="max-height: 150px; overflow-y: auto;">';
+
+                            stop.realtimeArrivals.slice(0, 10).forEach(function(arrival, index) {
+                                var arrivalId = 'tmb-metro-arrival-' + stop.codi_estacio + '-' + index;
+                                var scheduledTime = arrival.scheduledTime;
+
+                                var scheduledTimeStr = scheduledTime ? scheduledTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : '--:--';
+                                var countdownStr = getTMBMetroCountdownString(arrival, scheduledTime);
+
+                                console.log('🕒 Arrival', index, ': Line', arrival.line, 'Time:', countdownStr, 'Scheduled:', scheduledTimeStr);
+
+                                popupContent += '<div style="margin-bottom: 6px; padding: 6px; background: #fff; border-radius: 3px; border: 1px solid #eee;">' +
+                                    '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">' +
+                                    '<div style="font-weight: bold; color: ' + lineColor + ';">Línia ' + arrival.line + '</div>' +
+                                    '<div id="' + arrivalId + '" style="font-weight: bold; font-family: monospace;">' + countdownStr + '</div>' +
+                                    '</div>' +
+                                    '<div style="font-size: 11px; color: #666;">Arribada: ' + scheduledTimeStr + '</div>';
+                                if (arrival.destination) {
+                                    popupContent += '<div style="font-size: 11px; color: #666; margin-top: 2px;">➜ ' + arrival.destination + '</div>';
+                                }
+                                popupContent += '</div>';
+
+                                // Start live countdown update for this arrival
+                                startTMBMetroArrivalCountdown(arrivalId, arrival, scheduledTime);
+                            });
+
+                            popupContent += '</div></div>';
+                        } else {
+                            console.log('⚠️ No arrivals data for station', stationCode);
+                            popupContent += '<div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 8px; margin: 8px 0; text-align: center;">' +
+                                '<em>Sense informació de temps real</em>' +
+                                '</div>';
+                        }
+
+                        // Add refresh button and data timestamp
+                        var now = new Date();
+                        popupContent += '<div style="font-size: 10px; color: #888; margin-top: 8px; text-align: center; border-top: 1px solid #eee; padding-top: 6px;">' +
+                            '<button onclick="refreshTMBMetroStationData({codi_estacio: \'' + (stop.codi_estacio || stop.id) + '\', nom_estacio: \'' + (stop.nom_estacio || 'Sense nom').replace(/'/g, '\\\'') + '\', lat: ' + stop.lat + ', lng: ' + stop.lng + '})" ' +
+                            'style="background: #28a745; color: white; border: none; padding: 3px 6px; border-radius: 3px; cursor: pointer; font-size: 9px; margin-right: 8px;">🔄 Actualitzar</button>' +
+                            '<em>Dades actualitzades a les ' + now.toLocaleTimeString() + '</em>' +
+                            '</div>';
+
+                        popupContent += '<div style="font-size: 11px; color: #666; margin-top: 8px; text-align: center;">' +
+                            '🚇 Metro de Barcelona - TMB' +
+                            '</div>' +
+                            '</div>';
+
+                        // Update the marker's popup
+                        marker.setPopupContent(popupContent);
+                        console.log('✅ Updated popup for station', stationCode, 'with fresh data');
+                        foundMarker = true;
+                    }
+                }
+            });
+
+            if (!foundMarker) {
+                console.warn('❌ Could not find map marker for station', stationCode);
+            }
+        }
+
+        // Restore button state
+        if (refreshBtn) {
+            refreshBtn.textContent = originalText;
+            refreshBtn.disabled = false;
+            refreshBtn.style.background = '#28a745';
+        }
+
+        console.log('🎉 Successfully refreshed data for metro station:', stationCode, stationName);
+    }).catch(function(error) {
+        console.error('❌ Error refreshing data for station', stationCode, ':', error);
+
+        // Restore button state on error
+        if (refreshBtn) {
+            refreshBtn.textContent = '❌';
+            refreshBtn.disabled = false;
+            refreshBtn.style.background = '#dc3545';
+
+            // Reset to original state after 2 seconds
+            setTimeout(function() {
+                refreshBtn.textContent = originalText;
+                refreshBtn.style.background = '#28a745';
+            }, 2000);
+        }
+
+        alert('Error actualitzant les dades de l\'estació ' + stationName + ': ' + error.message);
+    });
+}
+
 // Make functions globally accessible
 window.startTMBMetroStops = startTMBMetroStops;
 window.stopTMBMetroStops = stopTMBMetroStops;
 window.getTMBMetroCountdownString = getTMBMetroCountdownString;
 window.startTMBMetroArrivalCountdown = startTMBMetroArrivalCountdown;
+window.loadTMBMetroStopsTable = loadTMBMetroStopsTable;
+window.searchTMBMetroTable = searchTMBMetroTable;
+window.clearTMBMetroTableSearch = clearTMBMetroTableSearch;
+window.sortTMBMetroTable = sortTMBMetroTable;
+window.changeTMBMetroPage = changeTMBMetroPage;
+window.zoomToTMBMetroStop = zoomToTMBMetroStop;
+window.refreshTMBMetroStationData = refreshTMBMetroStationData;

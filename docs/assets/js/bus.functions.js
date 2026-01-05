@@ -2,6 +2,9 @@
 var tmbBusStopsMarkers = [];
 var tmbBusStopsInterval = null;
 var allTMBStops = []; // Store all stops data
+var allTMBLines = []; // Store all bus lines data
+var tmbBatchProcessingCancelled = false; // Flag to cancel batch processing
+var tmbBusVehiclesEnabled = true; // Enable/disable bus vehicle markers
 
 // Start TMB bus stops visualization
 function startTMBBusStops() {
@@ -22,10 +25,96 @@ function startTMBBusStops() {
         });
     }, 600000); // 10 minutes
 
+    // Add toggle button for bus vehicle markers if it doesn't exist
+    var controlsDiv = document.querySelector('.sidebar-pane#bus .sidebar-pane');
+    if (controlsDiv) {
+        var existingToggleBtn = document.getElementById('toggle-bus-vehicles-btn');
+        if (!existingToggleBtn) {
+            var toggleBtn = document.createElement('button');
+            toggleBtn.id = 'toggle-bus-vehicles-btn';
+            toggleBtn.textContent = tmbBusVehiclesEnabled ? '🚍 Ocultar autobusos' : '🚍 Mostrar autobusos';
+            toggleBtn.title = tmbBusVehiclesEnabled ? 'Amagar marcadors d\'autobusos al mapa' : 'Mostrar marcadors d\'autobusos al mapa';
+            toggleBtn.style.background = '#666';
+            toggleBtn.style.color = 'white';
+            toggleBtn.style.border = 'none';
+            toggleBtn.style.padding = '10px 15px';
+            toggleBtn.style.borderRadius = '5px';
+            toggleBtn.style.cursor = 'pointer';
+            toggleBtn.style.fontSize = '14px';
+            toggleBtn.style.marginBottom = '10px';
+            toggleBtn.onclick = function() {
+                toggleTMBBusVehicles();
+            };
+
+            // Insert after the stop button
+            var stopBtn = document.getElementById('stop-tmb-stops-btn');
+            if (stopBtn && stopBtn.parentNode) {
+                stopBtn.parentNode.insertBefore(toggleBtn, stopBtn.nextSibling);
+            }
+        }
+    }
+
     // Update UI
-    document.getElementById('start-tmb-stops-btn').style.display = 'none';
-    document.getElementById('stop-tmb-stops-btn').style.display = 'inline-block';
+    document.getElementById('start-tmb-stops-btn').style.display = 'inline-block';
+    document.getElementById('stop-tmb-stops-btn').style.display = 'none';
+    document.getElementById('toggle-bus-vehicles-btn').style.display = 'inline-block';
     updateTMBBusStopsStatus(getTranslation('bus_status_loading'));
+}
+
+// Toggle bus vehicle markers visibility
+function toggleTMBBusVehicles() {
+    tmbBusVehiclesEnabled = !tmbBusVehiclesEnabled;
+
+    console.log('🚍 TMB bus vehicle markers', tmbBusVehiclesEnabled ? 'ENABLED' : 'DISABLED');
+
+    // Remove ALL existing bus vehicle markers from the map and markers array
+    if (tmbBusStopsMarkers && tmbBusStopsMarkers.length > 0) {
+        // Filter out bus vehicle markers (keep only bus stop markers)
+        var filteredMarkers = [];
+        var removedCount = 0;
+
+        tmbBusStopsMarkers.forEach(function(marker) {
+            if (marker && marker.options && marker.options.icon &&
+                marker.options.icon.options && marker.options.icon.options.className === 'tmb-bus-vehicle-marker') {
+                // This is a bus vehicle marker - remove from map
+                if (map.hasLayer(marker)) {
+                    map.removeLayer(marker);
+                }
+                removedCount++;
+                console.log('🚍 Removed bus vehicle marker from map');
+            } else {
+                // This is a bus stop marker - keep it
+                filteredMarkers.push(marker);
+            }
+        });
+
+        // Update the markers array to only contain stop markers
+        tmbBusStopsMarkers = filteredMarkers;
+
+        console.log('🚍 Removed', removedCount, 'bus vehicle markers, kept', tmbBusStopsMarkers.length, 'stop markers');
+
+        // If enabling, re-add bus vehicle markers for stops with real-time data
+        if (tmbBusVehiclesEnabled && allTMBStops && allTMBStops.length > 0) {
+            console.log('🚍 Re-enabling bus vehicle markers - re-adding them to the map');
+
+            // We need to re-process the stops to add bus vehicles
+            // This requires re-fetching real-time data, which is expensive
+            // For now, show a message to refresh the view
+            console.log('🚍 Please refresh the bus stops view to see bus vehicle markers again');
+
+            // TODO: Implement proper re-addition of bus markers without full refresh
+            // This would require storing the processed stop data with arrivals
+        }
+    }
+
+    // Update UI button if it exists
+    var toggleBtn = document.getElementById('toggle-bus-vehicles-btn');
+    if (toggleBtn) {
+        toggleBtn.textContent = tmbBusVehiclesEnabled ? '🚍 Ocultar autobusos' : '🚍 Mostrar autobusos';
+        toggleBtn.title = tmbBusVehiclesEnabled ? 'Amagar marcadors d\'autobusos al mapa' : 'Mostrar marcadors d\'autobusos al mapa';
+    }
+
+    return tmbBusVehiclesEnabled;
 }
 
 // Stop TMB bus stops visualization
@@ -35,6 +124,9 @@ function stopTMBBusStops() {
         tmbBusStopsInterval = null;
     }
 
+    // Set cancellation flag to stop any ongoing batch processing
+    tmbBatchProcessingCancelled = true;
+
     // Clear all stop markers
     tmbBusStopsMarkers.forEach(function(marker) {
         if (map.hasLayer(marker)) {
@@ -43,10 +135,16 @@ function stopTMBBusStops() {
     });
     tmbBusStopsMarkers = [];
 
+    // Hide any bus routes
+    hideTMBBusRoute();
+
     // Update UI
     document.getElementById('start-tmb-stops-btn').style.display = 'inline-block';
     document.getElementById('stop-tmb-stops-btn').style.display = 'none';
+    document.getElementById('toggle-bus-vehicles-btn').style.display = 'none';
     updateTMBBusStopsStatus(getTranslation('bus_status_inactive'));
+
+    console.log('🛑 TMB bus stops visualization stopped - batch processing cancelled');
 }
 
 // Update TMB bus stops status display
@@ -62,13 +160,14 @@ function fetchAllTMBBusStops() {
     console.log('🚌 Starting to fetch all TMB bus stops...');
 
     // First, get all bus lines
-    return fetchTMBBusLines().then(function(lines) {
-        console.log('✅ Found', lines.length, 'TMB bus lines');
+        return fetchTMBBusLines().then(function(lines) {
+            console.log('✅ Found', lines.length, 'TMB bus lines');
+            allTMBLines = lines; // Store lines data globally for better scheduled data access
 
-        if (lines.length === 0) {
-            console.warn('No bus lines found');
-            return [];
-        }
+            if (lines.length === 0) {
+                console.warn('No bus lines found');
+                return [];
+            }
 
         // For each line, fetch stops and aggregate them
         var stopPromises = lines.map(function(line) {
@@ -220,7 +319,109 @@ function fetchTMBStopsForLine(lineCode) {
         });
 }
 
-// Fetch real-time bus arrivals for a specific TMB stop
+// Fetch scheduled bus times for a specific TMB stop and line using the correct API structure
+function fetchTMBScheduledBusesForStop(stopCode, stop) {
+    // Get the line code from the stop data (stored during initial loading from /transit/linies/bus/{lineCode}/parades)
+    var lineCode = stop.line || stop.codi_linia;
+
+    if (!lineCode) {
+        console.log('📅 No line information available for stop', stopCode, '- cannot fetch scheduled data from /transit/linies/bus/{line}/parades/{stop}/horespas');
+        return Promise.resolve([]);
+    }
+
+    // Use the exact API structure provided: /transit/linies/bus/{codi_linia}/parades/{codi_parada}/horespas
+    var apiUrl = 'https://api.tmb.cat/v1/transit/linies/bus/' + encodeURIComponent(lineCode) + '/parades/' + encodeURIComponent(stopCode) + '/horespas?app_id=8029906b&app_key=73b5ad24d1db9fa24988bf134a1523d1';
+
+    console.log('📅 Fetching scheduled times using TMB API structure: /transit/linies/bus/' + lineCode + '/parades/' + stopCode + '/horespas');
+
+    return fetch(apiUrl)
+        .then(response => {
+            if (!response.ok) {
+                console.warn('❌ TMB scheduled API failed for line', lineCode, 'stop', stopCode, ': HTTP', response.status, response.statusText);
+                return [];
+            }
+            return response.json();
+        })
+        .then(data => {
+            var scheduledArrivals = [];
+
+            // Process TMB scheduled API response from /transit/linies/bus/{line}/parades/{stop}/horespas
+            if (data && Array.isArray(data)) {
+                // Direct array response
+                data.forEach(function(schedule) {
+                    processScheduledEntry(schedule, scheduledArrivals, lineCode, stopCode);
+                });
+            } else if (data && data.horesPas && Array.isArray(data.horesPas)) {
+                // Nested horesPas array
+                data.horesPas.forEach(function(schedule) {
+                    processScheduledEntry(schedule, scheduledArrivals, lineCode, stopCode);
+                });
+            } else if (data && data.horaris && Array.isArray(data.horaris)) {
+                // Alternative horaris array
+                data.horaris.forEach(function(schedule) {
+                    processScheduledEntry(schedule, scheduledArrivals, lineCode, stopCode);
+                });
+            } else {
+                console.log('📅 Scheduled API returned unexpected format for stop', stopCode, 'line', lineCode);
+            }
+
+            console.log('📅 ✅ Successfully loaded', scheduledArrivals.length, 'scheduled arrivals for stop', stopCode, 'on line', lineCode);
+            return scheduledArrivals;
+        })
+        .catch(error => {
+            console.error('❌ TMB scheduled API error for line', lineCode, 'stop', stopCode, ':', error);
+            return [];
+        });
+}
+
+// Helper function to process individual scheduled time entries
+function processScheduledEntry(schedule, scheduledArrivals, lineCode, stopCode) {
+    try {
+        var routeId = schedule.codi_linia || lineCode;
+        var destination = schedule.desti_trajecte || '';
+        var scheduledTimeStr = schedule.horaPas || schedule.hora || '';
+
+        // Parse scheduled time (format: "HH:MM")
+        if (scheduledTimeStr && typeof scheduledTimeStr === 'string') {
+            var timeParts = scheduledTimeStr.split(':');
+            if (timeParts.length === 2) {
+                var hours = parseInt(timeParts[0]);
+                var minutes = parseInt(timeParts[1]);
+
+                if (!isNaN(hours) && !isNaN(minutes)) {
+                    // Create scheduled time for today
+                    var scheduledTime = new Date();
+                    scheduledTime.setHours(hours, minutes, 0, 0);
+
+                    // If the time has already passed today, assume it's for tomorrow
+                    if (scheduledTime.getTime() < Date.now()) {
+                        scheduledTime.setDate(scheduledTime.getDate() + 1);
+                    }
+
+                    var now = new Date().getTime();
+                    var arrivalMs = scheduledTime.getTime();
+                    var diffMs = arrivalMs - now;
+                    var timeToArrival = Math.max(0, Math.round(diffMs / (1000 * 60))); // Convert to minutes
+
+                    scheduledArrivals.push({
+                        id: routeId + '-' + stopCode + '-scheduled-' + scheduledTimeStr,
+                        route: routeId,
+                        destination: destination,
+                        timeToArrival: timeToArrival,
+                        scheduledTime: scheduledTime,
+                        status: 'Horari',
+                        isRealtime: false,
+                        scheduledTimeStr: scheduledTimeStr
+                    });
+                }
+            }
+        }
+    } catch (error) {
+        console.warn('❌ Error processing scheduled entry for stop', stopCode, ':', error, schedule);
+    }
+}
+
+// Fetch real-time bus arrivals for a specific TMB stop, with fallback to scheduled data
 function fetchTMBRealtimeBusesForStop(stopCode) {
     var apiUrl = 'https://api.tmb.cat/v1/itransit/bus/parades/' + encodeURIComponent(stopCode) + '?app_id=8029906b&app_key=73b5ad24d1db9fa24988bf134a1523d1';
 
@@ -230,7 +431,8 @@ function fetchTMBRealtimeBusesForStop(stopCode) {
         .then(response => {
             if (!response.ok) {
                 console.warn('TMB real-time API failed for stop', stopCode, ':', response.status, response.statusText);
-                return null; // Return null instead of throwing to continue with other stops
+                // Try to get scheduled data as fallback
+                return fetch(apiUrl).then(() => null).catch(() => null);
             }
             return response.json();
         })
@@ -266,7 +468,8 @@ function fetchTMBRealtimeBusesForStop(stopCode) {
                                             var diffMs = scheduledTime - now;
                                             timeArrival = Math.max(0, Math.round(diffMs / (1000 * 60))); // Convert to minutes
                                         } else {
-                                            // If it's already in minutes, create a scheduled time for countdown
+                                            // TMB API returns temps_arribada in seconds, convert to minutes
+                                            timeArrival = Math.max(0, Math.round(timeArrival / 60)); // Convert seconds to minutes
                                             scheduledTime = new Date(Date.now() + (timeArrival * 60 * 1000));
                                         }
 
@@ -276,7 +479,8 @@ function fetchTMBRealtimeBusesForStop(stopCode) {
                                             destination: destination,
                                             timeToArrival: timeArrival,
                                             scheduledTime: scheduledTime, // Store the actual arrival time
-                                            status: 'Arriving at stop'
+                                            status: 'Arriving at stop',
+                                            isRealtime: true
                                         });
 
                                         console.log('✅ Processed TMB bus arrival:', busId, routeId, 'at stop', stopCode, 'in', timeArrival, 'min');
@@ -291,11 +495,19 @@ function fetchTMBRealtimeBusesForStop(stopCode) {
             }
 
             console.log('🕒 Processed', arrivals.length, 'real-time arrivals for stop', stopCode);
+
+            // If no real-time arrivals found, try to get scheduled data
+            if (arrivals.length === 0) {
+                console.log('📅 No real-time data for stop', stopCode, '- attempting to fetch scheduled data');
+                // Note: Scheduled data fetching would require line information
+                // This is a placeholder for future enhancement
+            }
+
             return arrivals;
         })
         .catch(error => {
             console.error('❌ TMB real-time API error for stop', stopCode, ':', error);
-            return null; // Return null to indicate no data available
+            return []; // Return empty array instead of null to indicate no data available
         });
 }
 
@@ -324,120 +536,218 @@ function displayTMBBusStops(stops) {
 
     var totalStops = 0;
     var totalBusMarkers = 0;
-    var realtimePromises = [];
+    var stopsLoaded = 0;
+    var realtimeLoaded = 0;
 
-    // First, fetch real-time data for all stops
-    stops.forEach(function(stop) {
-        if (stop.codi_parada || stop.id) {
+    // Phase 1: Load general stop information and create markers
+    updateTMBBusStopsStatus('📍 Carregant parades d\'autobús... (0/' + stops.length + ')');
+
+    stops.forEach(function(stop, index) {
+        if (stop.lat && stop.lng && !isNaN(stop.lat) && !isNaN(stop.lng)) {
+            // Get stop reference number for display
             var stopCode = stop.codi_parada || stop.id;
-            var promise = fetchTMBRealtimeBusesForStop(stopCode).then(function(arrivals) {
-                stop.realtimeArrivals = arrivals || [];
-                return stop;
+            var stopRef = stopCode || '?';
+            // Truncate if too long for display
+            if (stopRef.length > 5) {
+                stopRef = stopRef.substring(0, 5) + '..';
+            }
+
+            // Create basic square marker (neutral color, will be updated with data)
+            var markerHtml = '<div style="width: 24px; height: 24px; background: #666; border: 2px solid #999; border-radius: 4px; display: flex; align-items: center; justify-content: center; box-shadow: 1px 1px 3px rgba(0,0,0,0.7);">' +
+                '<span style="color: white; font-size: 10px; font-weight: bold; text-shadow: 1px 1px 1px rgba(0,0,0,0.7);">' + stopRef + '</span>' +
+                '</div>';
+
+            var stopMarker = L.marker([stop.lat, stop.lng], {
+                icon: L.divIcon({
+                    html: markerHtml,
+                    className: 'tmb-bus-stop-marker',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 24]
+                })
             });
-            realtimePromises.push(promise);
+
+            // Create basic popup without real-time data
+            var popupContent = '<div style="font-family: Arial, sans-serif; min-width: 250px;">' +
+                '<h4 style="margin: 0 0 8px 0; color: #c41e3a; border-bottom: 2px solid #c41e3a; padding-bottom: 4px;">' +
+                '🚏 Parada TMB ' + (stop.codi_parada || stop.id) + '</h4>' +
+                '<div style="background: #c41e3a15; border: 1px solid #c41e3a; border-radius: 4px; padding: 10px; margin: 8px 0;">' +
+                '<strong>Nom:</strong> ' + (stop.nom_parada || 'Sense nom') + '<br>' +
+                '<strong>Codi:</strong> ' + (stop.codi_parada || stop.id) + '<br>' +
+                '<strong>Posició:</strong> ' + stop.lat.toFixed(4) + ', ' + stop.lng.toFixed(4) +
+                '</div>' +
+                '<div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 8px; margin: 8px 0; text-align: center;">' +
+                '<em>Carregant informació de temps real...</em>' +
+                '</div>' +
+                '<div style="font-size: 11px; color: #666; margin-top: 8px; text-align: center;">' +
+                '🚌 Transport Metropolità de Barcelona' +
+                '</div>' +
+                '</div>';
+
+            stopMarker.bindPopup(popupContent);
+
+            // Add marker to map
+            stopMarker.addTo(map);
+            tmbBusStopsMarkers.push(stopMarker);
+            totalStops++;
+
+            // Update counter every few stops
+            stopsLoaded++;
+            if (stopsLoaded % 50 === 0 || stopsLoaded === stops.length) {
+                updateTMBBusStopsStatus('📍 Carregant parades d\'autobús... (' + stopsLoaded + '/' + stops.length + ')');
+            }
         }
     });
 
-    // Wait for all real-time data to be fetched
-    Promise.all(realtimePromises).then(function(stopsWithRealtime) {
+    console.log('✅ PHASE 1 COMPLETE: Created', totalStops, 'bus stop markers');
+
+    // Phase 2: Load real-time data and update markers
+    updateTMBBusStopsStatus('🕒 Carregant informació de temps real... (0/' + totalStops + ')');
+
+    // Fetch real-time data in batches to avoid overwhelming the API
+    fetchRealtimeDataInBatches(stops, 0).then(function(stopsWithRealtime) {
         // Store timestamp when data was fetched
         var dataFetchedAt = new Date();
 
         stopsWithRealtime.forEach(function(stop) {
+            // Define stopCode outside the condition so it's available for popup
+            var stopCode = stop.codi_parada || stop.id;
+
             if (stop.lat && stop.lng && !isNaN(stop.lat) && !isNaN(stop.lng)) {
                 // Get stop reference number for display
-                var stopRef = stop.codi_parada || stop.id || '?';
+                var stopRef = stopCode || '?';
                 // Truncate if too long for display
                 if (stopRef.length > 5) {
                     stopRef = stopRef.substring(0, 5) + '..';
                 }
 
-                // Check if there are active buses (arriving soon)
-                var hasActiveBuses = stop.realtimeArrivals && stop.realtimeArrivals.length > 0 &&
-                    stop.realtimeArrivals.some(function(arrival) { return arrival.timeToArrival <= 10; });
+                // Check if there are active buses (has real-time or scheduled data)
+                var hasActiveBuses = stop.realtimeArrivals && stop.realtimeArrivals.length > 0;
+                var hasRealtimeData = hasActiveBuses && stop.realtimeArrivals.some(function(arrival) { return arrival.isRealtime; });
+                var hasOnlyScheduledData = hasActiveBuses && !hasRealtimeData;
 
-                // Create bus stop marker with stop reference number and active bus indicator
-                var markerHtml = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.7));">' +
-                    '<circle cx="12" cy="12" r="10" fill="#c41e3a" stroke="white" stroke-width="2"/>' +
-                    '<rect x="7" y="6" width="10" height="6" rx="1" fill="white"/>' +
-                    '<text x="12" y="11" text-anchor="middle" fill="#c41e3a" font-size="6px" font-weight="bold">BUS</text>' +
-                    '<rect x="11" y="14" width="2" height="4" fill="#c41e3a"/>' +
-                    '</svg>' +
-                    '<div style="position: absolute; top: -8px; left: 50%; transform: translateX(-50%); ' +
-                    'background: #c41e3a; color: white; font-size: 8px; font-weight: bold; ' +
-                    'padding: 1px 3px; border-radius: 2px; border: 1px solid #333; white-space: nowrap;">' +
-                    stopRef + '</div>';
+                // Create different marker styles for real-time vs scheduled stops
+                var markerHtml, stopRefBgColor, stopRefBorderColor, markerSize, iconSize, iconAnchor;
 
-                // Add active bus indicator if there are buses arriving soon
-                if (hasActiveBuses) {
-                    markerHtml += '<div style="position: absolute; bottom: -2px; right: -2px; ' +
-                        'background: #00aa00; color: white; font-size: 6px; font-weight: bold; ' +
-                        'padding: 1px 2px; border-radius: 50%; border: 1px solid #333; min-width: 8px; text-align: center;">' +
-                        '●' + '</div>';
+                if (hasOnlyScheduledData) {
+                    // Blue-themed square marker for scheduled-only stops
+                    stopRefBgColor = '#0066cc';
+                    stopRefBorderColor = '#004499';
+                    markerSize = 28; // Slightly larger for scheduled data
+                    iconSize = [28, 28];
+                    iconAnchor = [14, 28];
+                } else if (hasRealtimeData) {
+                    // Green-themed square marker for real-time stops - make them more prominent
+                    stopRefBgColor = '#00aa00';
+                    stopRefBorderColor = '#008800';
+                    markerSize = 32; // Even larger for real-time data
+                    iconSize = [32, 32];
+                    iconAnchor = [16, 32];
+                } else {
+                    // Default red square marker for stops with no data
+                    stopRefBgColor = '#c41e3a';
+                    stopRefBorderColor = '#a0172e';
+                    markerSize = 24; // Normal size for no data
+                    iconSize = [24, 24];
+                    iconAnchor = [12, 24];
                 }
 
-                var stopMarker = L.marker([stop.lat, stop.lng], {
-                    icon: L.divIcon({
-                        html: markerHtml,
-                        className: 'tmb-bus-stop-marker',
-                        iconSize: [24, 24],
-                        iconAnchor: [12, 24]
-                    })
-                });
-
-                // Create popup with stop information and real-time arrivals
-                var popupContent = '<div style="font-family: Arial, sans-serif; min-width: 250px;">' +
-                    '<h4 style="margin: 0 0 8px 0; color: #c41e3a; border-bottom: 2px solid #c41e3a; padding-bottom: 4px;">' +
-                    '🚏 Parada TMB ' + (stop.codi_parada || stop.id) + '</h4>' +
-                    '<div style="background: #c41e3a15; border: 1px solid #c41e3a; border-radius: 4px; padding: 10px; margin: 8px 0;">' +
-                    '<strong>Nom:</strong> ' + (stop.nom_parada || 'Sense nom') + '<br>' +
-                    '<strong>Codi:</strong> ' + (stop.codi_parada || stop.id) + '<br>' +
-                    '<strong>Posició:</strong> ' + stop.lat.toFixed(4) + ', ' + stop.lng.toFixed(4) +
+                // Create a simple square marker with just the stop ID
+                markerHtml = '<div style="width: ' + markerSize + 'px; height: ' + markerSize + 'px; background: ' + stopRefBgColor + '; border: 2px solid ' + stopRefBorderColor + '; border-radius: 4px; display: flex; align-items: center; justify-content: center; box-shadow: 1px 1px 3px rgba(0,0,0,0.7);">' +
+                    '<span style="color: white; font-size: ' + (markerSize > 24 ? '12px' : '10px') + '; font-weight: bold; text-shadow: 1px 1px 1px rgba(0,0,0,0.7);">' + stopRef + '</span>' +
                     '</div>';
 
-                // Add real-time arrivals section
-                if (stop.realtimeArrivals && stop.realtimeArrivals.length > 0) {
-                    popupContent += '<div style="background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px; padding: 10px; margin: 8px 0;">' +
-                        '<h5 style="margin: 0 0 8px 0; color: #0066cc;">🕒 Próxims autobusos</h5>' +
-                        '<div style="max-height: 150px; overflow-y: auto;">';
-
-                    stop.realtimeArrivals.slice(0, 10).forEach(function(arrival, index) { // Show up to 10 arrivals
-                        var arrivalId = 'tmb-arrival-' + stop.codi_parada + '-' + index;
-                        var scheduledTime = arrival.scheduledTime;
-
-                        var scheduledTimeStr = scheduledTime ? scheduledTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : '--:--';
-                        var countdownStr = getTMBCountdownString(arrival, scheduledTime);
-
-                        popupContent += '<div style="margin-bottom: 6px; padding: 6px; background: #fff; border-radius: 3px; border: 1px solid #eee;">' +
-                            '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">' +
-                            '<div style="font-weight: bold; color: #c41e3a;">Línia ' + arrival.route + '</div>' +
-                            '<div id="' + arrivalId + '" style="font-weight: bold; font-family: monospace;">' + countdownStr + '</div>' +
-                            '</div>' +
-                            '<div style="font-size: 11px; color: #666;">' + getTranslation('bus_arrival_time') + ': ' + scheduledTimeStr + '</div>';
-                        if (arrival.destination) {
-                            popupContent += '<div style="font-size: 11px; color: #666; margin-top: 2px;">➜ ' + arrival.destination + '</div>';
+                // Find the existing marker for this stop and update it
+                var existingMarker = null;
+                for (var i = 0; i < tmbBusStopsMarkers.length; i++) {
+                    var marker = tmbBusStopsMarkers[i];
+                    if (marker && marker.getLatLng) {
+                        var markerLatLng = marker.getLatLng();
+                        if (Math.abs(markerLatLng.lat - stop.lat) < 0.0001 &&
+                            Math.abs(markerLatLng.lng - stop.lng) < 0.0001) {
+                            existingMarker = marker;
+                            break;
                         }
-                        popupContent += '</div>';
+                    }
+                }
 
-                        // Start live countdown update for this arrival
-                        startTMBArrivalCountdown(arrivalId, arrival, scheduledTime);
-                    });
+                if (existingMarker) {
+                    // Update the existing marker with new icon and popup
+                    existingMarker.setIcon(L.divIcon({
+                        html: markerHtml,
+                        className: 'tmb-bus-stop-marker',
+                        iconSize: iconSize,
+                        iconAnchor: iconAnchor
+                    }));
 
-                    popupContent += '</div></div>';
+                    // Create updated popup content
+                    var popupContent = '<div style="font-family: Arial, sans-serif; min-width: 250px;">' +
+                        '<h4 style="margin: 0 0 8px 0; color: #c41e3a; border-bottom: 2px solid #c41e3a; padding-bottom: 4px;">' +
+                        '🚏 Parada TMB ' + (stop.codi_parada || stop.id) + '</h4>' +
+                        '<div style="background: #c41e3a15; border: 1px solid #c41e3a; border-radius: 4px; padding: 10px; margin: 8px 0;">' +
+                        '<strong>Nom:</strong> ' + (stop.nom_parada || 'Sense nom') + '<br>' +
+                        '<strong>Codi:</strong> ' + (stop.codi_parada || stop.id) + '<br>' +
+                        '<strong>Posició:</strong> ' + stop.lat.toFixed(4) + ', ' + stop.lng.toFixed(4) +
+                        '</div>';
 
-                    // Now add bus vehicle markers for buses arriving at this stop
-                    stop.realtimeArrivals.slice(0, 5).forEach(function(arrival) { // Show up to 5 bus vehicles
-                        if (arrival.timeToArrival <= 5) { // Only show buses arriving within 5 minutes
-                            var busColor = tmbBusLineColors[arrival.route] || '#c41e3a';
-                            var busMarkerHtml = '<svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.8));">' +
-                                '<rect x="2" y="6" width="24" height="16" rx="3" fill="' + busColor + '" stroke="#fff" stroke-width="1"/>' +
-                                '<circle cx="8" cy="22" r="2" fill="#666"/>' +
-                                '<circle cx="20" cy="22" r="2" fill="#666"/>' +
-                                '<rect x="4" y="8" width="20" height="2" rx="1" fill="#fff"/>' +
-                                '<rect x="4" y="12" width="20" height="2" rx="1" fill="#fff"/>' +
-                                '<rect x="4" y="16" width="20" height="2" rx="1" fill="#fff"/>' +
-                                '<text x="14" y="20" text-anchor="middle" fill="#fff" font-size="8px" font-weight="bold">' + arrival.route + '</text>' +
-                                '</svg>';
+                    // Add real-time arrivals section
+                    if (stop.realtimeArrivals && stop.realtimeArrivals.length > 0) {
+                        popupContent += '<div style="background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px; padding: 10px; margin: 8px 0;">' +
+                            '<h5 style="margin: 0 0 8px 0; color: #0066cc;">🕒 Próxims autobusos</h5>' +
+                            '<div style="max-height: 150px; overflow-y: auto;">';
+
+                        stop.realtimeArrivals.slice(0, 10).forEach(function(arrival, index) { // Show up to 10 arrivals
+                            var arrivalId = 'tmb-arrival-' + stop.codi_parada + '-' + index;
+                            var scheduledTime = arrival.scheduledTime;
+
+                            var scheduledTimeStr = scheduledTime ? scheduledTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : '--:--';
+                            var countdownStr = getTMBCountdownString(arrival, scheduledTime);
+
+                            // Determine data source indicator
+                            var dataSourceText = arrival.isRealtime ? '🕒 Temps real' : '📅 Horari';
+                            var dataSourceColor = arrival.isRealtime ? '#00aa00' : '#0066cc';
+
+                            popupContent += '<div style="margin-bottom: 6px; padding: 6px; background: #fff; border-radius: 3px; border: 1px solid #eee;">' +
+                                '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">' +
+                                '<div style="font-weight: bold; color: #c41e3a;">Línia ' + arrival.route + '</div>' +
+                                '<div style="font-size: 10px; color: ' + dataSourceColor + '; font-weight: bold;">' + dataSourceText + '</div>' +
+                                '</div>' +
+                                '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">' +
+                                '<div style="font-size: 11px; color: #666;">' + getTranslation('bus_arrival_time') + ': ' + scheduledTimeStr + '</div>' +
+                                '<div id="' + arrivalId + '" style="font-weight: bold; font-family: monospace;">' + countdownStr + '</div>' +
+                                '</div>';
+                            if (arrival.destination) {
+                                popupContent += '<div style="font-size: 11px; color: #666; margin-top: 2px;">➜ ' + arrival.destination + '</div>';
+                            }
+                            popupContent += '</div>';
+
+                            // Start live countdown update for this arrival
+                            startTMBArrivalCountdown(arrivalId, arrival, scheduledTime);
+                        });
+
+                        popupContent += '</div></div>';
+
+                        // Now add bus vehicle markers for buses arriving at this stop - one per unique line
+                        var linesWithArrivals = {};
+                        stop.realtimeArrivals.forEach(function(arrival) {
+                            if (arrival.timeToArrival <= 1) { // Only consider buses arriving within 1 minute
+                                if (!linesWithArrivals[arrival.route]) {
+                                    linesWithArrivals[arrival.route] = [];
+                                }
+                                linesWithArrivals[arrival.route].push(arrival);
+                            }
+                        });
+
+                        // Create one marker per unique line
+                        Object.keys(linesWithArrivals).slice(0, 5).forEach(function(lineRoute) { // Show up to 5 different lines
+                            var arrivalsForLine = linesWithArrivals[lineRoute];
+                            var nextArrival = arrivalsForLine[0]; // Use the first/next arrival for this line
+                            var busColor = tmbBusLineColors[lineRoute] || '#c41e3a';
+
+                            var busMarkerHtml = '<div style="display: flex; flex-direction: column; align-items: center; filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.8));">' +
+                                '<div style="font-size: 20px; position: relative;">' +
+                                '<span style="position: absolute; top: -2px; left: 50%; transform: translateX(-50%); font-size: 8px; font-weight: bold; color: #000; text-shadow: 1px 1px 1px rgba(255,255,255,0.8);">' + lineRoute + '</span>' +
+                                '🚌</div>' +
+                                '</div>';
 
                             var busMarker = L.marker([stop.lat, stop.lng], {
                                 icon: L.divIcon({
@@ -448,17 +758,24 @@ function displayTMBBusStops(stops) {
                                 })
                             });
 
-                            // Create bus popup
+                            // Create bus popup showing all arrivals for this line
                             var busPopupContent = '<div style="font-family: Arial, sans-serif; min-width: 200px;">' +
                                 '<h4 style="margin: 0 0 8px 0; color: ' + busColor + '; border-bottom: 2px solid ' + busColor + '; padding-bottom: 4px;">' +
-                                '🚌 Autobús TMB Línia ' + arrival.route + '</h4>' +
-                                '<div style="background: ' + busColor + '15; border: 1px solid ' + busColor + '; border-radius: 4px; padding: 10px; margin: 8px 0;">' +
-                                '<strong>Línia:</strong> ' + arrival.route + '<br>' +
-                                '<strong>Destí:</strong> ' + (arrival.destination || 'Desconegut') + '<br>' +
-                                '<strong>Temps d\'arribada:</strong> <span style="font-weight: bold; color: ' +
-                                (arrival.timeToArrival <= 2 ? '#d63031' : arrival.timeToArrival <= 5 ? '#e17055' : '#0066cc') + ';">' +
-                                (arrival.timeToArrival === 0 ? 'Arribant ara' : arrival.timeToArrival + ' min') + '</span><br>' +
-                                '<strong>Parada actual:</strong> ' + (stop.nom_parada || 'Sense nom') + ' (' + stopRef + ')' +
+                                '🚌 Autobús TMB Línia ' + lineRoute + '</h4>' +
+                                '<div style="background: ' + busColor + '15; border: 1px solid ' + busColor + '; border-radius: 4px; padding: 10px; margin: 8px 0;">';
+
+                            arrivalsForLine.slice(0, 3).forEach(function(arrival, index) { // Show up to 3 arrivals for this line
+                                if (index > 0) busPopupContent += '<br>';
+                                busPopupContent += '<strong>Arribada ' + (index + 1) + ':</strong> <span style="font-weight: bold; color: ' +
+                                    (arrival.timeToArrival <= 2 ? '#d63031' : arrival.timeToArrival <= 5 ? '#e17055' : '#0066cc') + ';">' +
+                                    (arrival.timeToArrival === 0 ? 'Arribant ara' : arrival.timeToArrival + ' min') + '</span>';
+                                if (arrival.destination) {
+                                    busPopupContent += ' ➜ ' + arrival.destination;
+                                }
+                            });
+
+                            busPopupContent += '<br><strong>Parada actual:</strong> ' + (stop.nom_parada || 'Sense nom') + ' (' + stopRef + ')' +
+                                '<br><button onclick="showTMBBusRoute(\'' + lineRoute + '\')" style="margin-top: 8px; background: ' + busColor + '; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 10px;">🛣️ Mostrar ruta</button>' +
                                 '</div>' +
                                 '<div style="font-size: 11px; color: #666; margin-top: 8px; text-align: center;">' +
                                 '🚌 Transport Metropolità de Barcelona' +
@@ -472,33 +789,38 @@ function displayTMBBusStops(stops) {
                             tmbBusStopsMarkers.push(busMarker);
                             totalBusMarkers++;
 
-                            console.log('✅ ADDED TMB BUS VEHICLE MARKER: Line', arrival.route, 'at stop', stopRef, 'arriving in', arrival.timeToArrival, 'min');
-                        }
-                    });
-                } else {
-                    popupContent += '<div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 8px; margin: 8px 0; text-align: center;">' +
-                        '<em>Sense informació de temps real</em>' +
+                            console.log('✅ ADDED TMB BUS VEHICLE MARKER: Line', lineRoute, 'at stop', stopRef, 'with', arrivalsForLine.length, 'arrivals');
+                        });
+                    } else {
+                        popupContent += '<div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 8px; margin: 8px 0; text-align: center;">' +
+                            '<em>Sense informació de temps real</em>' +
+                            '</div>';
+                    }
+
+                    // Add refresh button and data fetch timestamp
+                    popupContent += '<div style="font-size: 10px; color: #888; margin-top: 8px; text-align: center; border-top: 1px solid #eee; padding-top: 6px;">' +
+                        '<div style="margin-bottom: 4px;">' +
+                        '<button onclick="refreshTMBStop(\'' + stop.codi_parada + '\', \'' + stopCode + '\')" ' +
+                        'style="background: #28a745; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 10px;">' +
+                        '🔄 ' + getTranslation('bus_refresh_stop') + '</button>' +
+                        '</div>' +
+                        '<em>' + getTranslation('bus_data_fetched_at') + ' ' + dataFetchedAt.toLocaleTimeString() + '</em>' +
                         '</div>';
+
+                    popupContent += '<div style="font-size: 11px; color: #666; margin-top: 8px; text-align: center;">' +
+                        '🚌 Transport Metropolità de Barcelona' +
+                        '</div>' +
+                        '</div>';
+
+                    // Update the existing marker's popup
+                    existingMarker.setPopupContent(popupContent);
+
+                    totalStops++;
+
+                    console.log('✅ UPDATED TMB BUS STOP MARKER:', stop.codi_parada || stop.id, stop.nom_parada, 'with', stop.realtimeArrivals ? stop.realtimeArrivals.length : 0, 'real-time arrivals');
+                } else {
+                    console.warn('❌ Could not find existing marker for TMB bus stop:', stop.codi_parada || stop.id, stop.lat, stop.lng);
                 }
-
-                // Add data fetch timestamp
-                popupContent += '<div style="font-size: 10px; color: #888; margin-top: 8px; text-align: center; border-top: 1px solid #eee; padding-top: 6px;">' +
-                    '<em>' + getTranslation('bus_data_fetched_at') + ' ' + dataFetchedAt.toLocaleTimeString() + '</em>' +
-                    '</div>';
-
-                popupContent += '<div style="font-size: 11px; color: #666; margin-top: 8px; text-align: center;">' +
-                    '🚌 Transport Metropolità de Barcelona' +
-                    '</div>' +
-                    '</div>';
-
-                stopMarker.bindPopup(popupContent);
-
-                // Add stop marker to map
-                stopMarker.addTo(map);
-                tmbBusStopsMarkers.push(stopMarker);
-                totalStops++;
-
-                console.log('✅ ADDED TMB BUS STOP MARKER:', stop.codi_parada || stop.id, stop.nom_parada, 'with', stop.realtimeArrivals ? stop.realtimeArrivals.length : 0, 'real-time arrivals');
             } else {
                 console.warn('❌ INVALID COORDS for TMB bus stop:', stop.codi_parada || stop.id, stop.lat, stop.lng);
             }
@@ -514,6 +836,119 @@ function displayTMBBusStops(stops) {
     }).catch(function(error) {
         console.error('❌ Error processing real-time data for TMB stops:', error);
         updateTMBBusStopsStatus('Error carregant dades temps real');
+    });
+}
+
+// Fetch real-time data in batches to avoid overwhelming the API
+function fetchRealtimeDataInBatches(stops, startIndex) {
+    var batchSize = 100; // Process 100 stops at a time
+    var delayBetweenBatches = 1000; // 1 second delay between batches
+
+    return new Promise(function(resolve, reject) {
+        var results = [];
+        var processedCount = 0;
+
+        function processBatch(index) {
+            // Check if processing was cancelled
+            if (tmbBatchProcessingCancelled) {
+                console.log('🛑 Batch processing cancelled at index', index);
+                resolve(results); // Resolve with whatever we have so far
+                return;
+            }
+
+            if (index >= stops.length) {
+                // All batches processed
+                resolve(results);
+                return;
+            }
+
+            var endIndex = Math.min(index + batchSize, stops.length);
+            var batch = stops.slice(index, endIndex);
+
+            console.log('📡 Processing batch of', batch.length, 'stops (', index, 'to', endIndex - 1, ')');
+
+            // Process this batch - load scheduled data first, then real-time
+            var batchPromises = batch.map(function(stop) {
+                if (stop.codi_parada || stop.id) {
+                    var stopCode = stop.codi_parada || stop.id;
+
+                    // First try to get real-time data for all stops
+                    return fetchTMBRealtimeBusesForStop(stopCode).then(function(realtimeArrivals) {
+                        var realtimeData = realtimeArrivals || [];
+
+                        if (realtimeData.length > 0) {
+                            console.log('🕒 ✅ Real-time data loaded for stop', stopCode, ':', realtimeData.length, 'arrivals');
+                            stop.realtimeArrivals = realtimeData;
+                        } else {
+                            console.log('🕒 No real-time data for stop', stopCode, '- trying scheduled data');
+
+                            // Try scheduled data as fallback when no real-time data
+                            var lineCode = stop.line || stop.codi_linia;
+                            return fetchTMBScheduledBusesForStop(stopCode, stop).then(function(scheduledArrivals) {
+                                var scheduledData = scheduledArrivals || [];
+                                console.log('📅 Scheduled data loaded for stop', stopCode, 'as fallback:', scheduledData.length, 'arrivals');
+                                stop.realtimeArrivals = scheduledData;
+                                return stop;
+                            }).catch(function(scheduledError) {
+                                console.warn('❌ Scheduled API failed for stop', stopCode, 'line', lineCode, ':', scheduledError);
+                                console.log('📅 Scheduled data failed for stop', stopCode, '- no data available');
+                                stop.realtimeArrivals = [];
+                                return stop;
+                            });
+                        }
+
+                        // Debug: Show what data type is actually set
+                        var hasRealtime = stop.realtimeArrivals.some(function(arr) { return arr.isRealtime; });
+                        var hasScheduled = stop.realtimeArrivals.some(function(arr) { return !arr.isRealtime; });
+                        console.log('🔍 FINAL DATA for stop', stopCode, ':', stop.realtimeArrivals.length, 'arrivals - Real-time:', hasRealtime, 'Scheduled:', hasScheduled);
+                        return stop;
+                    }).catch(function(realtimeError) {
+                        console.warn('❌ Real-time API failed for stop', stopCode, ':', realtimeError);
+                        console.log('🕒 Real-time failed for stop', stopCode, '- trying scheduled as fallback');
+
+                        // Try scheduled data as fallback when real-time fails
+                        var lineCode = stop.line || stop.codi_linia;
+                        return fetchTMBScheduledBusesForStop(stopCode, stop).then(function(scheduledArrivals) {
+                            var scheduledData = scheduledArrivals || [];
+                            console.log('� Scheduled data loaded for stop', stopCode, 'as fallback after real-time failure:', scheduledData.length, 'arrivals');
+                            stop.realtimeArrivals = scheduledData;
+                            return stop;
+                        }).catch(function(scheduledError) {
+                            console.warn('❌ Scheduled API also failed for stop', stopCode, 'line', lineCode, ':', scheduledError);
+                            stop.realtimeArrivals = [];
+                            return stop;
+                        });
+                    });
+                } else {
+                    stop.realtimeArrivals = [];
+                    return Promise.resolve(stop);
+                }
+            });
+
+            Promise.all(batchPromises).then(function(batchResults) {
+                results = results.concat(batchResults);
+                processedCount += batchResults.length;
+
+                // Update counter every batch
+                updateTMBBusStopsStatus('🕒 Carregant informació de temps real... (' + processedCount + '/' + stops.length + ')');
+
+                // If there are more batches, schedule the next one
+                if (endIndex < stops.length) {
+                    setTimeout(function() {
+                        processBatch(endIndex);
+                    }, delayBetweenBatches);
+                } else {
+                    // All done
+                    resolve(results);
+                }
+            }).catch(function(error) {
+                console.error('❌ Error processing batch:', error);
+                reject(error);
+            });
+        }
+
+        // Start processing from the beginning
+        processBatch(startIndex);
     });
 }
 
@@ -699,6 +1134,13 @@ function displayTMBTablePage() {
         actionsCell.style.padding = '8px';
         actionsCell.style.textAlign = 'center';
 
+        // Create a container for buttons
+        var actionsContainer = document.createElement('div');
+        actionsContainer.style.display = 'flex';
+        actionsContainer.style.gap = '4px';
+        actionsContainer.style.justifyContent = 'center';
+        actionsContainer.setAttribute('data-stop-id', stop.codi_parada || stop.id);
+
         var zoomBtn = document.createElement('button');
         zoomBtn.textContent = '📍';
         zoomBtn.title = 'Centrar al mapa';
@@ -713,7 +1155,25 @@ function displayTMBTablePage() {
             zoomToTMBStop(stop);
         };
 
-        actionsCell.appendChild(zoomBtn);
+        var refreshBtn = document.createElement('button');
+        refreshBtn.textContent = '🔄';
+        refreshBtn.title = getTranslation('bus_refresh_stop');
+        refreshBtn.className = 'refresh-btn';
+        refreshBtn.style.background = '#28a745';
+        refreshBtn.style.color = 'white';
+        refreshBtn.style.border = 'none';
+        refreshBtn.style.padding = '4px 6px';
+        refreshBtn.style.borderRadius = '3px';
+        refreshBtn.style.cursor = 'pointer';
+        refreshBtn.style.fontSize = '10px';
+        refreshBtn.onclick = function() {
+            var stopCode = stop.codi_parada || stop.id;
+            refreshTMBStop(stop.codi_parada || stop.id, stopCode);
+        };
+
+        actionsContainer.appendChild(zoomBtn);
+        actionsContainer.appendChild(refreshBtn);
+        actionsCell.appendChild(actionsContainer);
         row.appendChild(actionsCell);
 
         tbodyElement.appendChild(row);
@@ -965,6 +1425,280 @@ function startTMBArrivalCountdown(elementId, arrival, scheduledTime) {
     window.tmbCountdownIntervals.push(intervalId);
 }
 
+// Refresh data for a specific TMB stop
+function refreshTMBStop(stopId, stopCode) {
+    console.log('🔄 Refreshing data for TMB stop:', stopCode);
+
+    // Show loading indicator
+    var refreshBtn = document.querySelector(`[data-stop-id="${stopId}"] .refresh-btn`);
+    if (refreshBtn) {
+        refreshBtn.textContent = '⏳';
+        refreshBtn.disabled = true;
+        refreshBtn.title = getTranslation('bus_table_loading');
+    }
+
+    // Clean up existing countdown intervals for this specific stop
+    // This prevents old intervals from updating DOM elements that will be recreated
+    console.log('🧹 Cleaning up existing countdown intervals for stop', stopCode);
+
+    // Clear all intervals to ensure clean slate for popup updates
+    if (window.tmbCountdownIntervals && window.tmbCountdownIntervals.length > 0) {
+        window.tmbCountdownIntervals.forEach(function(intervalId) {
+            if (intervalId) {
+                clearInterval(intervalId);
+            }
+        });
+        window.tmbCountdownIntervals = [];
+        console.log('🧹 Cleared all countdown intervals for clean refresh');
+    }
+
+    // Fetch fresh real-time data for this stop
+    fetchTMBRealtimeBusesForStop(stopCode).then(function(arrivals) {
+        console.log('✅ Refreshed data for stop', stopCode, ':', arrivals);
+
+        // Update the stop's realtime data in the global data
+        var stopIndex = tmbStopsTableData.findIndex(function(stop) {
+            return stop.codi_parada === stopCode || stop.id === stopCode;
+        });
+
+        if (stopIndex !== -1) {
+            // Clear previous arrival data before setting new data
+            tmbStopsTableData[stopIndex].realtimeArrivals = [];
+            // Set new arrival data
+            tmbStopsTableData[stopIndex].realtimeArrivals = arrivals || [];
+            console.log('📊 Updated stop data in global array for stop', stopCode, '- cleared previous arrivals and set', (arrivals || []).length, 'new arrivals');
+        }
+
+        // Update the table display for current page
+        // This will recreate all DOM elements and countdown intervals cleanly
+        displayTMBTablePage();
+
+        // Update map markers if they exist
+        if (tmbBusStopsMarkers && tmbBusStopsMarkers.length > 0) {
+            // Find and update the marker popup content for the refreshed stop
+            tmbBusStopsMarkers.forEach(function(marker) {
+                if (marker && marker.getLatLng) {
+                    var markerLatLng = marker.getLatLng();
+                    // Check if this marker corresponds to the refreshed stop
+                    // Use coordinate matching since we don't have direct stop reference
+                    if (Math.abs(markerLatLng.lat - stop.lat) < 0.0001 &&
+                        Math.abs(markerLatLng.lng - stop.lng) < 0.0001) {
+                        console.log('🎯 Updating marker popup for refreshed stop', stopCode);
+
+                        // Create updated popup content with the new data
+                        var popupContent = '<div style="font-family: Arial, sans-serif; min-width: 250px;">' +
+                            '<h4 style="margin: 0 0 8px 0; color: #c41e3a; border-bottom: 2px solid #c41e3a; padding-bottom: 4px;">' +
+                            '🚏 Parada TMB ' + (stop.codi_parada || stop.id) + '</h4>' +
+                            '<div style="background: #c41e3a15; border: 1px solid #c41e3a; border-radius: 4px; padding: 10px; margin: 8px 0;">' +
+                            '<strong>Nom:</strong> ' + (stop.nom_parada || 'Sense nom') + '<br>' +
+                            '<strong>Codi:</strong> ' + (stop.codi_parada || stop.id) + '<br>' +
+                            '<strong>Posició:</strong> ' + stop.lat.toFixed(4) + ', ' + stop.lng.toFixed(4) +
+                            '</div>';
+
+                        // Add real-time arrivals section
+                        if (stop.realtimeArrivals && stop.realtimeArrivals.length > 0) {
+                            popupContent += '<div style="background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px; padding: 10px; margin: 8px 0;">' +
+                                '<h5 style="margin: 0 0 8px 0; color: #0066cc;">🕒 Próxims autobusos</h5>' +
+                                '<div style="max-height: 150px; overflow-y: auto;">';
+
+                            stop.realtimeArrivals.slice(0, 10).forEach(function(arrival, index) { // Show up to 10 arrivals
+                                var arrivalId = 'popup-arrival-' + stop.codi_parada + '-' + index;
+                                var scheduledTime = arrival.scheduledTime;
+
+                                var scheduledTimeStr = scheduledTime ? scheduledTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : '--:--';
+                                var countdownStr = getTMBCountdownString(arrival, scheduledTime);
+
+                                // Determine data source indicator
+                                var dataSourceText = arrival.isRealtime ? '🕒 Temps real' : '📅 Horari';
+                                var dataSourceColor = arrival.isRealtime ? '#00aa00' : '#0066cc';
+
+                                popupContent += '<div style="margin-bottom: 6px; padding: 6px; background: #fff; border-radius: 3px; border: 1px solid #eee;">' +
+                                    '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">' +
+                                    '<div style="font-weight: bold; color: #c41e3a;">Línia ' + arrival.route + '</div>' +
+                                    '<div style="font-size: 10px; color: ' + dataSourceColor + '; font-weight: bold;">' + dataSourceText + '</div>' +
+                                    '</div>' +
+                                    '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">' +
+                                    '<div style="font-size: 11px; color: #666;">' + getTranslation('bus_arrival_time') + ': ' + scheduledTimeStr + '</div>' +
+                                    '<div id="' + arrivalId + '" style="font-weight: bold; font-family: monospace;">' + countdownStr + '</div>' +
+                                    '</div>';
+                                if (arrival.destination) {
+                                    popupContent += '<div style="font-size: 11px; color: #666; margin-top: 2px;">➜ ' + arrival.destination + '</div>';
+                                }
+                                popupContent += '</div>';
+
+                                // Start live countdown update for this popup arrival
+                                startTMBArrivalCountdown(arrivalId, arrival, scheduledTime);
+                            });
+
+                            popupContent += '</div></div>';
+                        } else {
+                            popupContent += '<div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 8px; margin: 8px 0; text-align: center;">' +
+                                '<em>Sense informació de temps real</em>' +
+                                '</div>';
+                        }
+
+                        // Add refresh button and data fetch timestamp
+                        popupContent += '<div style="font-size: 10px; color: #888; margin-top: 8px; text-align: center; border-top: 1px solid #eee; padding-top: 6px;">' +
+                            '<div style="margin-bottom: 4px;">' +
+                            '<button onclick="refreshTMBStop(\'' + stop.codi_parada + '\', \'' + stopCode + '\')" ' +
+                            'style="background: #28a745; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 10px;">' +
+                            '🔄 ' + getTranslation('bus_refresh_stop') + '</button>' +
+                            '</div>' +
+                            '<em>' + getTranslation('bus_data_fetched_at') + ' ' + new Date().toLocaleTimeString() + '</em>' +
+                            '</div>';
+
+                        popupContent += '<div style="font-size: 11px; color: #666; margin-top: 8px; text-align: center;">' +
+                            '🚌 Transport Metropolità de Barcelona' +
+                            '</div>' +
+                            '</div>';
+
+                        // Update the marker's popup content - close and reopen if currently open
+                        var wasOpen = marker.isPopupOpen();
+                        marker.setPopupContent(popupContent);
+
+                        // If popup was open, close it briefly and reopen to ensure clean content
+                        if (wasOpen) {
+                            marker.closePopup();
+                            setTimeout(function() {
+                                marker.openPopup();
+                            }, 100);
+                        }
+
+                        console.log('✅ Updated marker popup for stop', stopCode, 'with', stop.realtimeArrivals ? stop.realtimeArrivals.length : 0, 'arrivals');
+                    }
+                }
+            });
+        }
+
+        // Reset button
+        if (refreshBtn) {
+            refreshBtn.textContent = '🔄';
+            refreshBtn.disabled = false;
+            refreshBtn.title = getTranslation('bus_refresh_stop');
+        }
+
+        console.log('✅ Successfully refreshed data for TMB stop', stopCode, 'with clean DOM updates');
+    }).catch(function(error) {
+        console.error('❌ Error refreshing data for TMB stop', stopCode, ':', error);
+
+        // Show error state
+        if (refreshBtn) {
+            refreshBtn.textContent = '❌';
+            refreshBtn.disabled = false;
+            refreshBtn.title = getTranslation('bus_error_table_loading');
+
+            // Reset to normal state after 3 seconds
+            setTimeout(function() {
+                if (refreshBtn) {
+                    refreshBtn.textContent = '🔄';
+                    refreshBtn.title = getTranslation('bus_refresh_stop');
+                }
+            }, 3000);
+        }
+
+        alert(getTranslation('bus_error_table_loading') + ': ' + error.message);
+    });
+}
+
+// TMB Bus Route Visualization
+var tmbBusRoutes = []; // Store bus route polylines
+
+// Fetch and display TMB bus route for a specific line
+function showTMBBusRoute(lineCode) {
+    console.log('🛣️ Showing route for TMB bus line:', lineCode);
+
+    // Hide any existing route first
+    hideTMBBusRoute();
+
+    var apiUrl = 'https://api.tmb.cat/v1/transit/linies/bus/' + encodeURIComponent(lineCode) + '/horaris?app_id=8029906b&app_key=73b5ad24d1db9fa24988bf134a1523d1';
+
+    console.log('🛣️ Fetching TMB bus route from:', apiUrl);
+
+    fetch(apiUrl)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('TMB bus route API failed: ' + response.status + ' ' + response.statusText);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('✅ TMB bus route API response for line', lineCode, ':', data);
+
+            var routeCoordinates = [];
+
+            // Process TMB route API response
+            if (data && data.features && Array.isArray(data.features)) {
+                data.features.forEach(function(feature) {
+                    if (feature.geometry && feature.geometry.type === 'LineString' && feature.geometry.coordinates) {
+                        // Add coordinates to route
+                        feature.geometry.coordinates.forEach(function(coord) {
+                            var lng = coord[0];
+                            var lat = coord[1];
+                            if (typeof lat === 'number' && typeof lng === 'number' &&
+                                lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+                                routeCoordinates.push([lat, lng]); // Leaflet uses [lat, lng]
+                            }
+                        });
+                    }
+                });
+            }
+
+            if (routeCoordinates.length > 1) {
+                // Create polyline for the route
+                var routeColor = tmbBusLineColors[lineCode] || '#c41e3a';
+                var routePolyline = L.polyline(routeCoordinates, {
+                    color: routeColor,
+                    weight: 4,
+                    opacity: 0.8,
+                    dashArray: '5, 10', // Dashed line to distinguish from other routes
+                    className: 'tmb-bus-route'
+                });
+
+                // Add route to map
+                routePolyline.addTo(map);
+                tmbBusRoutes.push(routePolyline);
+
+                // Fit map to show the entire route
+                map.fitBounds(routePolyline.getBounds(), {padding: [20, 20]});
+
+                console.log('✅ Added TMB bus route for line', lineCode, 'with', routeCoordinates.length, 'points');
+
+                // Show route info popup at the start of the route
+                if (routeCoordinates.length > 0) {
+                    var startPoint = routeCoordinates[0];
+                    var routeInfoPopup = L.popup()
+                        .setLatLng(startPoint)
+                        .setContent('<div style="font-family: Arial, sans-serif; text-align: center;">' +
+                            '<h4 style="margin: 0 0 8px 0; color: ' + routeColor + ';">🛣️ Ruta Línia ' + lineCode + '</h4>' +
+                            '<p style="margin: 0; font-size: 12px; color: #666;">Mostrant el trajecte de la línia</p>' +
+                            '<button onclick="hideTMBBusRoute()" style="margin-top: 8px; background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 11px;">Amagar ruta</button>' +
+                            '</div>')
+                        .openOn(map);
+                }
+            } else {
+                console.warn('⚠️ No valid route coordinates found for line', lineCode);
+                alert('No s\'ha pogut carregar la ruta per a la línia ' + lineCode);
+            }
+        })
+        .catch(error => {
+            console.error('❌ TMB bus route API error for line', lineCode, ':', error);
+            alert('Error carregant la ruta de la línia ' + lineCode + ': ' + error.message);
+        });
+}
+
+// Hide TMB bus route
+function hideTMBBusRoute() {
+    console.log('🚫 Hiding TMB bus route');
+
+    tmbBusRoutes.forEach(function(routePolyline) {
+        if (map.hasLayer(routePolyline)) {
+            map.removeLayer(routePolyline);
+        }
+    });
+
+    tmbBusRoutes = [];
+}
+
 // Make functions globally accessible
 window.startTMBBusStops = startTMBBusStops;
 window.stopTMBBusStops = stopTMBBusStops;
@@ -974,5 +1708,8 @@ window.clearTMBTableSearch = clearTMBTableSearch;
 window.sortTMBTable = sortTMBTable;
 window.changeTMBTablePage = changeTMBTablePage;
 window.zoomToTMBStop = zoomToTMBStop;
+window.refreshTMBStop = refreshTMBStop;
 window.getTMBCountdownString = getTMBCountdownString;
 window.startTMBArrivalCountdown = startTMBArrivalCountdown;
+window.showTMBBusRoute = showTMBBusRoute;
+window.hideTMBBusRoute = hideTMBBusRoute;

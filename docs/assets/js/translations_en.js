@@ -527,6 +527,7 @@ window.translations_en = {
     bus_countdown: "Countdown",
     bus_arrived: "Arrived",
     bus_overdue: "Overdue",
+    bus_refresh_stop: "Refresh stop",
 
     // Metro (TMB) translations
     metro_title: "🚇 TMB Metro",
