@@ -1,3 +1,6 @@
+// Global variables for query management
+var currentOverPassLayer = null; // Reference to current OverPassLayer for cancellation
+
 function get_poi(element) {
     if ($('#expert-mode').is(':checked'))
 	return {
@@ -153,6 +156,17 @@ function show_overpass_layer() {
 	console.debug('There is nothing selected to filter by.');
 	return;
     }
+
+    // Remove existing OverPassLayer instances to prevent duplicates
+    if (currentOverPassLayer && typeof iconLayer !== 'undefined' && iconLayer && typeof iconLayer.removeLayer === 'function') {
+        try {
+            iconLayer.removeLayer(currentOverPassLayer);
+            currentOverPassLayer = null;
+        } catch (err) {
+            console.warn('Error removing existing OverPassLayer:', err);
+        }
+    }
+
     var opl = new L.OverPassLayer({
 	query: query,
 	callback: callback,
@@ -160,6 +174,7 @@ function show_overpass_layer() {
     });
 
     iconLayer.addLayer(opl);
+    currentOverPassLayer = opl; // Store reference for cancellation
 }
 
 function get_permalink() {

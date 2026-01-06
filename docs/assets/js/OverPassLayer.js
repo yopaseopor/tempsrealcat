@@ -212,16 +212,8 @@ L.OverPassLayer = L.FeatureGroup.extend({
 
     //console.log(this._map.getBounds());
     if (this._map.getZoom() >= this.options.minzoom) {
-      // Check if baseLocation is set (global variable from site.js)
-      var boundsToUse;
-      if (typeof baseLocation !== 'undefined' && baseLocation.bounds) {
-        // Use base location bounds instead of current map view
-        boundsToUse = baseLocation.bounds;
-        console.log("Using base location bounds for POI loading");
-      } else {
-        // Use current map view bounds
-        boundsToUse = this._map.getBounds();
-      }
+      // Use current map view bounds for POI queries
+      var boundsToUse = this._map.getBounds();
 
       //var bboxList = new Array(this._map.getBounds());
       var bboxList = this._view2BBoxes(

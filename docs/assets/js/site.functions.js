@@ -162,17 +162,29 @@ function show_overpass_layer() {
         return;
     }
 
+    // Remove existing OverPassLayer instances to prevent duplicates
+    if (currentOverPassLayer && typeof iconLayer !== 'undefined' && iconLayer && typeof iconLayer.removeLayer === 'function') {
+        try {
+            iconLayer.removeLayer(currentOverPassLayer);
+            currentOverPassLayer = null;
+        } catch (err) {
+            console.warn('Error removing existing OverPassLayer:', err);
+        }
+    }
+
     try {
         var opl = new L.OverPassLayer({
             query: query,
             callback: callback,
-            minzoom: 14,
+            minzoom: 10,
             autoQuery: false // Disable auto-querying on map move
         });
 
         if (typeof iconLayer !== 'undefined' && iconLayer && typeof iconLayer.addLayer === 'function') {
             iconLayer.addLayer(opl);
             currentOverPassLayer = opl; // Store reference for cancellation
+            // Reset query time to allow immediate manual query
+            opl._lastQueryTime = 0;
             // Manually trigger the query
             opl.onMoveEnd();
         } else {

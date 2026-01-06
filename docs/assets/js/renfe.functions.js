@@ -158,6 +158,16 @@ function show_overpass_layer() {
         return;
     }
 
+    // Remove existing OverPassLayer instances to prevent duplicates
+    if (currentOverPassLayer && typeof iconLayer !== 'undefined' && iconLayer && typeof iconLayer.removeLayer === 'function') {
+        try {
+            iconLayer.removeLayer(currentOverPassLayer);
+            currentOverPassLayer = null;
+        } catch (err) {
+            console.warn('Error removing existing OverPassLayer:', err);
+        }
+    }
+
     try {
         var opl = new L.OverPassLayer({
             query: query,
@@ -167,6 +177,7 @@ function show_overpass_layer() {
 
         if (typeof iconLayer !== 'undefined' && iconLayer && typeof iconLayer.addLayer === 'function') {
             iconLayer.addLayer(opl);
+            currentOverPassLayer = opl; // Store reference for cancellation
         } else {
             console.warn('iconLayer is not available; cannot add OverPassLayer');
         }

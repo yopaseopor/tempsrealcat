@@ -18,7 +18,7 @@ function startTMBBusStops() {
         displayTMBBusStops(stops);
     });
 
-    // Update every 10 minutes for stops data (relatively static)
+    // Update every 10 minutes for stops data
     tmbBusStopsInterval = setInterval(function() {
         fetchAllTMBBusStops().then(function(stops) {
             displayTMBBusStops(stops);
@@ -583,7 +583,13 @@ function displayTMBBusStops(stops) {
                 '</div>' +
                 '</div>';
 
-            stopMarker.bindPopup(popupContent);
+            // Create popup with auto-refresh on open
+            var popup = L.popup().setContent(popupContent);
+            popup.on('popupopen', function() {
+                console.log('🚌 Popup opened for stop', stop.codi_parada || stop.id, '- refreshing data');
+                refreshTMBStop(stop);
+            });
+            stopMarker.bindPopup(popup);
 
             // Add marker to map
             stopMarker.addTo(map);
@@ -695,7 +701,10 @@ function displayTMBBusStops(stops) {
                             '<h5 style="margin: 0 0 8px 0; color: #0066cc;">🕒 Próxims autobusos</h5>' +
                             '<div style="max-height: 150px; overflow-y: auto;">';
 
-                        stop.realtimeArrivals.slice(0, 10).forEach(function(arrival, index) { // Show up to 10 arrivals
+                        var activeArrivals = stop.realtimeArrivals.filter(function(arrival) {
+                            return arrival.timeToArrival > 0;
+                        });
+                        activeArrivals.slice(0, 10).forEach(function(arrival, index) { // Show up to 10 active arrivals
                             var arrivalId = 'tmb-arrival-' + stop.codi_parada + '-' + index;
                             var scheduledTime = arrival.scheduledTime;
 
@@ -800,7 +809,7 @@ function displayTMBBusStops(stops) {
                     // Add refresh button and data fetch timestamp
                     popupContent += '<div style="font-size: 10px; color: #888; margin-top: 8px; text-align: center; border-top: 1px solid #eee; padding-top: 6px;">' +
                         '<div style="margin-bottom: 4px;">' +
-                        '<button onclick="refreshTMBStop(\'' + stop.codi_parada + '\', \'' + stopCode + '\')" ' +
+                        '<button onclick="refreshTMBStop({codi_parada: \'' + (stop.codi_parada || stop.id) + '\', nom_parada: \'' + (stop.nom_parada || 'Sense nom').replace(/'/g, '\\\'') + '\', lat: ' + stop.lat + ', lng: ' + stop.lng + '})" ' +
                         'style="background: #28a745; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 10px;">' +
                         '🔄 ' + getTranslation('bus_refresh_stop') + '</button>' +
                         '</div>' +
@@ -1417,20 +1426,70 @@ function startTMBArrivalCountdown(elementId, arrival, scheduledTime) {
     // Set up interval for live updates
     var intervalId = setInterval(updateCountdown, 1000); // Update every second
 
-    // Store the interval ID for cleanup (though popups are usually short-lived)
-    // In a real app, you might want to clean these up when the popup closes
-    if (!window.tmbCountdownIntervals) {
-        window.tmbCountdownIntervals = [];
+    // Extract stop ID from element ID (format: 'popup-arrival-STOPID-INDEX' or 'table-arrival-STOPID-INDEX')
+    var stopId = null;
+    var idParts = elementId.split('-');
+    if (idParts.length >= 4 && idParts[0] === 'popup' || idParts[0] === 'table') {
+        stopId = idParts[2]; // The stop ID is in position 2
     }
-    window.tmbCountdownIntervals.push(intervalId);
+
+    // Store the interval ID organized by stop ID
+    if (!window.tmbCountdownIntervals) {
+        window.tmbCountdownIntervals = {};
+    }
+    if (stopId) {
+        if (!window.tmbCountdownIntervals[stopId]) {
+            window.tmbCountdownIntervals[stopId] = [];
+        }
+        window.tmbCountdownIntervals[stopId].push(intervalId);
+    } else {
+        // Fallback for elements without proper stop ID
+        if (!window.tmbCountdownIntervals['unknown']) {
+            window.tmbCountdownIntervals['unknown'] = [];
+        }
+        window.tmbCountdownIntervals['unknown'].push(intervalId);
+    }
 }
 
 // Refresh data for a specific TMB stop
-function refreshTMBStop(stopId, stopCode) {
-    console.log('🔄 Refreshing data for TMB stop:', stopCode);
+function refreshTMBStop(stopOrId, stopCode) {
+    var stop = null;
+    var stopId = null;
+    var isPopupButton = false;
 
-    // Show loading indicator
-    var refreshBtn = document.querySelector(`[data-stop-id="${stopId}"] .refresh-btn`);
+    // Handle both calling styles: refreshTMBStop(stopObject) or refreshTMBStop(stopId, stopCode)
+    if (typeof stopOrId === 'object' && stopOrId !== null) {
+        // New style: full stop object passed
+        stop = stopOrId;
+        stopId = stop.codi_parada || stop.id;
+        stopCode = stopId;
+        isPopupButton = true; // Object calls come from popup buttons
+    } else {
+        // Old style: separate parameters
+        stopId = stopOrId;
+        isPopupButton = false; // Parameter calls come from table buttons
+    }
+
+    console.log('🔄 Refreshing data for TMB stop:', stopCode, stop ? '(full object)' : '(legacy)');
+
+    // Show loading state for popup button immediately
+    if (isPopupButton && stopId) {
+        var popupRefreshBtn = document.getElementById('popup-refresh-btn-' + stopId);
+        if (popupRefreshBtn) {
+            popupRefreshBtn.textContent = '⏳ Carregant...';
+            popupRefreshBtn.style.background = '#666';
+            popupRefreshBtn.disabled = true;
+            console.log('🔄 Set popup button to loading state for stop', stopId);
+        }
+    }
+
+    // Show loading indicator - for popup buttons, we'll handle this differently
+    // since the button gets replaced when popup content updates
+    var refreshBtn = null;
+    
+    // Try to find table button first (these have data-stop-id attribute)
+    refreshBtn = document.querySelector(`[data-stop-id="${stopId}"] .refresh-btn`);
+    
     if (refreshBtn) {
         refreshBtn.textContent = '⏳';
         refreshBtn.disabled = true;
@@ -1441,15 +1500,15 @@ function refreshTMBStop(stopId, stopCode) {
     // This prevents old intervals from updating DOM elements that will be recreated
     console.log('🧹 Cleaning up existing countdown intervals for stop', stopCode);
 
-    // Clear all intervals to ensure clean slate for popup updates
-    if (window.tmbCountdownIntervals && window.tmbCountdownIntervals.length > 0) {
-        window.tmbCountdownIntervals.forEach(function(intervalId) {
+    // Clear only intervals for this specific stop
+    if (window.tmbCountdownIntervals && window.tmbCountdownIntervals[stopCode]) {
+        window.tmbCountdownIntervals[stopCode].forEach(function(intervalId) {
             if (intervalId) {
                 clearInterval(intervalId);
             }
         });
-        window.tmbCountdownIntervals = [];
-        console.log('🧹 Cleared all countdown intervals for clean refresh');
+        window.tmbCountdownIntervals[stopCode] = [];
+        console.log('🧹 Cleared', window.tmbCountdownIntervals[stopCode].length, 'countdown intervals for stop', stopCode);
     }
 
     // Fetch fresh real-time data for this stop
@@ -1469,40 +1528,62 @@ function refreshTMBStop(stopId, stopCode) {
             console.log('📊 Updated stop data in global array for stop', stopCode, '- cleared previous arrivals and set', (arrivals || []).length, 'new arrivals');
         }
 
-        // Update the table display for current page
+        // Update the table display for current page only if not called from popup button
         // This will recreate all DOM elements and countdown intervals cleanly
-        displayTMBTablePage();
+        if (!isPopupButton) {
+            displayTMBTablePage();
+        }
 
         // Update map markers if they exist
         if (tmbBusStopsMarkers && tmbBusStopsMarkers.length > 0) {
+            // Find the stop object from global data first
+            var refreshedStop = null;
+            if (allTMBStops && allTMBStops.length > 0) {
+                refreshedStop = allTMBStops.find(function(stop) {
+                    return stop.codi_parada === stopCode || stop.id === stopCode;
+                });
+            }
+
+            // If not found in allTMBStops, try tmbStopsTableData
+            if (!refreshedStop && tmbStopsTableData && tmbStopsTableData.length > 0) {
+                refreshedStop = tmbStopsTableData.find(function(stop) {
+                    return stop.codi_parada === stopCode || stop.id === stopCode;
+                });
+            }
+
+            // Update the stop's realtime data in the global arrays
+            if (refreshedStop) {
+                refreshedStop.realtimeArrivals = arrivals || [];
+            }
+
             // Find and update the marker popup content for the refreshed stop
             tmbBusStopsMarkers.forEach(function(marker) {
-                if (marker && marker.getLatLng) {
+                if (marker && marker.getLatLng && refreshedStop) {
                     var markerLatLng = marker.getLatLng();
                     // Check if this marker corresponds to the refreshed stop
                     // Use coordinate matching since we don't have direct stop reference
-                    if (Math.abs(markerLatLng.lat - stop.lat) < 0.0001 &&
-                        Math.abs(markerLatLng.lng - stop.lng) < 0.0001) {
+                    if (Math.abs(markerLatLng.lat - refreshedStop.lat) < 0.0001 &&
+                        Math.abs(markerLatLng.lng - refreshedStop.lng) < 0.0001) {
                         console.log('🎯 Updating marker popup for refreshed stop', stopCode);
 
                         // Create updated popup content with the new data
                         var popupContent = '<div style="font-family: Arial, sans-serif; min-width: 250px;">' +
                             '<h4 style="margin: 0 0 8px 0; color: #c41e3a; border-bottom: 2px solid #c41e3a; padding-bottom: 4px;">' +
-                            '🚏 Parada TMB ' + (stop.codi_parada || stop.id) + '</h4>' +
+                            '🚏 Parada TMB ' + (refreshedStop.codi_parada || refreshedStop.id) + '</h4>' +
                             '<div style="background: #c41e3a15; border: 1px solid #c41e3a; border-radius: 4px; padding: 10px; margin: 8px 0;">' +
-                            '<strong>Nom:</strong> ' + (stop.nom_parada || 'Sense nom') + '<br>' +
-                            '<strong>Codi:</strong> ' + (stop.codi_parada || stop.id) + '<br>' +
-                            '<strong>Posició:</strong> ' + stop.lat.toFixed(4) + ', ' + stop.lng.toFixed(4) +
+                            '<strong>Nom:</strong> ' + (refreshedStop.nom_parada || 'Sense nom') + '<br>' +
+                            '<strong>Codi:</strong> ' + (refreshedStop.codi_parada || refreshedStop.id) + '<br>' +
+                            '<strong>Posició:</strong> ' + refreshedStop.lat.toFixed(4) + ', ' + refreshedStop.lng.toFixed(4) +
                             '</div>';
 
                         // Add real-time arrivals section
-                        if (stop.realtimeArrivals && stop.realtimeArrivals.length > 0) {
+                        if (refreshedStop.realtimeArrivals && refreshedStop.realtimeArrivals.length > 0) {
                             popupContent += '<div style="background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px; padding: 10px; margin: 8px 0;">' +
                                 '<h5 style="margin: 0 0 8px 0; color: #0066cc;">🕒 Próxims autobusos</h5>' +
                                 '<div style="max-height: 150px; overflow-y: auto;">';
 
-                            stop.realtimeArrivals.slice(0, 10).forEach(function(arrival, index) { // Show up to 10 arrivals
-                                var arrivalId = 'popup-arrival-' + stop.codi_parada + '-' + index;
+                            refreshedStop.realtimeArrivals.slice(0, 10).forEach(function(arrival, index) { // Show up to 10 arrivals
+                                var arrivalId = 'popup-arrival-' + refreshedStop.codi_parada + '-' + index;
                                 var scheduledTime = arrival.scheduledTime;
 
                                 var scheduledTimeStr = scheduledTime ? scheduledTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : '--:--';
@@ -1538,13 +1619,17 @@ function refreshTMBStop(stopId, stopCode) {
                         }
 
                         // Add refresh button and data fetch timestamp
+                        var now = new Date();
+                        var buttonText = '🔄 ' + getTranslation('bus_refresh_stop');
+                        var buttonBg = '#28a745';
+                        
                         popupContent += '<div style="font-size: 10px; color: #888; margin-top: 8px; text-align: center; border-top: 1px solid #eee; padding-top: 6px;">' +
                             '<div style="margin-bottom: 4px;">' +
-                            '<button onclick="refreshTMBStop(\'' + stop.codi_parada + '\', \'' + stopCode + '\')" ' +
-                            'style="background: #28a745; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 10px;">' +
-                            '🔄 ' + getTranslation('bus_refresh_stop') + '</button>' +
+                            '<button id="popup-refresh-btn-' + (refreshedStop.codi_parada || refreshedStop.id) + '" onclick="refreshTMBStop({codi_parada: \'' + (refreshedStop.codi_parada || refreshedStop.id) + '\', nom_parada: \'' + (refreshedStop.nom_parada || 'Sense nom').replace(/'/g, '\\\'') + '\', lat: ' + refreshedStop.lat + ', lng: ' + refreshedStop.lng + '})" ' +
+                            'style="background: ' + buttonBg + '; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 10px;">' +
+                            buttonText + '</button>' +
                             '</div>' +
-                            '<em>' + getTranslation('bus_data_fetched_at') + ' ' + new Date().toLocaleTimeString() + '</em>' +
+                            '<em>' + getTranslation('bus_data_fetched_at') + ' ' + now.toLocaleTimeString() + '</em>' +
                             '</div>';
 
                         popupContent += '<div style="font-size: 11px; color: #666; margin-top: 8px; text-align: center;">' +
@@ -1552,19 +1637,59 @@ function refreshTMBStop(stopId, stopCode) {
                             '</div>' +
                             '</div>';
 
-                        // Update the marker's popup content - close and reopen if currently open
-                        var wasOpen = marker.isPopupOpen();
+                        // Update the marker's popup content - close and reopen if currently open to ensure clean DOM
+                        var wasOpen = marker.getPopup() && marker.getPopup().isOpen && marker.getPopup().isOpen();
                         marker.setPopupContent(popupContent);
 
-                        // If popup was open, close it briefly and reopen to ensure clean content
+                        // Handle popup reopening and countdown restart with proper timing
                         if (wasOpen) {
+                            // Close popup, update content, reopen, then start countdowns
                             marker.closePopup();
                             setTimeout(function() {
                                 marker.openPopup();
-                            }, 100);
+                                // Wait for popup to be fully rendered before starting countdowns
+                                setTimeout(function() {
+                                    console.log('🕒 Starting countdown timers for refreshed stop', stopCode);
+                                    if (refreshedStop.realtimeArrivals && refreshedStop.realtimeArrivals.length > 0) {
+                                        refreshedStop.realtimeArrivals.slice(0, 10).forEach(function(arrival, index) {
+                                            var arrivalId = 'popup-arrival-' + refreshedStop.codi_parada + '-' + index;
+                                            var scheduledTime = arrival.scheduledTime;
+                                            
+                                            // Verify element exists before starting countdown
+                                            var element = document.getElementById(arrivalId);
+                                            if (element) {
+                                                console.log('✅ Starting countdown for element', arrivalId);
+                                                startTMBArrivalCountdown(arrivalId, arrival, scheduledTime);
+                                            } else {
+                                                console.warn('⚠️ Element not found for countdown:', arrivalId);
+                                            }
+                                        });
+                                    }
+                                }, 500); // Longer delay to ensure DOM is fully stable after popup opens
+                            }, 200); // Delay for popup operations
+                        } else {
+                            // Popup was not open, start countdowns after content update
+                            setTimeout(function() {
+                                console.log('🕒 Starting countdown timers for closed popup stop', stopCode);
+                                if (refreshedStop.realtimeArrivals && refreshedStop.realtimeArrivals.length > 0) {
+                                    refreshedStop.realtimeArrivals.slice(0, 10).forEach(function(arrival, index) {
+                                        var arrivalId = 'popup-arrival-' + refreshedStop.codi_parada + '-' + index;
+                                        var scheduledTime = arrival.scheduledTime;
+                                        
+                                        // Verify element exists before starting countdown
+                                        var element = document.getElementById(arrivalId);
+                                        if (element) {
+                                            console.log('✅ Starting countdown for element', arrivalId);
+                                            startTMBArrivalCountdown(arrivalId, arrival, scheduledTime);
+                                        } else {
+                                            console.warn('⚠️ Element not found for countdown:', arrivalId);
+                                        }
+                                    });
+                                }
+                            }, 300); // Longer delay for content update
                         }
 
-                        console.log('✅ Updated marker popup for stop', stopCode, 'with', stop.realtimeArrivals ? stop.realtimeArrivals.length : 0, 'arrivals');
+                        console.log('✅ Updated marker popup for stop', stopCode, 'with', refreshedStop.realtimeArrivals ? refreshedStop.realtimeArrivals.length : 0, 'arrivals');
                     }
                 }
             });
@@ -1572,9 +1697,19 @@ function refreshTMBStop(stopId, stopCode) {
 
         // Reset button
         if (refreshBtn) {
+            // Table button reset
             refreshBtn.textContent = '🔄';
             refreshBtn.disabled = false;
             refreshBtn.title = getTranslation('bus_refresh_stop');
+        } else if (isPopupButton && stopId) {
+            // Popup button reset - find and update the popup button
+            var popupRefreshBtn = document.getElementById('popup-refresh-btn-' + stopId);
+            if (popupRefreshBtn) {
+                popupRefreshBtn.textContent = '🔄 ' + getTranslation('bus_refresh_stop');
+                popupRefreshBtn.style.background = '#28a745';
+                popupRefreshBtn.disabled = false;
+                console.log('✅ Reset popup button for stop', stopId);
+            }
         }
 
         console.log('✅ Successfully refreshed data for TMB stop', stopCode, 'with clean DOM updates');
@@ -1583,6 +1718,7 @@ function refreshTMBStop(stopId, stopCode) {
 
         // Show error state
         if (refreshBtn) {
+            // Table button error state
             refreshBtn.textContent = '❌';
             refreshBtn.disabled = false;
             refreshBtn.title = getTranslation('bus_error_table_loading');
@@ -1594,6 +1730,22 @@ function refreshTMBStop(stopId, stopCode) {
                     refreshBtn.title = getTranslation('bus_refresh_stop');
                 }
             }, 3000);
+        } else if (isPopupButton && stopId) {
+            // Popup button error state
+            var popupRefreshBtn = document.getElementById('popup-refresh-btn-' + stopId);
+            if (popupRefreshBtn) {
+                popupRefreshBtn.textContent = '❌ Error';
+                popupRefreshBtn.style.background = '#dc3545';
+                popupRefreshBtn.disabled = false;
+                
+                // Reset to normal state after 3 seconds
+                setTimeout(function() {
+                    if (popupRefreshBtn) {
+                        popupRefreshBtn.textContent = '🔄 ' + getTranslation('bus_refresh_stop');
+                        popupRefreshBtn.style.background = '#28a745';
+                    }
+                }, 3000);
+            }
         }
 
         alert(getTranslation('bus_error_table_loading') + ': ' + error.message);
@@ -1610,14 +1762,16 @@ function showTMBBusRoute(lineCode) {
     // Hide any existing route first
     hideTMBBusRoute();
 
-    var apiUrl = 'https://api.tmb.cat/v1/transit/linies/bus/' + encodeURIComponent(lineCode) + '/horaris?app_id=8029906b&app_key=73b5ad24d1db9fa24988bf134a1523d1';
+    // Use the correct TMB API endpoint: /transit/linies/bus/{lineCode}/
+    var apiUrl = 'https://api.tmb.cat/v1/transit/linies/bus/' + encodeURIComponent(lineCode) + '/?app_id=8029906b&app_key=73b5ad24d1db9fa24988bf134a1523d1';
 
-    console.log('🛣️ Fetching TMB bus route from:', apiUrl);
+    console.log('🛣️ Fetching TMB bus line data from:', apiUrl);
 
     fetch(apiUrl)
         .then(response => {
             if (!response.ok) {
-                throw new Error('TMB bus route API failed: ' + response.status + ' ' + response.statusText);
+                console.warn('❌ TMB bus line API failed:', response.status, response.statusText);
+                throw new Error('TMB API returned ' + response.status + ': ' + response.statusText);
             }
             return response.json();
         })
@@ -1626,22 +1780,124 @@ function showTMBBusRoute(lineCode) {
 
             var routeCoordinates = [];
 
-            // Process TMB route API response
+            // Process TMB route API response - handle different possible formats
             if (data && data.features && Array.isArray(data.features)) {
-                data.features.forEach(function(feature) {
-                    if (feature.geometry && feature.geometry.type === 'LineString' && feature.geometry.coordinates) {
-                        // Add coordinates to route
-                        feature.geometry.coordinates.forEach(function(coord) {
-                            var lng = coord[0];
-                            var lat = coord[1];
-                            if (typeof lat === 'number' && typeof lng === 'number' &&
-                                lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-                                routeCoordinates.push([lat, lng]); // Leaflet uses [lat, lng]
+                console.log('📊 Processing', data.features.length, 'features from API response');
+
+                data.features.forEach(function(feature, featureIndex) {
+                    console.log('🔍 Processing feature', featureIndex, ':', feature);
+
+                    // Try different geometry formats
+                    if (feature.geometry) {
+                        if (feature.geometry.type === 'LineString' && feature.geometry.coordinates) {
+                            console.log('✅ Found LineString geometry in feature', featureIndex);
+                            // Standard GeoJSON LineString format
+                            feature.geometry.coordinates.forEach(function(coord) {
+                                var lng = coord[0];
+                                var lat = coord[1];
+                                if (typeof lat === 'number' && typeof lng === 'number' &&
+                                    lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+                                    routeCoordinates.push([lat, lng]); // Leaflet uses [lat, lng]
+                                    console.log('📍 Added coordinate:', lat, lng);
+                                } else {
+                                    console.warn('⚠️ Invalid coordinate:', lat, lng);
+                                }
+                            });
+                        } else if (feature.geometry.type === 'MultiLineString' && feature.geometry.coordinates) {
+                            console.log('✅ Found MultiLineString geometry in feature', featureIndex);
+                            // MultiLineString format
+                            feature.geometry.coordinates.forEach(function(lineString) {
+                                lineString.forEach(function(coord) {
+                                    var lng = coord[0];
+                                    var lat = coord[1];
+                                    if (typeof lat === 'number' && typeof lng === 'number' &&
+                                        lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+                                        routeCoordinates.push([lat, lng]);
+                                        console.log('📍 Added MultiLineString coordinate:', lat, lng);
+                                    }
+                                });
+                            });
+                        } else if (Array.isArray(feature.geometry.coordinates) && feature.geometry.coordinates.length > 0) {
+                            console.log('✅ Found coordinate array in feature', featureIndex, '- type:', feature.geometry.type);
+                            // Handle cases where coordinates might be nested differently
+                            if (Array.isArray(feature.geometry.coordinates[0])) {
+                                // Likely nested array of coordinates
+                                feature.geometry.coordinates.forEach(function(coordSet) {
+                                    if (Array.isArray(coordSet) && coordSet.length >= 2) {
+                                        var lng = coordSet[0];
+                                        var lat = coordSet[1];
+                                        if (typeof lat === 'number' && typeof lng === 'number' &&
+                                            lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+                                            routeCoordinates.push([lat, lng]);
+                                            console.log('📍 Added nested coordinate:', lat, lng);
+                                        }
+                                    }
+                                });
+                            } else if (feature.geometry.coordinates.length >= 2) {
+                                // Direct coordinate pair
+                                var lng = feature.geometry.coordinates[0];
+                                var lat = feature.geometry.coordinates[1];
+                                if (typeof lat === 'number' && typeof lng === 'number' &&
+                                    lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+                                    routeCoordinates.push([lat, lng]);
+                                    console.log('📍 Added direct coordinate:', lat, lng);
+                                }
+                            }
+                        } else {
+                            console.warn('⚠️ Feature', featureIndex, 'has geometry but no supported coordinate format:', feature.geometry.type);
+                        }
+                    } else {
+                        console.warn('⚠️ Feature', featureIndex, 'has no geometry property');
+                    }
+
+                    // Also check properties for coordinate data (some APIs put coordinates in properties)
+                    if (feature.properties && !routeCoordinates.length) {
+                        console.log('🔍 Checking properties for coordinate data in feature', featureIndex);
+
+                        // Look for coordinate arrays in properties
+                        ['coordinates', 'coords', 'path', 'route', 'geometry'].forEach(function(propName) {
+                            if (feature.properties[propName] && Array.isArray(feature.properties[propName])) {
+                                console.log('✅ Found coordinate array in properties.' + propName);
+                                feature.properties[propName].forEach(function(coord) {
+                                    if (Array.isArray(coord) && coord.length >= 2) {
+                                        var lng = coord[0];
+                                        var lat = coord[1];
+                                        if (typeof lat === 'number' && typeof lng === 'number' &&
+                                            lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+                                            routeCoordinates.push([lat, lng]);
+                                            console.log('📍 Added coordinate from properties:', lat, lng);
+                                        }
+                                    }
+                                });
                             }
                         });
                     }
                 });
+            } else if (data && Array.isArray(data)) {
+                console.log('📊 Processing direct array response with', data.length, 'items');
+                // Handle direct array format
+                data.forEach(function(item, index) {
+                    if (item.coordinates && Array.isArray(item.coordinates)) {
+                        console.log('✅ Found coordinates in array item', index);
+                        item.coordinates.forEach(function(coord) {
+                            if (Array.isArray(coord) && coord.length >= 2) {
+                                var lng = coord[0];
+                                var lat = coord[1];
+                                if (typeof lat === 'number' && typeof lng === 'number' &&
+                                    lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+                                    routeCoordinates.push([lat, lng]);
+                                    console.log('📍 Added coordinate from array item:', lat, lng);
+                                }
+                            }
+                        });
+                    }
+                });
+            } else {
+                console.warn('❌ Unexpected TMB route API response format - no features or arrays found');
+                console.log('Response structure:', typeof data, data ? Object.keys(data) : 'null');
             }
+
+            console.log('🎯 Total route coordinates collected:', routeCoordinates.length);
 
             if (routeCoordinates.length > 1) {
                 // Create polyline for the route
@@ -1661,7 +1917,7 @@ function showTMBBusRoute(lineCode) {
                 // Fit map to show the entire route
                 map.fitBounds(routePolyline.getBounds(), {padding: [20, 20]});
 
-                console.log('✅ Added TMB bus route for line', lineCode, 'with', routeCoordinates.length, 'points');
+                console.log('✅ Successfully added TMB bus route for line', lineCode, 'with', routeCoordinates.length, 'points');
 
                 // Show route info popup at the start of the route
                 if (routeCoordinates.length > 0) {
@@ -1676,13 +1932,27 @@ function showTMBBusRoute(lineCode) {
                         .openOn(map);
                 }
             } else {
-                console.warn('⚠️ No valid route coordinates found for line', lineCode);
-                alert('No s\'ha pogut carregar la ruta per a la línia ' + lineCode);
+                console.warn('⚠️ No valid route coordinates found for line', lineCode, '- collected', routeCoordinates.length, 'points');
+                console.log('Route coordinates array:', routeCoordinates);
+
+                // Try to provide more debugging information
+                if (data && data.features) {
+                    console.log('Features in response:', data.features.length);
+                    data.features.forEach(function(feature, i) {
+                        console.log('Feature', i, 'geometry:', feature.geometry ? feature.geometry.type : 'none');
+                        if (feature.geometry && feature.geometry.coordinates) {
+                            console.log('Feature', i, 'coordinates length:', feature.geometry.coordinates.length);
+                            console.log('First coordinate sample:', feature.geometry.coordinates[0]);
+                        }
+                    });
+                }
+
+                alert('No s\'ha pogut carregar la ruta per a la línia ' + lineCode + '. Comprova que la línia existeix i té dades de ruta disponibles.');
             }
         })
         .catch(error => {
             console.error('❌ TMB bus route API error for line', lineCode, ':', error);
-            alert('Error carregant la ruta de la línia ' + lineCode + ': ' + error.message);
+            alert('Error carregant la ruta de la línia ' + lineCode + ': ' + error.message + '\n\nPot ser que l\'API de rutes no estigui disponible o que la línia no tingui dades de geometria.');
         });
 }
 
@@ -1698,6 +1968,8 @@ function hideTMBBusRoute() {
 
     tmbBusRoutes = [];
 }
+
+
 
 // Make functions globally accessible
 window.startTMBBusStops = startTMBBusStops;
