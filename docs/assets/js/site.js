@@ -308,6 +308,11 @@ function updateBaseLocationDisplay() {
         updateWikipediaContent();
     }
 
+    // Refresh OSM POIs for the new location if they are active
+    if (typeof refreshOsmPoisForNewLocation === 'function') {
+        refreshOsmPoisForNewLocation();
+    }
+
     // Do NOT automatically reload POIs - user must click button
     // Removed: setting_changed();
 }
@@ -555,6 +560,72 @@ function loadBicycleContent() {
         });
 }
 
+// Function to load external HTML content for OSM tab
+function loadOsmContent() {
+    const osmPane = document.getElementById('osm');
+
+    // Check if content is already loaded (look for the specific OSM title)
+    if (osmPane.querySelector('h1[data-i18n="osm_title"]')) {
+        return; // Content already loaded
+    }
+
+    // Load the osm.html content
+    fetch('osm.html')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to load osm.html');
+            }
+            return response.text();
+        })
+        .then(html => {
+            // Extract the sidebar-pane content from the HTML
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const osmContent = doc.querySelector('#osm');
+
+            if (osmContent) {
+                // Clear existing content and add new content
+                osmPane.innerHTML = osmContent.innerHTML;
+
+                // Load the OSM functions script dynamically
+                if (!window.startOsmPois) {
+                    const script = document.createElement('script');
+                    script.src = 'assets/js/osm.function.js';
+                    script.onload = function() {
+                        console.log('OSM functions script loaded successfully');
+
+                        // Initialize POI count after script loads
+                        if (typeof updateSelectedPoisCount === 'function') {
+                            updateSelectedPoisCount();
+                        }
+
+                        // Add event listeners to buttons and inputs
+                        setupOsmEventListeners();
+                    };
+                    script.onerror = function() {
+                        console.error('Failed to load OSM functions script');
+                    };
+                    document.head.appendChild(script);
+                } else {
+                    // Script already loaded, just set up event listeners
+                    setupOsmEventListeners();
+                }
+
+                // Update language for the new content
+                updateLanguage();
+
+                console.log('OSM content loaded successfully');
+            } else {
+                console.error('Could not find #osm content in osm.html');
+                osmPane.innerHTML = '<div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span></div><h1>Error loading OSM content</h1>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading OSM content:', error);
+            osmPane.innerHTML = '<div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span></div><h1>Error loading OSM content</h1><p>' + error.message + '</p>';
+        });
+}
+
 // Initialize train, FGC, Bus, and Metro content loading when tabs are clicked
 document.addEventListener('DOMContentLoaded', function() {
     // Add event listener to train tab
@@ -599,6 +670,15 @@ document.addEventListener('DOMContentLoaded', function() {
         bicycleTab.addEventListener('click', function(e) {
             // Load Bicycle content after a short delay to ensure tab is active
             setTimeout(loadBicycleContent, 100);
+        });
+    }
+
+    // Add event listener to OSM tab
+    const osmTab = document.querySelector('a[href="#osm"]');
+    if (osmTab) {
+        osmTab.addEventListener('click', function(e) {
+            // Load OSM content after a short delay to ensure tab is active
+            setTimeout(loadOsmContent, 100);
         });
     }
 
@@ -759,7 +839,11 @@ function clearnotes()
 
 var url = 'assets/gpx/track001.gpx'; // URL to your GPX file
 
-function addgpx() {
+function addgpx(gpxUrl) {
+    // Use provided URL or fallback to default
+    var url = gpxUrl || 'assets/gpx/track001.gpx';
+    console.log('Loading GPX from:', url);
+    
 el = L.control.elevation();
 	el.addTo(map);
 g = new L.GPX(url, {
@@ -839,6 +923,116 @@ $(document).on('click', '.search-result-global', function(e) {
 
 expert_mode_init();
 updateQueryButton(); // Initialize button states
+
+// Initialize Overpass server selection
+if (typeof initializeServerSelection === 'function') {
+    initializeServerSelection();
+}
+
+// Add keyboard shortcuts for OSM POI functions
+document.addEventListener('keydown', function(event) {
+    // Only handle shortcuts when not typing in input fields
+    if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+        return;
+    }
+
+    // F1: Start OSM POIs
+    if (event.key === 'F1' || event.keyCode === 112) {
+        event.preventDefault();
+        if (typeof startOsmPois === 'function') {
+            startOsmPois();
+        }
+    }
+
+    // F2: Stop OSM POIs
+    if (event.key === 'F2' || event.keyCode === 113) {
+        event.preventDefault();
+        if (typeof stopOsmPois === 'function') {
+            stopOsmPois();
+        }
+    }
+
+    // F3: Select all POIs
+    if (event.key === 'F3' || event.keyCode === 114) {
+        event.preventDefault();
+        if (typeof selectAllPois === 'function') {
+            selectAllPois();
+        }
+    }
+
+    // F4: Deselect all POIs
+    if (event.key === 'F4' || event.keyCode === 115) {
+        event.preventDefault();
+        if (typeof deselectAllPois === 'function') {
+            deselectAllPois();
+        }
+    }
+});
+
+// Function to set up event listeners for OSM POI controls
+function setupOsmEventListeners() {
+    // Button event listeners
+    var startBtn = document.getElementById('start-osm-pois-btn');
+    if (startBtn) {
+        startBtn.addEventListener('click', function() {
+            if (typeof startOsmPois === 'function') {
+                startOsmPois();
+            }
+        });
+    }
+
+    var stopBtn = document.getElementById('stop-osm-pois-btn');
+    if (stopBtn) {
+        stopBtn.addEventListener('click', function() {
+            if (typeof stopOsmPois === 'function') {
+                stopOsmPois();
+            }
+        });
+    }
+
+    // Bulk action buttons
+    var selectAllBtn = document.getElementById('select-all-pois-btn');
+    if (selectAllBtn) {
+        selectAllBtn.addEventListener('click', function() {
+            if (typeof selectAllPois === 'function') {
+                selectAllPois();
+            }
+        });
+    }
+
+    var deselectAllBtn = document.getElementById('deselect-all-pois-btn');
+    if (deselectAllBtn) {
+        deselectAllBtn.addEventListener('click', function() {
+            if (typeof deselectAllPois === 'function') {
+                deselectAllPois();
+            }
+        });
+    }
+
+    // Search input
+    var searchInput = document.getElementById('osm-poi-search');
+    if (searchInput) {
+        searchInput.removeAttribute('onkeyup');
+        searchInput.addEventListener('keyup', function() {
+            if (typeof searchPois === 'function') {
+                searchPois();
+            }
+        });
+    }
+
+    // Checkbox event listeners
+    var checkboxes = document.querySelectorAll('#osm-poi-list input[type="checkbox"]');
+    checkboxes.forEach(function(checkbox) {
+        checkbox.removeAttribute('onchange');
+        checkbox.addEventListener('change', function() {
+            if (typeof updateSelectedPoisCount === 'function') {
+                updateSelectedPoisCount();
+            }
+        });
+    });
+
+    console.log('OSM event listeners set up successfully');
+}
 
 // Map click handler for setting route points (only when routing tab is active)
 if (typeof map !== 'undefined' && map && typeof map.on === 'function') {

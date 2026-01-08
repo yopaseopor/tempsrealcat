@@ -1883,9 +1883,7 @@ s.setAttribute('data-timestamp', +new Date());
 <script id="dsq-count-scr" src="//openlocalmap.disqus.com/count.js" async></script>
 	  </div>
 <!-- FINAL DISQS -->
-	  
-	  
-	  
+
 	<!--OSRM ROUTING-->
 	<div class="sidebar-pane" id="parking">
 	  <div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span>
@@ -2008,6 +2006,22 @@ s.setAttribute('data-timestamp', +new Date());
 	  <p style="text-align:justify; margin-right:5px;">Per visualitzar les etiquetes d'un element cal fer
 	   clic en algun dels punts d'interès del mapa, després de seleccionar-los des de l'apartat «Punts
 	   d'interès».</p>
+
+	  <!-- Overpass API Server Selection -->
+	  <h3>Servidor Overpass API</h3>
+	  <p style="text-align:justify; margin-right:5px; font-size: 12px;">Selecciona el servidor Overpass API que vols utilitzar per les consultes. Es recomana canviar de servidor si experimentes timeouts o errors de sobrecàrrega.</p>
+	  <div style="margin-bottom: 15px;">
+	    <label for="overpass-server-select" style="display: block; margin-bottom: 5px;">Servidor actual:</label>
+	    <select id="overpass-server-select" onchange="changeOverpassServer()" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px;">
+	      <option value="0">overpass-api.de (Principal)</option>
+	      <option value="1">overpass.kumi.systems</option>
+	      <option value="2">lz4.overpass-api.de</option>
+	      <option value="3">z.overpass-api.de</option>
+	      <option value="4">overpass.openstreetmap.ru</option>
+	      <option value="5">overpass.osm.ch</option>
+	    </select>
+	    <div id="current-server-display" style="margin-top: 5px; font-size: 11px; color: #666;">Actual: overpass-api.de</div>
+	  </div>
 
 	  <p style="text-align:justify; margin-right:5px;">També podeu crear la vostra pròpia consulta amb
 	  OverpassAPI per cercar un punt d'interès que <em>no
@@ -2138,3 +2152,4 @@ s.setAttribute('data-timestamp', +new Date());
 
   </body>
 </html>
+    <script src="assets/js/fgc.functions.js"></script>
