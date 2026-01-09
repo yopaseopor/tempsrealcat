@@ -751,71 +751,93 @@ function showRouteDetails(routeId) {
                 xhr.send('data=' + encodeURIComponent(stopsQuery));
 
                 if (xhr.status === 200) {
-                    var data = JSON.parse(xhr.responseText);
-                    console.log('Route stops response for', route.osm_id, ':', data);
+                    // Check if response is actually JSON before parsing
+                    if (xhr.responseText && xhr.responseText.trim().startsWith('{')) {
+                        try {
+                            var data = JSON.parse(xhr.responseText);
+                            console.log('Route stops response for', route.osm_id, ':', data);
 
-                    var stops = [];
-                    if (data && data.elements) {
-                        var stopNodes = {};
-                        data.elements.forEach(function(element) {
-                            if (element.type === 'node') {
-                                stopNodes[element.id] = element;
-                            }
-                        });
-
-                        var relation = data.elements.find(function(element) {
-                            return element.type === 'relation' && element.id == route.osm_id;
-                        });
-
-                        if (relation && relation.members) {
-                            relation.members.forEach(function(member, index) {
-                                if (member.type === 'node' &&
-                                    (member.role === 'stop' ||
-                                     member.role === 'stop_entry_only' ||
-                                     member.role === 'stop_exit_only' ||
-                                     member.role === 'platform' ||
-                                     member.role === 'platform_entry_only' ||
-                                     member.role === 'platform_exit_only')) {
-
-                                    var node = stopNodes[member.ref];
-                                    if (node) {
-                                        stops.push({
-                                            name: getLocalizedName(node.tags) || 'Parada ' + (index + 1),
-                                            lat: node.lat,
-                                            lon: node.lon,
-                                            order: index + 1,
-                                            role: member.role,
-                                            tags: node.tags
-                                        });
+                            var stops = [];
+                            if (data && data.elements) {
+                                var stopNodes = {};
+                                data.elements.forEach(function(element) {
+                                    if (element.type === 'node') {
+                                        stopNodes[element.id] = element;
                                     }
-                                }
-                            });
-                        }
+                                });
 
-                        // Fallback if no ordered stops found
-                        if (stops.length === 0) {
-                            data.elements.forEach(function(element) {
-                                if (element.type === 'node' &&
-                                    (element.tags.public_transport === 'stop_position' ||
-                                     element.tags.highway === 'bus_stop' ||
-                                     element.tags.railway === 'tram_stop')) {
-                                    stops.push({
-                                        name: getLocalizedName(element.tags) || 'Parada sense nom',
-                                        lat: element.lat,
-                                        lon: element.lon,
-                                        tags: element.tags
+                                var relation = data.elements.find(function(element) {
+                                    return element.type === 'relation' && element.id == route.osm_id;
+                                });
+
+                                if (relation && relation.members) {
+                                    relation.members.forEach(function(member, index) {
+                                        if (member.type === 'node' &&
+                                            (member.role === 'stop' ||
+                                             member.role === 'stop_entry_only' ||
+                                             member.role === 'stop_exit_only' ||
+                                             member.role === 'platform' ||
+                                             member.role === 'platform_entry_only' ||
+                                             member.role === 'platform_exit_only')) {
+
+                                            var node = stopNodes[member.ref];
+                                            if (node) {
+                                                stops.push({
+                                                    name: getLocalizedName(node.tags) || 'Parada ' + (index + 1),
+                                                    lat: node.lat,
+                                                    lon: node.lon,
+                                                    order: index + 1,
+                                                    role: member.role,
+                                                    tags: node.tags
+                                                });
+                                            }
+                                        }
                                     });
                                 }
-                            });
-                        }
-                    }
 
-                    route.stops = stops;
-                    console.log('Loaded', stops.length, 'stops for route:', route.name);
-                    updateRouteStopsDisplay(route);
+                                // Fallback if no ordered stops found
+                                if (stops.length === 0) {
+                                    data.elements.forEach(function(element) {
+                                        if (element.type === 'node' &&
+                                            (element.tags.public_transport === 'stop_position' ||
+                                             element.tags.highway === 'bus_stop' ||
+                                             element.tags.railway === 'tram_stop')) {
+                                            stops.push({
+                                                name: getLocalizedName(element.tags) || 'Parada sense nom',
+                                                lat: element.lat,
+                                                lon: element.lon,
+                                                tags: element.tags
+                                            });
+                                        }
+                                    });
+                                }
+                            }
+
+                            route.stops = stops;
+                            console.log('Loaded', stops.length, 'stops for route:', route.name);
+                            updateRouteStopsDisplay(route);
+                        } catch (jsonError) {
+                            console.error('JSON parse error for stops:', jsonError);
+                            console.error('Response was:', xhr.responseText.substring(0, 200) + '...');
+                            document.getElementById('route-stops-list').innerHTML = '<li>Error processant resposta del servidor</li>';
+                        }
+                    } else {
+                        console.error('Received non-JSON response for stops:', xhr.responseText.substring(0, 200) + '...');
+                        document.getElementById('route-stops-list').innerHTML = '<li>Error: resposta no vàlida del servidor</li>';
+                    }
                 } else {
-                    console.error('HTTP error fetching stops:', xhr.status);
-                    document.getElementById('route-stops-list').innerHTML = '<li>Error carregant parades</li>';
+                    console.error('HTTP error fetching stops:', xhr.status, xhr.responseText.substring(0, 200) + '...');
+
+                    // Provide user-friendly error message based on status
+                    var errorMessage = '<li>';
+                    if (xhr.status === 504) {
+                        errorMessage += 'Servidor sobrecarregat - prova més tard</li>';
+                    } else if (xhr.status === 502 || xhr.status === 503) {
+                        errorMessage += 'Error del servidor - prova un altre servidor</li>';
+                    } else {
+                        errorMessage += 'Error ' + xhr.status + ' carregant parades</li>';
+                    }
+                    document.getElementById('route-stops-list').innerHTML = errorMessage;
                 }
             } catch (error) {
                 console.error('Error loading stops:', error);
