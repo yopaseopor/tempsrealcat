@@ -5,36 +5,36 @@
   bottom: 0;
   width: 100%;
   overflow: hidden;
-  z-index: 2000;
-  cursor: ew-resize; }
+  z-index: 2000; }
   .sidebar.collapsed {
-    width: 30px; }
+    width: 50px; }
   @media (min-width: 768px) {
     .sidebar {
       left: 10px;
       top: 10px;
-      bottom: 10px; } }
+      bottom: 10px;
+      transition: width 500ms ease-in-out; } }
   /* Enable slide-in for short pages on mobile */
   @media (max-height: 600px) {
     .sidebar {
       left: 10px;
       top: 10px;
       bottom: 10px;
-      width: 320px;
+      width: 280px;
       transition: width 500ms; }
       .sidebar.collapsed {
-        width: 40px; }
+        width: 60px; }
       .sidebar.collapsed ~ .sidebar-map .leaflet-left {
         left: 40px; } }
   @media (min-width: 768px) and (max-width: 991px) {
     .sidebar {
-      width: 365px; } }
+      width: 320px; } }
   @media (min-width: 992px) and (max-width: 1199px) {
     .sidebar {
-      width: 450px; } }
+      width: 400px; } }
   @media (min-width: 1200px) {
     .sidebar {
-      width: 520px; } }
+      width: 450px; } }
 
 .sidebar-tabs {
   position: absolute;
@@ -88,13 +88,13 @@
     display: block; }
   @media (min-width: 768px) and (max-width: 991px) {
     .sidebar-pane {
-      width: 265px; } }
+      width: 280px; } }
   @media (min-width: 992px) and (max-width: 1199px) {
     .sidebar-pane {
-      width: 350px; } }
+      width: 360px; } }
   @media (min-width: 1200px) {
     .sidebar-pane {
-      width: 420px; } }
+      width: 410px; } }
 
 .sidebar-map {
   margin-left: 40px; }
@@ -120,13 +120,13 @@
     transition: left 500ms; } }
 @media (min-width: 768px) and (max-width: 991px) {
   .sidebar-map .leaflet-left {
-    left: 375px; } }
+    left: 330px; } }
 @media (min-width: 992px) and (max-width: 1199px) {
   .sidebar-map .leaflet-left {
-    left: 460px; } }
+    left: 410px; } }
 @media (min-width: 1200px) {
   .sidebar-map .leaflet-left {
-    left: 530px; } }
+    left: 460px; } }
 
 /* Map positioning for short pages on mobile */
 @media (max-height: 600px) {

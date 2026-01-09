@@ -20,7 +20,7 @@
     <link rel="stylesheet" href="assets/css/leaflet.label.css" />
     <link rel="stylesheet" href="assets/css/leaflet.zoomhome.css" />
 
-    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/site.css">
     <link rel="stylesheet" href="assets/css/leaflet-sidebar.css" />
     <link rel="stylesheet" href="assets/print/easyPrint.css" />
@@ -44,10 +44,11 @@
 	<li><a href="#fgc" role="tab"><i class="fa fa-chevron-circle-right"></i></a></li>
 	<li><a href="#bus" role="tab"><i class="fa fa-bus"></i></a></li>
 	<li><a href="#metro" role="tab"><i class="fa fa-subway"></i></a></li>
-	<li><a href="#gtfs" role="tab"><i class="fa fa-clock-o"></i></a></li>
+	<li><a href="#gtfs" role="tab"><i class="fa fa-clock"></i></a></li>
+	<li><a href="#transit" role="tab"><i class="fa fa-angles-right"></i></a></li>
 	<li><a href="#wikipedia" role="tab"><i class="fa fa-book"></i></a></li>
 		<!--MODIFICAR AQUÍ-->
-	<li><a href="#comments" role="tab"><i class="fa fa-comments-o"></i></a></li>
+	<li><a href="#comments" role="tab"><i class="fa fa-comments"></i></a></li>
 	<li><a href="#parking" role="tab"><i class="fa fa-car"></i></a></li>
 	<li><a href="#mapillary" role="tab"><i class="fa fa-road"></i></a></li>
 	<li><a href="#links" role="tab"><i class="fa fa-link"></i></a></li>
@@ -62,7 +63,7 @@
 	<!--PUNTS D'INTERÈS-->
 	<A NAME="home_init"></A>
 	<div class="sidebar-pane" id="home">
-	  <div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span>
+	  <div class="close-button"><span class="fa fa-xmark" onclick="javascript: sidebar.close()"></span>
 	  </div>
 	  <center><button style="background:#2a2a2a; color:white; padding:5px;" class="fa fa-support"
           onClick="location.href='#help_home'"> Ajuda (PDI)</button></center>
@@ -414,6 +415,12 @@
 	  <br>
 	  <center><button style="background:#2a2a2a; color:white; padding:5px;" class="fa fa-arrow-up"
           onClick="location.href='#gtfs_init'" data-i18n="gtfs_help_back"> Inici</button></center>
+	</div>
+
+
+	<!--TRANSIT-->
+	<div class="sidebar-pane" id="transit">
+	  <!-- Content will be loaded dynamically from transit.html -->
 	</div>
 
 
@@ -2149,6 +2156,8 @@ s.setAttribute('data-timestamp', +new Date());
     <script src="assets/js/fgc.functions.js"></script>
     <script src="assets/js/bus.functions.js"></script>
     <script src="assets/js/metro.functions.js"></script>
+    <script src="assets/js/bicycle.functions.js"></script>
+    <script src="assets/js/transit.functions.js"></script>
 
   </body>
 </html>

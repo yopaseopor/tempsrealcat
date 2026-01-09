@@ -323,6 +323,61 @@ app.get('/api/tmb-realtime', async (req, res) => {
 
 
 
+// DGT Traffic API proxy endpoint
+app.get('/api/dgt-traffic', async (req, res) => {
+  try {
+    console.log('🚨 Fetching DGT traffic incidents from DATEX II API...');
+
+    // DGT DATEX II API endpoint for traffic incidents
+    const dgtUrl = 'https://infocar.dgt.es/datex2/sct/SituationPublication/all/content.xml';
+
+    console.log('🌐 Fetching from URL:', dgtUrl);
+
+    const response = await fetch(dgtUrl, {
+      headers: {
+        'User-Agent': 'OpenLocalMap-Proxy/1.0',
+        'Accept': 'application/xml, text/xml, */*',
+        'Accept-Encoding': 'gzip, deflate, br'
+      },
+      timeout: 30000 // 30 second timeout
+    });
+
+    console.log('📊 Response status:', response.status);
+    console.log('📊 Response headers:', Object.fromEntries(response.headers.entries()));
+
+    if (!response.ok) {
+      console.warn(`⚠️ DGT API returned ${response.status}: ${response.statusText}`);
+      setCorsHeaders(res);
+      return res.status(response.status).json({
+        error: 'DGT API error',
+        status: response.status,
+        message: response.statusText,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const xmlData = await response.text();
+    console.log('✅ Successfully fetched DGT DATEX II traffic data');
+    console.log('📏 Data length:', xmlData.length, 'characters');
+    console.log('📄 First 200 chars:', xmlData.substring(0, 200));
+
+    // Set content type for XML response
+    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+    setCorsHeaders(res);
+    res.send(xmlData);
+  } catch (error) {
+    console.error('❌ Error fetching DGT traffic data:', error.message);
+
+    // Return error response with explicit CORS headers
+    setCorsHeaders(res);
+    res.status(500).json({
+      error: 'Failed to fetch DGT traffic data',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Bicing API proxy endpoint
 app.get('/api/bicing', async (req, res) => {
   try {
@@ -396,10 +451,11 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 OpenLocalMap server running on http://localhost:${PORT}`);
-  console.log(`� RENFE API proxy: http://localhost:${PORT}/api/renfe-trains`);
+  console.log(` RENFE API proxy: http://localhost:${PORT}/api/renfe-trains`);
   console.log(`🔗 FGC API proxy: http://localhost:${PORT}/api/fgc-trains`);
   console.log(`🚏 TMB stops API proxy: http://localhost:${PORT}/api/tmb-stops`);
   console.log(`🚌 TMB real-time API proxy: http://localhost:${PORT}/api/tmb-realtime`);
   console.log(`🚍 TMB API proxy: http://localhost:${PORT}/api/tmb-buses`);
+  console.log(`🚨 DGT traffic API proxy: http://localhost:${PORT}/api/dgt-traffic`);
   console.log(`🚴 Bicing API proxy: http://localhost:${PORT}/api/bicing`);
 });

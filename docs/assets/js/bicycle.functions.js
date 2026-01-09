@@ -29,7 +29,7 @@ function startRealtimeBicing() {
     document.getElementById('start-bicing-realtime-btn').style.display = 'none';
     document.getElementById('stop-bicing-realtime-btn').style.display = 'inline-block';
     document.getElementById('bicing-legend-btn').style.display = 'inline-block';
-    updateBicingRealtimeStatus('Carregant estacions Bicing en temps real...');
+    updateBicingRealtimeStatus(getTranslation('bicycle_status_loading'));
 }
 
 // Stop Bicing real-time visualization
@@ -50,152 +50,197 @@ function stopRealtimeBicing() {
     // Update UI
     document.getElementById('start-bicing-realtime-btn').style.display = 'inline-block';
     document.getElementById('stop-bicing-realtime-btn').style.display = 'none';
-    updateBicingRealtimeStatus('Inactiu');
+    updateBicingRealtimeStatus(getTranslation('bicycle_status_inactive'));
 }
 
 // Update Bicing real-time status display
 function updateBicingRealtimeStatus(status) {
     var statusElement = document.getElementById('bicing-realtime-status');
     if (statusElement) {
-        statusElement.textContent = 'Status: ' + status;
+        statusElement.textContent = getTranslation('bicycle_status') + ' ' + status;
     }
 }
 
-// Fetch real-time Bicing station data
+// Fetch real-time Bicing station data using proper GBFS endpoints
 function fetchRealtimeBicing() {
-    // Detect deployment environment
+    console.log('🚴 Fetching Bicing data using GBFS endpoints...');
+
+    // GBFS API endpoints for Barcelona Bicing
+    var stationInfoUrl = 'https://barcelona.publicbikesystem.net/customer/gbfs/v2/en/station_information';
+    var stationStatusUrl = 'https://barcelona.publicbikesystem.net/customer/gbfs/v2/en/station_status';
+    var vehicleTypesUrl = 'https://barcelona.publicbikesystem.net/customer/gbfs/v2/en/vehicle_types';
+
+    // Detect deployment environment for proxy usage
     var hostname = window.location.hostname;
     var isGitHubPages = hostname.includes('github.io');
     var isVercel = hostname.includes('vercel.app') || hostname.includes('now.sh');
 
-    // Use appropriate API endpoint based on environment
-    var apiUrl;
-    if (isVercel) {
-        // Use Vercel-deployed API
-        apiUrl = '/api/bicing';
-        console.log('🚴 Fetching Bicing data via Vercel API...');
-    } else if (isGitHubPages) {
-        // On GitHub Pages, use our Vercel deployment as proxy
-        apiUrl = 'https://openlocalmap2.vercel.app/api/bicing';
-        console.log('🚴 Fetching Bicing data via Vercel proxy from GitHub Pages...');
-    } else {
-        // Local development
-        apiUrl = '/api/bicing';
-        console.log('🚴 Fetching Bicing data via local proxy server...');
+    // Function to fetch data with proxy if needed
+    function fetchWithProxy(url) {
+        var apiUrl;
+        if (isVercel) {
+            // Use Vercel proxy
+            apiUrl = '/api/bicing?url=' + encodeURIComponent(url);
+        } else if (isGitHubPages) {
+            // Use Vercel proxy from GitHub Pages
+            apiUrl = 'https://openlocalmap2.vercel.app/api/bicing?url=' + encodeURIComponent(url);
+        } else {
+            // Local development - try direct fetch first, then fallback to proxy
+            return fetch(url).catch(() => {
+                console.log('🔄 Direct fetch failed, trying proxy for:', url);
+                return fetch('/api/bicing?url=' + encodeURIComponent(url));
+            });
+        }
+        return fetch(apiUrl);
     }
 
-    return fetch(apiUrl)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Bicing API proxy failed: ' + response.status + ' ' + response.statusText);
-            }
-            return response.json();
+    // Fetch all three GBFS endpoints
+    var promises = [
+        fetchWithProxy(stationInfoUrl).then(r => r.json()).catch(err => {
+            console.warn('Failed to fetch station information:', err);
+            return {data: {stations: []}};
+        }),
+        fetchWithProxy(stationStatusUrl).then(r => r.json()).catch(err => {
+            console.warn('Failed to fetch station status:', err);
+            return {data: {stations: []}};
+        }),
+        fetchWithProxy(vehicleTypesUrl).then(r => r.json()).catch(err => {
+            console.warn('Failed to fetch vehicle types:', err);
+            return {data: {vehicle_types: []}};
         })
-        .then(jsonData => {
-            console.log('✅ Bicing API proxy succeeded! Processing station data...', jsonData);
+    ];
 
-            // Check if the response contains an error
-            if (jsonData.error) {
-                throw new Error('API Error: ' + jsonData.message);
+    return Promise.all(promises)
+        .then(function(results) {
+            var stationInfo = results[0];
+            var stationStatus = results[1];
+            var vehicleTypes = results[2];
+
+            console.log('✅ GBFS endpoints fetched successfully');
+            console.log('📊 Station info:', stationInfo.data?.stations?.length || 0, 'stations');
+            console.log('📊 Station status:', stationStatus.data?.stations?.length || 0, 'stations');
+            console.log('📊 Vehicle types:', vehicleTypes.data?.vehicle_types?.length || 0, 'types');
+
+            // Create lookup maps for efficient merging
+            var statusMap = {};
+            if (stationStatus.data && stationStatus.data.stations) {
+                stationStatus.data.stations.forEach(function(status) {
+                    statusMap[status.station_id] = status;
+                });
+            }
+
+            var vehicleTypeMap = {};
+            if (vehicleTypes.data && vehicleTypes.data.vehicle_types) {
+                vehicleTypes.data.vehicle_types.forEach(function(vt) {
+                    vehicleTypeMap[vt.vehicle_type_id] = vt;
+                });
             }
 
             var stations = [];
 
-            // Process Bicing GBFS API response
-            if (jsonData && jsonData.data && jsonData.data.stations) {
-                // For GBFS, we have station status but need to fetch station information separately
-                // For now, we'll create stations with available data and fetch station info
-
-                // First, collect all station IDs to fetch their information
-                var stationIds = jsonData.data.stations.map(function(station) {
-                    return station.station_id;
-                });
-
-                // Fetch station information (this would be async in a real implementation)
-                // For now, create basic stations and note we need coordinates
-                jsonData.data.stations.forEach(function(station) {
+            // Process station information and merge with status data
+            if (stationInfo.data && stationInfo.data.stations) {
+                stationInfo.data.stations.forEach(function(info) {
                     try {
-                        console.log('🔍 Processing Bicing GBFS station', station.station_id, ':', station);
+                        var stationId = info.station_id;
+                        var status = statusMap[stationId];
 
-                        var stationId = station.station_id;
-                        var bikes = station.num_bikes_available || 0;
-                        var docks = station.num_docks_available || 0;
-                        var capacity = bikes + docks;
-                        var isInstalled = station.is_installed === 1;
-                        var isRenting = station.is_renting === 1;
-                        var isReturning = station.is_returning === 1;
-                        var lastReported = station.last_reported;
+                        console.log('🔍 Processing station', stationId, '- has status:', !!status);
 
-                        // For GBFS, we need to fetch station_information for coordinates and names
-                        // For demonstration, we'll use placeholder coordinates (Barcelona center)
-                        // In production, you'd fetch: https://barcelona.publicbikesystem.net/customer/gbfs/v2/en/station_information
-                        var lat = 41.3851 + (Math.random() - 0.5) * 0.02; // Random around Barcelona center
-                        var lng = 2.1734 + (Math.random() - 0.5) * 0.02;
-
-                        var status = 'UNKNOWN';
-                        if (isInstalled && isRenting && isReturning) {
-                            status = 'IN_SERVICE';
-                        } else if (!isInstalled) {
-                            status = 'NOT_INSTALLED';
-                        } else if (!isRenting && !isReturning) {
-                            status = 'MAINTENANCE';
+                        // Skip stations without coordinates
+                        if (!info.lat || !info.lon) {
+                            console.warn('⚠️ Station', stationId, 'missing coordinates, skipping');
+                            return;
                         }
 
-                        // Create station with GBFS data
+                        var lat = parseFloat(info.lat);
+                        var lng = parseFloat(info.lon);
+
+                        if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+                            console.warn('⚠️ Station', stationId, 'has invalid coordinates:', lat, lng, '- skipping');
+                            return;
+                        }
+
+                        // Extract status data
+                        var bikes = status ? (status.num_bikes_available || 0) : 0;
+                        var docks = status ? (status.num_docks_available || 0) : 0;
+                        var capacity = info.capacity || (bikes + docks);
+                        var isInstalled = status ? (status.is_installed === 1) : true;
+                        var isRenting = status ? (status.is_renting === 1) : true;
+                        var isReturning = status ? (status.is_returning === 1) : true;
+                        var lastReported = status ? status.last_reported : null;
+
+                        // Extract vehicle type counts
+                        var mechanical = 0;
+                        var electric = 0;
+                        if (status && status.num_bikes_available_types) {
+                            mechanical = status.num_bikes_available_types.mechanical || 0;
+                            electric = status.num_bikes_available_types.ebike || 0;
+                        } else {
+                            // Fallback: assume all bikes are mechanical if no type info
+                            mechanical = bikes;
+                            electric = 0;
+                        }
+
+                        var stationStatus = 'UNKNOWN';
+                        if (isInstalled && isRenting && isReturning) {
+                            stationStatus = 'IN_SERVICE';
+                        } else if (!isInstalled) {
+                            stationStatus = 'NOT_INSTALLED';
+                        } else if (!isRenting && !isReturning) {
+                            stationStatus = 'MAINTENANCE';
+                        }
+
+                        // Create station with merged data
                         stations.push({
                             id: stationId,
                             code: stationId,
-                            name: 'Estació ' + stationId, // Would come from station_information
-                            address: 'Barcelona', // Would come from station_information
+                            name: info.name || ('Estació ' + stationId),
+                            address: info.address || 'Barcelona',
                             lat: lat,
                             lng: lng,
                             capacity: capacity,
                             bikes: bikes,
                             slots: docks,
-                            mechanical: bikes, // GBFS doesn't separate mechanical/electric
-                            electric: 0,
-                            status: status,
+                            mechanical: mechanical,
+                            electric: electric,
+                            status: stationStatus,
                             lastReported: lastReported,
                             timestamp: new Date().getTime()
                         });
 
-                        console.log('✅ Processed Bicing GBFS station:', stationId, 'bikes:', bikes, 'capacity:', capacity);
+                        console.log('✅ Processed station:', stationId, info.name, 'at', lat + ',' + lng, 'bikes:', bikes + '/' + capacity);
+
                     } catch (error) {
-                        console.warn('Error processing Bicing GBFS station:', station.station_id, ':', error, station);
+                        console.warn('❌ Error processing station', info.station_id, ':', error);
                     }
                 });
-
-                // Note: In production, fetch station_information endpoint for complete data
-                console.log('📍 Note: Using placeholder coordinates. Fetch station_information for real coordinates.');
-            } else {
-                console.warn('❌ Bicing API response format unexpected:', jsonData);
             }
 
+            console.log('📍 Successfully processed', stations.length, 'Bicing stations from GBFS API');
+
             if (stations.length > 0) {
-                console.log('🚴 SUCCESS: Extracted', stations.length, 'Bicing stations from API proxy!');
+                console.log('🚴 SUCCESS: Retrieved', stations.length, 'Bicing stations with real coordinates and live data!');
                 return stations;
             } else {
-                console.warn('Proxy returned data but no stations found');
-                alert('🚴 No s\'han trobat estacions Bicing a les dades. L\'API pot estar temporalment indisponible.\n\nUtilitza l\'opció "📝 Introduir Dades Manualment" per provar amb dades d\'exemple.');
+                console.warn('No valid stations found in GBFS response');
+                alert('🚴 No s\'han trobat estacions Bicing vàlides. L\'API GBFS pot estar temporalment indisponible.\n\nUtilitza l\'opció "📝 Introduir Dades Manualment" per provar amb dades d\'exemple.');
                 return [];
             }
         })
         .catch(error => {
-            console.error('❌ Bicing API proxy failed:', error.message);
+            console.error('❌ GBFS API fetch failed:', error);
 
-            // Fallback options - same CORS proxy system as RENFE and FGC
+            // Fallback to CORS proxies for individual endpoints
             if (isGitHubPages) {
-                // On GitHub Pages, try CORS proxies
-                console.log('🔄 Falling back to CORS proxies for Bicing...');
-                return fetchRealtimeBicingFallback();
+                console.log('🔄 Falling back to CORS proxies for Bicing GBFS...');
+                return fetchRealtimeBicingGbfsFallback();
             } else if (isVercel) {
-                // On Vercel, show manual fallback option
-                alert('🚴 API proxy temporarily unavailable. Use manual data entry:\n\n1. Open: https://opendata-ajuntament.barcelona.cat/data/dataset/... \n2. Copy JSON data\n3. Use "📝 Introduir Dades Manualment"');
+                alert('🚴 GBFS API temporarily unavailable. Use manual data entry:\n\n1. Open: https://opendata-ajuntament.barcelona.cat/data/dataset/... \n2. Copy JSON data\n3. Use "📝 Introduir Dades Manualment"');
                 return Promise.resolve([]);
             } else {
-                // Local development - try CORS proxies
-                console.log('🔄 Local development - API proxy failed, trying CORS proxies...');
-                return fetchRealtimeBicingFallback();
+                console.log('🔄 Local development - GBFS API failed, trying CORS proxies...');
+                return fetchRealtimeBicingGbfsFallback();
             }
         });
 }
@@ -212,86 +257,95 @@ function displayRealtimeBicing(stations) {
     });
     bicingRealtimeMarkers = [];
 
-    // Group stations by availability status for better visualization
-    var stationsByStatus = {
-        'FULL': [],      // All slots occupied (red)
-        'HIGH': [],      // Many bikes available (green)
-        'MEDIUM': [],    // Some bikes available (orange)
-        'LOW': [],       // Few bikes available (yellow)
-        'EMPTY': [],     // No bikes available (gray)
-        'UNKNOWN': []    // Unknown status (blue)
+    // Group stations by occupation percentage for gradient visualization
+    var occupationRanges = {
+        'EMPTY': [],       // 0 bikes available (black)
+        'VERY_LOW': [],    // 0-20% occupied (green)
+        'LOW': [],         // 20-40% occupied (light green)
+        'MODERATE': [],    // 40-60% occupied (yellow)
+        'HIGH': [],        // 60-80% occupied (orange)
+        'VERY_HIGH': [],   // 80-100% occupied (red)
+        'UNKNOWN': []      // Unknown status (gray)
     };
 
     stations.forEach(function(station) {
-        // Determine status based on bike availability
-        var availabilityRatio = station.capacity > 0 ? station.bikes / station.capacity : 0;
-        var status;
+        // Calculate occupation percentage (occupied slots / total capacity)
+        var occupationPercentage = 0;
+        if (station.capacity > 0) {
+            occupationPercentage = ((station.capacity - station.bikes) / station.capacity) * 100;
+        }
 
-        if (station.status === 'IN_SERVICE') {
+        var range;
+        // Show occupation colors for all stations with valid capacity data, regardless of status
+        if (station.capacity > 0 && station.bikes >= 0) {
+            // Special case: stations with 0 bikes get black color
             if (station.bikes === 0) {
-                status = 'EMPTY';
-            } else if (availabilityRatio >= 0.75) {
-                status = 'HIGH';
-            } else if (availabilityRatio >= 0.5) {
-                status = 'MEDIUM';
-            } else if (availabilityRatio >= 0.25) {
-                status = 'LOW';
+                range = 'EMPTY';
+            } else if (occupationPercentage <= 20) {
+                range = 'VERY_LOW';
+            } else if (occupationPercentage <= 40) {
+                range = 'LOW';
+            } else if (occupationPercentage <= 60) {
+                range = 'MODERATE';
+            } else if (occupationPercentage <= 80) {
+                range = 'HIGH';
             } else {
-                status = 'FULL';
+                range = 'VERY_HIGH';
             }
         } else {
-            status = 'UNKNOWN';
+            // Only use UNKNOWN for stations with no valid data
+            range = 'UNKNOWN';
         }
 
-        if (!stationsByStatus[status]) {
-            stationsByStatus[status] = [];
-        }
-        stationsByStatus[status].push(station);
+        station.occupationPercentage = occupationPercentage; // Store for marker display
+        occupationRanges[range].push(station);
     });
 
-    // Define colors for different availability statuses
-    var statusColors = {
-        'HIGH': '#28a745',    // Green - good availability
-        'MEDIUM': '#ffc107',  // Yellow - moderate availability
-        'LOW': '#fd7e14',     // Orange - low availability
-        'EMPTY': '#6c757d',   // Gray - no bikes available
-        'FULL': '#dc3545',    // Red - all slots occupied
-        'UNKNOWN': '#007bff'  // Blue - unknown status
+    // Define colors for occupation percentage ranges (green to red gradient)
+    var occupationColors = {
+        'EMPTY': '#000000',     // Black - no bikes available
+        'VERY_LOW': '#28a745',  // Green - low occupation (good availability)
+        'LOW': '#6cc04a',      // Light green - low-moderate occupation
+        'MODERATE': '#ffc107', // Yellow - moderate occupation
+        'HIGH': '#fd7e14',     // Orange - high occupation
+        'VERY_HIGH': '#dc3545', // Red - very high occupation (almost full)
+        'UNKNOWN': '#6c757d'   // Gray - unknown status
     };
 
-    var statusNames = {
-        'HIGH': 'Alta disponibilitat',
-        'MEDIUM': 'Disponibilitat mitjana',
-        'LOW': 'Baixa disponibilitat',
-        'EMPTY': 'Sense bicicletes',
-        'FULL': 'Plena (sense places)',
+    var occupationNames = {
+        'EMPTY': 'Sense bicicletes disponibles',
+        'VERY_LOW': 'Baixa ocupació (≤20%)',
+        'LOW': 'Ocupació baixa (20-40%)',
+        'MODERATE': 'Ocupació moderada (40-60%)',
+        'HIGH': 'Alta ocupació (60-80%)',
+        'VERY_HIGH': 'Molt alta ocupació (80-100%)',
         'UNKNOWN': 'Estat desconegut'
     };
 
     var totalStations = 0;
 
-    // Create markers for each station, grouped by status
-    Object.keys(stationsByStatus).forEach(function(status) {
-        var statusStations = stationsByStatus[status];
-        var statusColor = statusColors[status] || '#007bff';
-        var statusName = statusNames[status] || status;
+    // Create markers for each station, grouped by occupation percentage
+    Object.keys(occupationRanges).forEach(function(range) {
+        var rangeStations = occupationRanges[range];
+        var rangeColor = occupationColors[range] || '#007bff';
+        var rangeName = occupationNames[range] || range;
 
-        statusStations.forEach(function(station) {
+        rangeStations.forEach(function(station) {
             if (station.lat && station.lng && !isNaN(station.lat) && !isNaN(station.lng)) {
-                // Create modern station icon with colored status indicator
+                // Create modern station icon with colored occupation indicator
                 var marker = L.marker([station.lat, station.lng], {
                     icon: L.divIcon({
                         html: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.7));">' +
-                              '<circle cx="12" cy="12" r="10" fill="' + statusColor + '" stroke="white" stroke-width="2"/>' +
+                              '<circle cx="12" cy="12" r="10" fill="' + rangeColor + '" stroke="white" stroke-width="2"/>' +
                               '<circle cx="12" cy="8" r="2" fill="white"/>' +
                               '<rect x="10" y="10" width="4" height="8" rx="1" fill="white"/>' +
-                              '<circle cx="10" cy="14" r="1.5" fill="' + statusColor + '"/>' +
-                              '<circle cx="14" cy="14" r="1.5" fill="' + statusColor + '"/>' +
-                              '<circle cx="10" cy="18" r="1.5" fill="' + statusColor + '"/>' +
-                              '<circle cx="14" cy="18" r="1.5" fill="' + statusColor + '"/>' +
+                              '<circle cx="10" cy="14" r="1.5" fill="' + rangeColor + '"/>' +
+                              '<circle cx="14" cy="14" r="1.5" fill="' + rangeColor + '"/>' +
+                              '<circle cx="10" cy="18" r="1.5" fill="' + rangeColor + '"/>' +
+                              '<circle cx="14" cy="18" r="1.5" fill="' + rangeColor + '"/>' +
                               '</svg>' +
                               '<div style="position: absolute; top: -6px; left: 50%; transform: translateX(-50%); ' +
-                              'background: ' + statusColor + '; color: white; font-size: 9px; font-weight: bold; ' +
+                              'background: ' + rangeColor + '; color: white; font-size: 9px; font-weight: bold; ' +
                               'padding: 1px 3px; border-radius: 2px; border: 1px solid #333; white-space: nowrap;">' +
                               station.bikes + '/' + station.capacity + '</div>',
                         className: 'bicing-station-marker',
@@ -300,19 +354,19 @@ function displayRealtimeBicing(stations) {
                     })
                 });
 
-                // Enhanced popup with Bicing station information and color coding
+                // Enhanced popup with Bicing station information and occupation percentage
                 var availabilityPercent = station.capacity > 0 ? Math.round((station.bikes / station.capacity) * 100) : 0;
-                var availabilityColor = availabilityPercent >= 75 ? '#28a745' : availabilityPercent >= 50 ? '#ffc107' : availabilityPercent >= 25 ? '#fd7e14' : '#dc3545';
+                var occupationPercent = Math.round(station.occupationPercentage || 0);
 
                 marker.bindPopup(
                     '<div style="font-family: Arial, sans-serif; min-width: 250px;">' +
-                    '<h4 style="margin: 0 0 8px 0; color: ' + statusColor + '; border-bottom: 2px solid ' + statusColor + '; padding-bottom: 4px;">' +
+                    '<h4 style="margin: 0 0 8px 0; color: ' + rangeColor + '; border-bottom: 2px solid ' + rangeColor + '; padding-bottom: 4px;">' +
                     '🚴 Estació Bicing ' + (station.code || station.id) + '</h4>' +
-                    '<div style="background: ' + statusColor + '15; border: 1px solid ' + statusColor + '; border-radius: 4px; padding: 10px; margin: 8px 0;">' +
+                    '<div style="background: ' + rangeColor + '15; border: 1px solid ' + rangeColor + '; border-radius: 4px; padding: 10px; margin: 8px 0;">' +
                     '<strong>Nom:</strong> ' + (station.name || 'Sense nom') + '<br>' +
                     '<strong>Adreça:</strong> ' + (station.address || 'No disponible') + '<br>' +
-                    '<strong>Estat:</strong> <span style="color: ' + statusColor + '; font-weight: bold;">' + statusName + '</span><br>' +
-                    '<strong>Bicicletes disponibles:</strong> <span style="color: ' + availabilityColor + '; font-weight: bold; font-size: 1.1em;">' + station.bikes + '</span> (' + availabilityPercent + '%)<br>' +
+                    '<strong>Ocupació:</strong> <span style="color: ' + rangeColor + '; font-weight: bold;">' + occupationPercent + '%</span> (' + rangeName + ')<br>' +
+                    '<strong>Bicicletes disponibles:</strong> <span style="color: #28a745; font-weight: bold; font-size: 1.1em;">' + station.bikes + '</span> (' + availabilityPercent + '%)<br>' +
                     '<strong>Places lliures:</strong> ' + station.slots + '<br>' +
                     '<strong>Capacitat total:</strong> ' + station.capacity + '<br>' +
                     '<strong>Bicicletes mecàniques:</strong> ' + (station.mechanical || 0) + '<br>' +
@@ -330,7 +384,7 @@ function displayRealtimeBicing(stations) {
                 bicingRealtimeMarkers.push(marker);
                 totalStations++;
 
-                console.log('✅ ADDED BICING STATION MARKER:', station.id, station.name, 'at', station.lat, station.lng);
+                console.log('✅ ADDED BICING STATION MARKER:', station.id, station.name, 'at', station.lat, station.lng, 'occupation:', occupationPercent + '%');
             } else {
                 console.warn('❌ INVALID COORDS for Bicing station:', station.id, station.lat, station.lng);
             }
@@ -339,19 +393,19 @@ function displayRealtimeBicing(stations) {
 
     console.log('🎯 TOTAL BICING STATION MARKERS CREATED:', totalStations);
 
-    // Create a legend for the station statuses
+    // Create a legend for the occupation ranges
     if (totalStations > 0) {
-        createBicingLegend(stationsByStatus, statusColors, statusNames);
+        createBicingLegend(occupationRanges, occupationColors, occupationNames);
     }
 
     // Update status without zooming
-    updateBicingRealtimeStatus('🚴 Mostrant ' + totalStations + ' estacions Bicing (' + Object.keys(stationsByStatus).filter(s => stationsByStatus[s].length > 0).length + ' estats)');
+    updateBicingRealtimeStatus('🚴 Mostrant ' + totalStations + ' estacions Bicing (' + Object.keys(occupationRanges).filter(r => occupationRanges[r].length > 0).length + ' rangs d\'ocupació)');
 
     console.log('🎉 BICING STATION DISPLAY COMPLETED SUCCESSFULLY!');
 }
 
-// Create a legend showing station availability statuses and their colors
-function createBicingLegend(stationsByStatus, statusColors, statusNames) {
+// Create a legend showing station occupation ranges and their colors
+function createBicingLegend(occupationRanges, occupationColors, occupationNames) {
     // Remove existing legend if any
     var existingLegend = document.getElementById('bicing-station-legend');
     if (existingLegend) {
@@ -378,35 +432,35 @@ function createBicingLegend(stationsByStatus, statusColors, statusNames) {
         z-index: 1000;
     `;
 
-    legend.innerHTML = '<div style="font-weight: bold; margin-bottom: 8px; color: #0066cc;">🚴 Disponibilitat d\'Estacions Bicing</div>';
+    legend.innerHTML = '<div style="font-weight: bold; margin-bottom: 8px; color: #0066cc;">🚴 Ocupació d\'Estacions Bicing</div>';
 
-    // Display statuses in order of availability
-    var statusOrder = ['HIGH', 'MEDIUM', 'LOW', 'EMPTY', 'FULL', 'UNKNOWN'];
+    // Display occupation ranges from low to high (green to red), with EMPTY first
+    var rangeOrder = ['EMPTY', 'VERY_LOW', 'LOW', 'MODERATE', 'HIGH', 'VERY_HIGH', 'UNKNOWN'];
 
-    statusOrder.forEach(function(status) {
-        var count = stationsByStatus[status] ? stationsByStatus[status].length : 0;
+    rangeOrder.forEach(function(range) {
+        var count = occupationRanges[range] ? occupationRanges[range].length : 0;
         if (count === 0) return;
 
-        var statusColor = statusColors[status] || '#007bff';
-        var statusName = statusNames[status] || status;
+        var rangeColor = occupationColors[range] || '#007bff';
+        var rangeName = occupationNames[range] || range;
 
-        var statusDiv = document.createElement('div');
-        statusDiv.style.cssText = `
+        var rangeDiv = document.createElement('div');
+        rangeDiv.style.cssText = `
             display: flex;
             align-items: center;
             margin-bottom: 5px;
             padding: 4px;
             border-radius: 3px;
-            background: ${statusColor}10;
+            background: ${rangeColor}10;
         `;
 
-        statusDiv.innerHTML = `
-            <div style="width: 12px; height: 12px; background: ${statusColor}; border: 1px solid #333; border-radius: 2px; margin-right: 6px;"></div>
-            <span style="font-weight: bold; color: ${statusColor}; font-size: 11px;">${statusName}</span>
+        rangeDiv.innerHTML = `
+            <div style="width: 12px; height: 12px; background: ${rangeColor}; border: 1px solid #333; border-radius: 2px; margin-right: 6px;"></div>
+            <span style="font-weight: bold; color: ${rangeColor}; font-size: 11px;">${rangeName}</span>
             <span style="margin-left: auto; color: #666; font-size: 10px;">(${count})</span>
         `;
 
-        legend.appendChild(statusDiv);
+        legend.appendChild(rangeDiv);
     });
 
     // Add close button
@@ -739,6 +793,125 @@ function toggleBicingLegend() {
     }
 }
 
+// Fallback function for GBFS endpoints using CORS proxies
+function fetchRealtimeBicingGbfsFallback() {
+    var corsProxies = [
+        'https://cors-anywhere.herokuapp.com/',
+        'https://api.codetabs.com/v1/proxy?quest=',
+        'https://proxy.cors.sh/',
+        'https://corsproxy.io/?'
+    ];
+
+    // GBFS endpoints for Barcelona Bicing
+    var stationInfoUrl = 'https://barcelona.publicbikesystem.net/customer/gbfs/v2/en/station_information';
+    var stationStatusUrl = 'https://barcelona.publicbikesystem.net/customer/gbfs/v2/en/station_status';
+
+    function tryNextProxy(proxyIndex) {
+        if (proxyIndex >= corsProxies.length) {
+            console.warn('All CORS proxies failed for Bicing GBFS - using manual fallback');
+            alert('🚴 Unable to load real Bicing station data.\n\nAll CORS proxies failed.\n\nPlease use the manual data entry option.');
+            return Promise.resolve([]);
+        }
+
+        var proxy = corsProxies[proxyIndex];
+        var fullInfoUrl = proxy + stationInfoUrl;
+        var fullStatusUrl = proxy + stationStatusUrl;
+
+        console.log('🔄 Trying CORS proxy', proxyIndex + 1, 'of', corsProxies.length, 'for Bicing GBFS:', proxy);
+
+        // Fetch both endpoints
+        var promises = [
+            fetch(fullInfoUrl).then(r => r.json()).catch(err => {
+                console.warn('Failed to fetch station information via proxy:', err);
+                return {data: {stations: []}};
+            }),
+            fetch(fullStatusUrl).then(r => r.json()).catch(err => {
+                console.warn('Failed to fetch station status via proxy:', err);
+                return {data: {stations: []}};
+            })
+        ];
+
+        return Promise.all(promises)
+            .then(function(results) {
+                var stationInfo = results[0];
+                var stationStatus = results[1];
+
+                console.log('✅ GBFS CORS proxy succeeded! Processing data...');
+
+                // Create status lookup map
+                var statusMap = {};
+                if (stationStatus.data && stationStatus.data.stations) {
+                    stationStatus.data.stations.forEach(function(status) {
+                        statusMap[status.station_id] = status;
+                    });
+                }
+
+                var stations = [];
+
+                // Process and merge data
+                if (stationInfo.data && stationInfo.data.stations) {
+                    stationInfo.data.stations.forEach(function(info) {
+                        try {
+                            var stationId = info.station_id;
+                            var status = statusMap[stationId];
+
+                            if (!info.lat || !info.lon) {
+                                console.warn('⚠️ Station', stationId, 'missing coordinates, skipping');
+                                return;
+                            }
+
+                            var lat = parseFloat(info.lat);
+                            var lng = parseFloat(info.lon);
+
+                            if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+                                console.warn('⚠️ Station', stationId, 'has invalid coordinates:', lat, lng, '- skipping');
+                                return;
+                            }
+
+                            var bikes = status ? (status.num_bikes_available || 0) : 0;
+                            var docks = status ? (status.num_docks_available || 0) : 0;
+                            var capacity = info.capacity || (bikes + docks);
+
+                            stations.push({
+                                id: stationId,
+                                code: stationId,
+                                name: info.name || ('Estació ' + stationId),
+                                address: info.address || 'Barcelona',
+                                lat: lat,
+                                lng: lng,
+                                capacity: capacity,
+                                bikes: bikes,
+                                slots: docks,
+                                mechanical: status && status.num_bikes_available_types ? (status.num_bikes_available_types.mechanical || 0) : bikes,
+                                electric: status && status.num_bikes_available_types ? (status.num_bikes_available_types.ebike || 0) : 0,
+                                status: status ? (status.is_installed && status.is_renting && status.is_returning ? 'IN_SERVICE' : 'UNKNOWN') : 'UNKNOWN',
+                                lastReported: status ? status.last_reported : null,
+                                timestamp: new Date().getTime()
+                            });
+
+                        } catch (error) {
+                            console.warn('❌ Error processing station', info.station_id, ':', error);
+                        }
+                    });
+                }
+
+                if (stations.length > 0) {
+                    console.log('🚴 SUCCESS: Retrieved', stations.length, 'Bicing stations via GBFS CORS proxy!');
+                    return stations;
+                } else {
+                    console.warn('Proxy returned data but no valid stations found');
+                    return tryNextProxy(proxyIndex + 1);
+                }
+            })
+            .catch(error => {
+                console.warn('❌ GBFS CORS proxy', proxy, 'failed:', error.message);
+                return tryNextProxy(proxyIndex + 1);
+            });
+    }
+
+    return tryNextProxy(0);
+}
+
 // Fallback function using external CORS proxies (same as RENFE and FGC)
 function fetchRealtimeBicingFallback() {
     var corsProxies = [
@@ -831,4 +1004,5 @@ window.stopRealtimeBicing = stopRealtimeBicing;
 window.openBicingJson = openBicingJson;
 window.showBicingDataEntry = showBicingDataEntry;
 window.processBicingManualJsonData = processBicingManualJsonData;
+window.toggleBicingLegend = toggleBicingLegend;
 window.toggleBicingLegend = toggleBicingLegend;

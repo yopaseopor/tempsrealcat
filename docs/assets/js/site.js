@@ -560,6 +560,67 @@ function loadBicycleContent() {
         });
 }
 
+// Function to load external HTML content for Transit tab
+function loadTransitContent() {
+    const transitPane = document.getElementById('transit');
+
+    // Check if content is already loaded (look for the specific Transit title)
+    if (transitPane.querySelector('h1[data-i18n="transit_title"]')) {
+        return; // Content already loaded
+    }
+
+    // Load the transit.html content
+    fetch('transit.html')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to load transit.html');
+            }
+            return response.text();
+        })
+        .then(html => {
+            // Extract the sidebar-pane content from the HTML
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const transitContent = doc.querySelector('#transit');
+
+            if (transitContent) {
+                // Clear existing content and add new content
+                transitPane.innerHTML = transitContent.innerHTML;
+
+                // Load the transit functions script dynamically
+                if (!window.loadTransitType) {
+                    const script = document.createElement('script');
+                    script.src = 'assets/js/transit.functions.js';
+                    script.onload = function() {
+                        console.log('Transit functions script loaded successfully');
+
+                        // Add event listeners for transit buttons
+                        setupTransitEventListeners();
+                    };
+                    script.onerror = function() {
+                        console.error('Failed to load transit functions script');
+                    };
+                    document.head.appendChild(script);
+                } else {
+                    // Script already loaded, just set up event listeners
+                    setupTransitEventListeners();
+                }
+
+                // Update language for the new content
+                updateLanguage();
+
+                console.log('Transit content loaded successfully');
+            } else {
+                console.error('Could not find #transit content in transit.html');
+                transitPane.innerHTML = '<div class="close-button"><span class="fa fa-xmark" onclick="javascript: sidebar.close()"></span></div><h1>Error loading Transit content</h1>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading Transit content:', error);
+            transitPane.innerHTML = '<div class="close-button"><span class="fa fa-xmark" onclick="javascript: sidebar.close()"></span></div><h1>Error loading Transit content</h1><p>' + error.message + '</p>';
+        });
+}
+
 // Function to load external HTML content for OSM tab
 function loadOsmContent() {
     const osmPane = document.getElementById('osm');
@@ -670,6 +731,15 @@ document.addEventListener('DOMContentLoaded', function() {
         bicycleTab.addEventListener('click', function(e) {
             // Load Bicycle content after a short delay to ensure tab is active
             setTimeout(loadBicycleContent, 100);
+        });
+    }
+
+    // Add event listener to Transit tab
+    const transitTab = document.querySelector('a[href="#transit"]');
+    if (transitTab) {
+        transitTab.addEventListener('click', function(e) {
+            // Load Transit content after a short delay to ensure tab is active
+            setTimeout(loadTransitContent, 100);
         });
     }
 
@@ -1032,6 +1102,41 @@ function setupOsmEventListeners() {
     });
 
     console.log('OSM event listeners set up successfully');
+}
+
+// Function to set up event listeners for Transit controls
+function setupTransitEventListeners() {
+    // Load traffic incidents button
+    var loadTrafficBtn = document.querySelector('#transit button[onclick*="loadTrafficTransit"]');
+    if (loadTrafficBtn) {
+        loadTrafficBtn.addEventListener('click', function() {
+            if (typeof loadTrafficTransit === 'function') {
+                loadTrafficTransit();
+            }
+        });
+    }
+
+    // Clear traffic incidents button
+    var clearTrafficBtn = document.querySelector('#transit button[onclick*="clearAllTransit"]');
+    if (clearTrafficBtn) {
+        clearTrafficBtn.addEventListener('click', function() {
+            if (typeof clearAllTransit === 'function') {
+                clearAllTransit();
+            }
+        });
+    }
+
+    // Copy instructions button
+    var copyBtn = document.querySelector('#transit button[onclick*="copyTransitInstructions"]');
+    if (copyBtn) {
+        copyBtn.addEventListener('click', function() {
+            if (typeof copyTransitInstructions === 'function') {
+                copyTransitInstructions();
+            }
+        });
+    }
+
+    console.log('Transit event listeners set up successfully');
 }
 
 // Map click handler for setting route points (only when routing tab is active)

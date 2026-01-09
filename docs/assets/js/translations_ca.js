@@ -580,5 +580,87 @@ window.translations_ca = {
     fgc_coverage: "ℹ️ Cobertura: Aquest servei mostra trens FGC de Catalunya, incloent Línia Barcelona-Vallès, Línia Llobregat-Anoia i Metro del Vallès. Les dades s'actualitzen cada 30 segons.",
     fgc_help_title: "Ajuda",
     fgc_help_text: "Aquest panell et permet visualitzar la posició en temps real dels trens FGC a Catalunya. Les dades provenen de l'API oberta de FGC i s'actualitzen automàticament. Si tens problemes amb la càrrega automàtica, pots utilitzar l'opció de dades manuals.",
-    fgc_copy_instructions: "📋 Copiar instruccions"
+    fgc_copy_instructions: "📋 Copiar instruccions",
+
+    // Traduccions de Bicycle (Bicing)
+    bicycle_title: "🚴 Bicing",
+    bicycle_description: "Visualitza les estacions de Bicing amb informació en temps real sobre disponibilitat de bicicletes i places lliures.",
+    bicycle_bicing: "🚲 Estacions Bicing",
+    bicycle_start_bicing: "Mostrar Estacions Bicing",
+    bicycle_stop_bicing: "Amagar Estacions Bicing",
+    bicycle_status: "Estat:",
+    bicycle_status_inactive: "Inactiu",
+    bicycle_manual_entry: "📝 Introduir Dades Manualment",
+    bicycle_how_it_works: "📖 Com funciona",
+    bicycle_step1: "Mostrar estacions Bicing amb disponibilitat en temps real",
+    bicycle_step2: "Els colors indiquen la disponibilitat: verd (alta), groc (mitjana), taronja (baixa), vermell (plena)",
+    bicycle_step3: "Clica als marcadors: Obté informació detallada sobre cada estació",
+    bicycle_step4: "Amagar quan vulguis: Prem el botó d'aturar per netejar el mapa",
+    bicycle_step5: "Utilitza l'entrada manual si l'API no funciona",
+    bicycle_coverage: "ℹ️ Cobertura: Aquest servei mostra les estacions de Bicing a Barcelona amb dades actualitzades cada 30 segons. Les dades provenen de l'API GBFS de l'Ajuntament de Barcelona.",
+    bicycle_help_title: "Ajuda",
+    bicycle_help_text: "Aquest panell et permet visualitzar les estacions de Bicing amb informació en temps real sobre disponibilitat de bicicletes i places lliures. Utilitza l'opció d'entrada manual si experimentes problemes de connexió amb l'API oficial.",
+
+    // Missatges d'estat de Bicycle
+    bicycle_status_loading: "Carregant estacions Bicing en temps real...",
+    bicycle_status_showing: "🚴 Mostrant {count} estacions Bicing ({ranges} rangs d'ocupació)",
+    bicycle_legend_show: "🎨 Mostrar Llegenda",
+    bicycle_legend_hide: "🎨 Ocultar Llegenda",
+    bicycle_legend_title: "🚴 Ocupació d'Estacions Bicing",
+
+    // Entrada manual de dades
+    bicycle_manual_paste_json: "Si us plau, enganxa les dades JSON de Bicing primer.",
+    bicycle_manual_processed: "Dades processades! Veus {count} estacions Bicing reals al mapa.",
+    bicycle_manual_no_valid_data: "No s'han trobat dades d'estacions vàlides en el JSON. Comprova que has copiat les dades correctes.",
+    bicycle_manual_error_processing: "Error processant les dades JSON. Comprova que el format és correcte.",
+    bicycle_manual_url_copied: "✅ URL de Bicing copiada al porta-retalls!",
+    bicycle_manual_copy_error: "❌ Error copiant al porta-retalls. Copia manualment:",
+    bicycle_manual_instructions_copied: "Instruccions copiades al porta-retalls!",
+    bicycle_manual_textarea_cleared: "Textarea netejat. Preparat per enganxar dades.",
+    bicycle_manual_sample_loaded: "Dades d'exemple carregades. Clica 'Processar Dades Reals' per veure estacions Bicing.",
+    bicycle_manual_status_ready: "Estat: Preparat per enganxar dades",
+
+    // Errors d'API
+    bicycle_api_no_stations: "🚴 No s'han trobat estacions Bicing vàlides. L'API GBFS pot estar temporalment indisponible.\n\nUtilitza l'opció '📝 Introduir Dades Manualment' per provar amb dades d'exemple.",
+    bicycle_api_cors_failed: "🚴 No s'han pogut carregar dades reals d'estacions Bicing.\n\nTots els proxies CORS han fallat.\n\nSi us plau utilitza l'opció d'entrada manual de dades.",
+    bicycle_api_server_unavailable: "🚴 API GBFS temporalment indisponible. Utilitza entrada manual de dades:\n\n1. Obrir: https://opendata-ajuntament.barcelona.cat/data/dataset/...\n2. Copiar dades JSON\n3. Utilitzar '📝 Introduir Dades Manualment'",
+    bicycle_api_local_proxy_failed: "🚴 No s'han pogut carregar dades reals d'estacions Bicing.\n\nEl servidor proxy local pot no estar executant-se, i tots els proxies CORS externs han fallat.\n\nSi us plau:\n1. Assegura't que el servidor Node.js està executant-se (npm start)\n2. O utilitza l'opció d'entrada manual de dades a continuació.",
+
+    // Rangs de llegenda
+    bicycle_range_empty: "Sense bicicletes disponibles",
+    bicycle_range_very_low: "Ocupació molt baixa (≤20%)",
+    bicycle_range_low: "Ocupació baixa (20-40%)",
+    bicycle_range_moderate: "Ocupació moderada (40-60%)",
+    bicycle_range_high: "Ocupació alta (60-80%)",
+    bicycle_range_very_high: "Ocupació molt alta (80-100%)",
+    bicycle_range_unknown: "Estat desconegut",
+
+    // Informació de popup
+    bicycle_popup_title: "🚴 Estació Bicing {code}",
+    bicycle_popup_name: "Nom:",
+    bicycle_popup_address: "Adreça:",
+    bicycle_popup_occupancy: "Ocupació:",
+    bicycle_popup_availability: "Bicicletes disponibles:",
+    bicycle_popup_docks: "Places lliures:",
+    bicycle_popup_capacity: "Capacitat total:",
+    bicycle_popup_mechanical: "Bicicletes mecàniques:",
+    bicycle_popup_electric: "Bicicletes elèctriques:",
+    bicycle_popup_position: "Posició:",
+    bicycle_popup_updated: "🕒 Actualitzat:",
+
+    // Etiquetes de botons
+    bicycle_button_enter_data: "Introduir dades",
+    bicycle_button_open_url: "Obrir URL",
+    bicycle_button_process_data: "Processar Dades Reals",
+    bicycle_button_sample_data: "Dades d'exemple",
+    bicycle_button_clear: "Netejar",
+    bicycle_button_copy_url: "Copiar URL",
+    bicycle_button_instructions: "Instruccions",
+    bicycle_button_share_map: "Compartir mapa",
+
+    // Formulari d'entrada manual
+    bicycle_form_title: "Entrada manual de dades Bicing",
+    bicycle_form_placeholder: "Enganxa aquí les dades JSON de Bicing...",
+    bicycle_form_instructions_title: "Copiar instruccions",
+    bicycle_form_instructions_text: "PASSOS PER COPIAR LES DADES BICING:\n\n1. Ves a la pestanya Bicing que s'ha obert\n2. Prem Ctrl+A (seleccionar tot)\n3. Prem Ctrl+C (copiar)\n4. Torna aquí i prem Ctrl+V (enganxar)\n5. Clica 'Processar Dades Reals'\n\nURL: https://opendata-ajuntament.barcelona.cat/data/dataset/6aa3416d-ce1a-494d-861b-7bd07f069600/resource/1b215493-9e63-4a12-8980-2d7e0fa19f85/download"
 };
