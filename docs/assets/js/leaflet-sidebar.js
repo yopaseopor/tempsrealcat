@@ -57,6 +57,9 @@ L.Control.Sidebar = L.Control.extend({
             L.DomEvent.on(child.firstChild, e, this._onClick, child);
         }
 
+        // Add resize event listeners
+        L.DomEvent.on(this._sidebar, 'mousedown touchstart', this._onMouseDown, this);
+
         return this;
     },
 
@@ -68,6 +71,9 @@ L.Control.Sidebar = L.Control.extend({
             var child = this._tabitems[i];
             L.DomEvent.off(child.firstChild, e, this._onClick);
         }
+
+        // Remove resize event listeners
+        L.DomEvent.off(this._sidebar, 'mousedown touchstart', this._onMouseDown, this);
 
         return this;
     },
@@ -127,6 +133,54 @@ L.Control.Sidebar = L.Control.extend({
         else
             this._sidebar.open(this.firstChild.hash.slice(1));
 
+    },
+
+    _onMouseDown: function(e) {
+        if (L.DomUtil.hasClass(this._sidebar._sidebar, 'collapsed')) return;
+
+        e.preventDefault();
+        this._isResizing = true;
+        this._startX = e.clientX || e.touches[0].clientX;
+        this._startWidth = this._sidebar._sidebar.offsetWidth;
+
+        L.DomUtil.addClass(document.body, 'sidebar-resizing');
+        L.DomEvent.on(document, 'mousemove touchmove', this._onMouseMove, this);
+        L.DomEvent.on(document, 'mouseup touchend', this._onMouseUp, this);
+    },
+
+    _onMouseMove: function(e) {
+        if (!this._isResizing) return;
+
+        e.preventDefault();
+        var clientX = e.clientX || e.touches[0].clientX;
+        var newWidth = this._startWidth + (clientX - this._startX);
+
+        // Set minimum and maximum width constraints
+        newWidth = Math.max(200, Math.min(newWidth, window.innerWidth * 0.8));
+
+        this._sidebar._sidebar.style.width = newWidth + 'px';
+
+        // Update map positioning
+        this._updateMapPosition(newWidth);
+    },
+
+    _onMouseUp: function(e) {
+        if (!this._isResizing) return;
+
+        this._isResizing = false;
+        L.DomUtil.removeClass(document.body, 'sidebar-resizing');
+        L.DomEvent.off(document, 'mousemove touchmove', this._onMouseMove, this);
+        L.DomEvent.off(document, 'mouseup touchend', this._onMouseUp, this);
+    },
+
+    _updateMapPosition: function(sidebarWidth) {
+        if (!this._map) return;
+
+        var mapContainer = this._map.getContainer();
+        var leafletLeft = mapContainer.querySelector('.leaflet-left');
+        if (leafletLeft) {
+            leafletLeft.style.left = (sidebarWidth + 10) + 'px';
+        }
     }
 });
 
