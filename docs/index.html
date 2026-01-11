@@ -36,25 +36,25 @@
     <div id="sidebar" class="sidebar collapsed">
       <!-- Nav tabs -->
       <ul class="sidebar-tabs" role="tablist">
-	<li><a href="#search" role="tab"><i class="fa fa-search"></i></a></li>
-	<li><a href="#home" role="tab"><i class="fa fa-map-marker"></i></a></li>
-	<li><a href="#routes" role="tab"><i class="fa fa-compass"></i></a></li>
-	<li><a href="#bicycle" role="tab"><i class="fa fa-bicycle"></i></a></li>
-	<li><a href="#train" role="tab"><i class="fa fa-train"></i></a></li>
-	<li><a href="#fgc" role="tab"><i class="fa fa-chevron-circle-right"></i></a></li>
-	<li><a href="#bus" role="tab"><i class="fa fa-bus"></i></a></li>
-	<li><a href="#metro" role="tab"><i class="fa fa-subway"></i></a></li>
-	<li><a href="#gtfs" role="tab"><i class="fa fa-clock"></i></a></li>
-	<li><a href="#transit" role="tab"><i class="fa fa-angles-right"></i></a></li>
-	<li><a href="#wikipedia" role="tab"><i class="fa fa-book"></i></a></li>
+	<li><a href="#search" role="tab"><i class="fa fa-search"></i><br><small>Cerca</small></a></li>
+	<li><a href="#home" role="tab"><i class="fa fa-map-marker"></i><br><small>PDI</small></a></li>
+	<li><a href="#routes" role="tab"><i class="fa fa-compass"></i><br><small>Rutes</small></a></li>
+	<li><a href="#bicycle" role="tab"><i class="fa fa-bicycle"></i><br><small>Bicing</small></a></li>
+	<li><a href="#train" role="tab"><i class="fa fa-train"></i><br><small>RENFE</small></a></li>
+	<li><a href="#fgc" role="tab"><i class="fa fa-chevron-circle-right"></i><br><small>FGC</small></a></li>
+	<li><a href="#bus" role="tab"><i class="fa fa-bus"></i><br><small>Bus</small></a></li>
+	<li><a href="#metro" role="tab"><i class="fa fa-subway"></i><br><small>Metro</small></a></li>
+	<li><a href="#gtfs" role="tab"><i class="fa fa-clock"></i><br><small>GTFS</small></a></li>
+	<li><a href="#wikipedia" role="tab"><i class="fa fa-book"></i><br><small>Viqui</small></a></li>
 		<!--MODIFICAR AQUÍ-->
-	<li><a href="#comments" role="tab"><i class="fa fa-comments"></i></a></li>
-	<li><a href="#parking" role="tab"><i class="fa fa-car"></i></a></li>
-	<li><a href="#mapillary" role="tab"><i class="fa fa-road"></i></a></li>
-	<li><a href="#links" role="tab"><i class="fa fa-link"></i></a></li>
-	<li><a href="#developer" role="tab"><i class="fa fa-code"></i></a></li>
-	<li><a href="#language" role="tab"><i class="fa fa-language"></i></a></li>
-	<li><a href="#about" role="tab"><i class="fa fa-info-circle"></i></a></li>
+	<li><a href="#comments" role="tab"><i class="fa fa-comments"></i><br><small>Coments</small></a></li>
+	<li><a href="#parking" role="tab"><i class="fa fa-car"></i><br><small>Parking</small></a></li>
+	<li><a href="#mapillary" role="tab"><i class="fa fa-street-view"></i><br><small>Street</small></a></li>
+	<li><a href="#traffic" role="tab"><i class="fa fa-road-circle-xmark"></i><br><small>Trànsit</small></a></li>
+	<li><a href="#links" role="tab"><i class="fa fa-link"></i><br><small>Links</small></a></li>
+	<li><a href="#developer" role="tab"><i class="fa fa-code"></i><br><small>Expert</small></a></li>
+	<li><a href="#language" role="tab"><i class="fa fa-language"></i><br><small>Idioma</small></a></li>
+	<li><a href="#about" role="tab"><i class="fa fa-info-circle"></i><br><small>Info</small></a></li>
       </ul>
 
       <!-- Tab panes -->
@@ -215,7 +215,12 @@
 	  <center><button style="background:#2a2a2a; color:white; padding:5px;" class="fa fa-arrow-up"
           onClick="location.href='#mapillary_init'" data-i18n="mapillary_help_back"> Inici</button></center>
 	</div>
-	
+
+	<!--TRAFFIC-->
+	<div class="sidebar-pane" id="traffic">
+	  <!-- Content will be loaded dynamically from traffic.html -->
+	</div>
+
 	<!--RUTES-->
 	<A NAME="rutes_init"></A>
 	<div class="sidebar-pane" id="routes">
@@ -415,12 +420,6 @@
 	  <br>
 	  <center><button style="background:#2a2a2a; color:white; padding:5px;" class="fa fa-arrow-up"
           onClick="location.href='#gtfs_init'" data-i18n="gtfs_help_back"> Inici</button></center>
-	</div>
-
-
-	<!--TRANSIT-->
-	<div class="sidebar-pane" id="transit">
-	  <!-- Content will be loaded dynamically from transit.html -->
 	</div>
 
 
@@ -2157,7 +2156,7 @@ s.setAttribute('data-timestamp', +new Date());
     <script src="assets/js/bus.functions.js"></script>
     <script src="assets/js/metro.functions.js"></script>
     <script src="assets/js/bicycle.functions.js"></script>
-    <script src="assets/js/transit.functions.js"></script>
+    <script src="assets/js/traffic.functions.js"></script>
 
   </body>
 </html>

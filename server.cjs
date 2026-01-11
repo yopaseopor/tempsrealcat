@@ -323,61 +323,6 @@ app.get('/api/tmb-realtime', async (req, res) => {
 
 
 
-// DGT Traffic API proxy endpoint
-app.get('/api/dgt-traffic', async (req, res) => {
-  try {
-    console.log('🚨 Fetching DGT traffic incidents from DATEX II API...');
-
-    // DGT DATEX II API endpoint for traffic incidents
-    const dgtUrl = 'https://infocar.dgt.es/datex2/sct/SituationPublication/all/content.xml';
-
-    console.log('🌐 Fetching from URL:', dgtUrl);
-
-    const response = await fetch(dgtUrl, {
-      headers: {
-        'User-Agent': 'OpenLocalMap-Proxy/1.0',
-        'Accept': 'application/xml, text/xml, */*',
-        'Accept-Encoding': 'gzip, deflate, br'
-      },
-      timeout: 30000 // 30 second timeout
-    });
-
-    console.log('📊 Response status:', response.status);
-    console.log('📊 Response headers:', Object.fromEntries(response.headers.entries()));
-
-    if (!response.ok) {
-      console.warn(`⚠️ DGT API returned ${response.status}: ${response.statusText}`);
-      setCorsHeaders(res);
-      return res.status(response.status).json({
-        error: 'DGT API error',
-        status: response.status,
-        message: response.statusText,
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    const xmlData = await response.text();
-    console.log('✅ Successfully fetched DGT DATEX II traffic data');
-    console.log('📏 Data length:', xmlData.length, 'characters');
-    console.log('📄 First 200 chars:', xmlData.substring(0, 200));
-
-    // Set content type for XML response
-    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
-    setCorsHeaders(res);
-    res.send(xmlData);
-  } catch (error) {
-    console.error('❌ Error fetching DGT traffic data:', error.message);
-
-    // Return error response with explicit CORS headers
-    setCorsHeaders(res);
-    res.status(500).json({
-      error: 'Failed to fetch DGT traffic data',
-      message: error.message,
-      timestamp: new Date().toISOString()
-    });
-  }
-});
-
 // Bicing API proxy endpoint
 app.get('/api/bicing', async (req, res) => {
   try {
@@ -423,6 +368,244 @@ app.get('/api/bicing', async (req, res) => {
   }
 });
 
+// DGT Traffic API proxy endpoint
+app.get('/api/dgt-traffic', async (req, res) => {
+  try {
+    console.log('🚦 Fetching DGT traffic data from DATEX2 API...');
+
+    // DGT DATEX2 XML endpoint for traffic situations
+    const dgtUrl = 'https://infocar.dgt.es/datex2/sct/SituationPublication/all/content.xml';
+
+    const response = await fetch(dgtUrl, {
+      headers: {
+        'User-Agent': 'OpenLocalMap-Proxy/1.0',
+        'Accept': 'application/xml, text/xml'
+      },
+      timeout: 30000 // 30 second timeout
+    });
+
+    if (!response.ok) {
+      console.warn(`⚠️ DGT API returned ${response.status}: ${response.statusText}`);
+      setCorsHeaders(res);
+      return res.status(response.status).json({
+        error: 'DGT API error',
+        status: response.status,
+        message: response.statusText,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const xmlData = await response.text();
+    console.log('✅ Successfully fetched DGT traffic XML data');
+
+    // Set appropriate headers for XML response
+    setCorsHeaders(res);
+    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+    res.send(xmlData);
+  } catch (error) {
+    console.error('❌ Error fetching DGT traffic data:', error.message);
+
+    // Return error response with explicit CORS headers
+    setCorsHeaders(res);
+    res.status(500).json({
+      error: 'Failed to fetch DGT traffic data',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// GENCAT RSS Traffic API proxy endpoint
+app.get('/api/gencat-rss-traffic', async (req, res) => {
+  try {
+    console.log('🚦 Fetching GENCAT RSS traffic data...');
+
+    // GENCAT RSS XML endpoint for traffic incidents
+    const gencatRssUrl = 'http://www.gencat.cat/transit/opendata/incidenciesRSS.xml';
+
+    const response = await fetch(gencatRssUrl, {
+      headers: {
+        'User-Agent': 'OpenLocalMap-Proxy/1.0',
+        'Accept': 'application/xml, text/xml'
+      },
+      timeout: 30000 // 30 second timeout
+    });
+
+    if (!response.ok) {
+      console.warn(`⚠️ GENCAT RSS API returned ${response.status}: ${response.statusText}`);
+      setCorsHeaders(res);
+      return res.status(response.status).json({
+        error: 'GENCAT RSS API error',
+        status: response.status,
+        message: response.statusText,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const xmlData = await response.text();
+    console.log('✅ Successfully fetched GENCAT RSS traffic XML data');
+
+    // Set appropriate headers for XML response
+    setCorsHeaders(res);
+    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+    res.send(xmlData);
+  } catch (error) {
+    console.error('❌ Error fetching GENCAT RSS traffic data:', error.message);
+
+    // Return error response with explicit CORS headers
+    setCorsHeaders(res);
+    res.status(500).json({
+      error: 'Failed to fetch GENCAT RSS traffic data',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// GENCAT GML Traffic API proxy endpoint
+app.get('/api/gencat-gml-traffic', async (req, res) => {
+  try {
+    console.log('🚦 Fetching GENCAT GML traffic data...');
+
+    // GENCAT GML XML endpoint for traffic incidents
+    const gencatGmlUrl = 'https://www.gencat.cat/transit/opendata/incidenciesGML.xml';
+
+    const response = await fetch(gencatGmlUrl, {
+      headers: {
+        'User-Agent': 'OpenLocalMap-Proxy/1.0',
+        'Accept': 'application/xml, text/xml'
+      },
+      timeout: 30000 // 30 second timeout
+    });
+
+    if (!response.ok) {
+      console.warn(`⚠️ GENCAT GML API returned ${response.status}: ${response.statusText}`);
+      setCorsHeaders(res);
+      return res.status(response.status).json({
+        error: 'GENCAT GML API error',
+        status: response.status,
+        message: response.statusText,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const xmlData = await response.text();
+    console.log('✅ Successfully fetched GENCAT GML traffic XML data');
+
+    // Set appropriate headers for XML response
+    setCorsHeaders(res);
+    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+    res.send(xmlData);
+  } catch (error) {
+    console.error('❌ Error fetching GENCAT GML traffic data:', error.message);
+
+    // Return error response with explicit CORS headers
+    setCorsHeaders(res);
+    res.status(500).json({
+      error: 'Failed to fetch GENCAT GML traffic data',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Geocoding API proxy endpoint using Overpass
+app.get('/api/geocode-road', async (req, res) => {
+  try {
+    const roadRef = req.query.ref;
+    const placeName = req.query.place;
+
+    if (!roadRef) {
+      setCorsHeaders(res);
+      return res.status(400).json({
+        error: 'Missing road reference parameter',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    console.log(`🗺️ Geocoding road ${roadRef} near Catalonia...`);
+
+    // Try multiple Overpass servers to avoid timeouts
+    const overpassServers = [
+      'https://overpass-api.de/api/interpreter',
+      'https://overpass.kumi.systems/api/interpreter',
+      'https://overpass.openstreetmap.fr/api/interpreter'
+    ];
+
+    let coordinates = null;
+    let serverUsed = null;
+
+    for (const server of overpassServers) {
+      try {
+        // Build Overpass query to find highway with matching ref tag
+        const overpassQuery = `
+          [out:json][timeout:20];
+          way["highway"]["ref"="${roadRef}"](around:50000,41.5912,1.5209);
+          out center;
+        `;
+
+        const response = await fetch(server, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'User-Agent': 'OpenLocalMap-Proxy/1.0'
+          },
+          body: `data=${encodeURIComponent(overpassQuery)}`,
+          signal: AbortSignal.timeout(15000) // 15 second timeout per server
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+
+          if (data.elements && data.elements.length > 0) {
+            const element = data.elements[0];
+            coordinates = {
+              lat: element.center ? element.center.lat : element.lat,
+              lng: element.center ? element.center.lon : element.lon
+            };
+            serverUsed = server;
+            console.log(`✅ Geocoded ${roadRef} using ${serverUsed}: ${coordinates.lat}, ${coordinates.lng}`);
+            break;
+          }
+        }
+
+      } catch (error) {
+        console.warn(`⚠️ Overpass server ${server} failed:`, error.message);
+        continue;
+      }
+    }
+
+    if (!coordinates) {
+      console.log(`❌ No coordinates found for road ${roadRef}`);
+      setCorsHeaders(res);
+      return res.status(404).json({
+        error: 'Road not found in OpenStreetMap',
+        roadRef: roadRef,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    setCorsHeaders(res);
+    res.json({
+      roadRef: roadRef,
+      coordinates: coordinates,
+      source: 'OpenStreetMap',
+      server: serverUsed,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ Error geocoding road:', error.message);
+
+    setCorsHeaders(res);
+    res.status(500).json({
+      error: 'Failed to geocode road',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Handle all routes by serving index.html (for SPA routing)
 // API routes are handled above, so this only handles non-API routes
 app.use((req, res, next) => {
@@ -451,11 +634,13 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 OpenLocalMap server running on http://localhost:${PORT}`);
-  console.log(` RENFE API proxy: http://localhost:${PORT}/api/renfe-trains`);
-  console.log(`🔗 FGC API proxy: http://localhost:${PORT}/api/fgc-trains`);
+  console.log(`🚂 RENFE API proxy: http://localhost:${PORT}/api/renfe-trains`);
+  console.log(`🚆 FGC API proxy: http://localhost:${PORT}/api/fgc-trains`);
   console.log(`🚏 TMB stops API proxy: http://localhost:${PORT}/api/tmb-stops`);
   console.log(`🚌 TMB real-time API proxy: http://localhost:${PORT}/api/tmb-realtime`);
   console.log(`🚍 TMB API proxy: http://localhost:${PORT}/api/tmb-buses`);
-  console.log(`🚨 DGT traffic API proxy: http://localhost:${PORT}/api/dgt-traffic`);
   console.log(`🚴 Bicing API proxy: http://localhost:${PORT}/api/bicing`);
+  console.log(`🚦 DGT Traffic API proxy: http://localhost:${PORT}/api/dgt-traffic`);
+  console.log(`🚦 GENCAT RSS Traffic API proxy: http://localhost:${PORT}/api/gencat-rss-traffic`);
+  console.log(`🚦 GENCAT GML Traffic API proxy: http://localhost:${PORT}/api/gencat-gml-traffic`);
 });

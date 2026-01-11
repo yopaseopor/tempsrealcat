@@ -5,42 +5,42 @@
   bottom: 0;
   width: 100%;
   overflow: hidden;
-  z-index: 2000; }
+  z-index: 2000;
+  cursor: ew-resize; }
   .sidebar.collapsed {
     width: 50px; }
   @media (min-width: 768px) {
     .sidebar {
       left: 10px;
       top: 10px;
-      bottom: 10px;
-      transition: width 500ms ease-in-out; } }
+      bottom: 10px; } }
   /* Enable slide-in for short pages on mobile */
   @media (max-height: 600px) {
     .sidebar {
       left: 10px;
       top: 10px;
       bottom: 10px;
-      width: 280px;
+      width: 320px;
       transition: width 500ms; }
       .sidebar.collapsed {
-        width: 60px; }
+        width: 40px; }
       .sidebar.collapsed ~ .sidebar-map .leaflet-left {
         left: 40px; } }
   @media (min-width: 768px) and (max-width: 991px) {
     .sidebar {
-      width: 320px; } }
+      width: 325px; } }
   @media (min-width: 992px) and (max-width: 1199px) {
     .sidebar {
-      width: 400px; } }
+      width: 410px; } }
   @media (min-width: 1200px) {
     .sidebar {
-      width: 450px; } }
+      width: 480px; } }
 
 .sidebar-tabs {
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 40px;
+  width: 50px;
   height: 100%;
   margin: 0;
   padding: 0;
@@ -49,7 +49,7 @@
   overflow-x: hidden; }
   .sidebar-tabs > li {
     width: 100%;
-    height: 40px;
+    height: 60px;
     color: #333;
     font-size: 12pt;
     overflow: hidden;
@@ -64,14 +64,19 @@
       display: block;
       width: 100%;
       height: 100%;
-      line-height: 40px;
+      padding-top: 5px;
       color: inherit;
       text-decoration: none;
       text-align: center; }
+      .sidebar-tabs > li > a small {
+        display: block;
+        font-size: 9px;
+        line-height: 1;
+        margin-top: 2px; }
 
 .sidebar-content {
   position: absolute;
-  left: 40px;
+  left: 50px;
   right: 0;
   top: 0;
   bottom: 0;
@@ -88,16 +93,16 @@
     display: block; }
   @media (min-width: 768px) and (max-width: 991px) {
     .sidebar-pane {
-      width: 280px; } }
+      width: 265px; } }
   @media (min-width: 992px) and (max-width: 1199px) {
     .sidebar-pane {
-      width: 360px; } }
+      width: 350px; } }
   @media (min-width: 1200px) {
     .sidebar-pane {
-      width: 410px; } }
+      width: 420px; } }
 
 .sidebar-map {
-  margin-left: 40px; }
+  margin-left: 50px; }
   @media (min-width: 768px) {
     .sidebar-map {
       margin-left: 0; } }
@@ -120,13 +125,13 @@
     transition: left 500ms; } }
 @media (min-width: 768px) and (max-width: 991px) {
   .sidebar-map .leaflet-left {
-    left: 330px; } }
+    left: 375px; } }
 @media (min-width: 992px) and (max-width: 1199px) {
   .sidebar-map .leaflet-left {
-    left: 410px; } }
+    left: 460px; } }
 @media (min-width: 1200px) {
   .sidebar-map .leaflet-left {
-    left: 460px; } }
+    left: 530px; } }
 
 /* Map positioning for short pages on mobile */
 @media (max-height: 600px) {

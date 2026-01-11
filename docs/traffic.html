@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DGT Traffic Information</title>
+</head>
+<body>
+    <!--TRAFFIC-->
+    <div class="sidebar-pane" id="traffic">
+      <div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span>
+      </div>
+      <h1>🚦 Trànsit DGT</h1>
+      <p style="text-align:justify; margin-right:5px;">Informació del trànsit en temps real a Espanya. Les dades provenen directament de la DGT (Dirección General de Tráfico) a través del protocol DATEX2.</p>
+
+      <!-- Real-time traffic controls -->
+      <div style="margin-bottom: 15px;">
+        <h3 style="margin-bottom: 10px; color: #333;">📡 Informació en temps real</h3>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
+          <button id="load-traffic-btn" onclick="loadTrafficData()" style="background:#2a2a2a; color:white; padding:10px 15px; border:none; border-radius:5px; cursor:pointer; font-size: 14px;">
+            <i class="fa fa-sync"></i> Carregar dades
+          </button>
+          <button id="clear-traffic-btn" onclick="clearTrafficData()" style="background:#cc0000; color:white; padding:10px 15px; border:none; border-radius:5px; cursor:pointer; font-size: 14px; display: none;">
+            <i class="fa fa-trash"></i> Neteja mapa
+          </button>
+        </div>
+
+        <!-- Filter options -->
+        <div style="margin-top: 10px;">
+          <label style="font-size: 12px; color: #666;">Filtrar per tipus:</label>
+          <select id="traffic-filter" onchange="filterTrafficIncidents()" style="margin-left: 10px; padding: 5px; border: 1px solid #ccc; border-radius: 3px;">
+            <option value="all">Tots els incidents</option>
+            <option value="maintenance">Obres</option>
+            <option value="accident">Accidents</option>
+            <option value="congestion">Congestió</option>
+            <option value="closure">Tancaments</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Status display -->
+      <div id="traffic-status" style="background: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #ddd;">
+        Status: <span id="status-text">Preparat per carregar dades</span>
+      </div>
+
+      <!-- Traffic table -->
+      <div id="traffic-table-section" style="display: none; margin-bottom: 20px;">
+        <h4 style="margin-bottom: 10px; color: #333;">📊 Taula d'incidents</h4>
+        <div id="table-container" style="max-height: 250px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px;">
+          <!-- Table will be populated here -->
+        </div>
+      </div>
+
+      <!-- Traffic incidents cards -->
+      <div id="traffic-cards-section" style="display: none; margin-bottom: 15px;">
+        <h4 style="margin-bottom: 10px; color: #333;">🎴 Targetes d'incidents</h4>
+        <div id="cards-container" style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; padding: 10px;">
+          <!-- Cards will be populated here -->
+        </div>
+      </div>
+
+      <!-- Instructions -->
+      <div style="background: #e8f4f8; padding: 15px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #b8daff;">
+        <h4 style="margin-top: 0; color: #004085;">📖 Com funciona</h4>
+        <ol style="font-size: 13px; color: #004085; margin: 0; padding-left: 20px;">
+          <li>Prem "Carregar dades" per obtenir informació del trànsit actual</li>
+          <li>Els incidents apareixeran com marcadors al mapa</li>
+          <li>Clica als marcadors per veure detalls de cada incident</li>
+          <li>Utilitza el filtre per mostrar només certs tipus d'incidents</li>
+          <li>Prem "Neteja mapa" per eliminar tots els marcadors</li>
+        </ol>
+      </div>
+
+      <!-- Coverage info -->
+      <div style="background: #fff3cd; padding: 10px; border-radius: 3px; border: 1px solid #ffeaa7; font-size: 12px;">
+        <strong>ℹ️ Cobertura:</strong> Aquest servei mostra informació del trànsit de tot Espanya proporcionada per la DGT. Les dades s'actualitzen regularment.
+      </div>
+
+      <br><hr width="90%">
+
+      <!-- Help section -->
+      <h3 style="color: #333;"><i class="fa fa-question-circle"></i> Ajuda</h3>
+      <p style="text-align:justify; margin-right:5px; font-size: 13px;">
+        Aquest panell et permet visualitzar incidents de trànsit en temps real a Espanya. Les dades provenen del servei DATEX2 de la DGT i inclouen obres, accidents, congestions i tancaments de carreteres.
+      </p>
+    </div>
+</body>
+</html>
