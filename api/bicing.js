@@ -28,16 +28,17 @@ export default async function handler(req, res) {
       // Decode the URL parameter and validate it
       const requestedUrl = decodeURIComponent(req.query.url);
 
-      // Basic validation to ensure it's a GBFS endpoint
-      if (requestedUrl.includes('barcelona.publicbikesystem.net') ||
-          requestedUrl.includes('gbfs') ||
-          requestedUrl.includes('station')) {
+      // More permissive validation - just check it's an HTTPS URL
+      if (requestedUrl.startsWith('https://') &&
+          (requestedUrl.includes('barcelona.publicbikesystem.net') ||
+           requestedUrl.includes('gbfs'))) {
         bicingUrl = requestedUrl;
         console.log('🚴 Using provided URL:', bicingUrl);
       } else {
         return res.status(400).json({
           error: 'Invalid URL parameter',
-          message: 'URL must be a valid GBFS endpoint',
+          message: 'URL must be a valid HTTPS GBFS endpoint',
+          requestedUrl: requestedUrl,
           timestamp: new Date().toISOString()
         });
       }
