@@ -21,11 +21,30 @@ async function loadTrafficData() {
         loadBtn.disabled = true;
         loadBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Carregant...';
 
+        // Detect deployment environment for API calls
+        var hostname = window.location.hostname;
+        var isGitHubPages = hostname.includes('github.io');
+        var isVercel = hostname.includes('vercel.app') || hostname.includes('now.sh');
+
+        // Function to get API URL based on environment
+        function getApiUrl(endpoint) {
+            if (isVercel) {
+                // Use Vercel API
+                return endpoint;
+            } else if (isGitHubPages) {
+                // Use Vercel proxy from GitHub Pages
+                return 'https://openlocalmap2.vercel.app' + endpoint;
+            } else {
+                // Local development
+                return endpoint;
+            }
+        }
+
         // Fetch data from all sources in parallel
         const [dgtResponse, rssResponse, gmlResponse] = await Promise.allSettled([
-            fetch('/api/dgt-traffic'),
-            fetch('/api/gencat-rss-traffic'),
-            fetch('/api/gencat-gml-traffic')
+            fetch(getApiUrl('/api/dgt-traffic')),
+            fetch(getApiUrl('/api/gencat-rss-traffic')),
+            fetch(getApiUrl('/api/gencat-gml-traffic'))
         ]);
 
         let allIncidents = [];
