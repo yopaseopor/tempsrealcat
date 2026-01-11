@@ -621,8 +621,8 @@ function loadAllGtfsDatasets() {
     showGtfsLoading();
     $('#gtfs-search').val(''); // Clear search
 
-    // Load GTFS feeds from the Mobility Database API
-    fetch('https://api.mobilitydatabase.org/v1/gtfs_feeds')
+    // Load GTFS feeds from the Mobility Database API via Vercel proxy
+    fetch('/api/gtfs-feeds')
         .then(response => {
             if (!response.ok) {
                 throw new Error('API request failed: ' + response.status + ' ' + response.statusText);
@@ -794,7 +794,7 @@ function clearStoredRefreshToken() {
 }
 
 function requestAccessToken(refreshToken) {
-    return fetch('https://api.mobilitydatabase.org/v1/tokens', {
+    return fetch('/api/gtfs-tokens', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refresh_token: refreshToken })
@@ -841,12 +841,15 @@ function authFetch(url, options) {
     options = options || {};
     options.headers = options.headers || {};
     return getValidAccessToken().then(token => {
+        // Use proxy endpoint with authorization header
+        const proxyUrl = url.replace('https://api.mobilitydatabase.org/v1/', '/api/');
         options.headers['Authorization'] = 'Bearer ' + token;
-        return fetch(url, options);
+        return fetch(proxyUrl, options);
     }).catch(err => {
-        // If no refresh token is configured or token request fails, fall back to an unauthenticated fetch
+        // If no refresh token is configured or token request fails, fall back to proxy without auth
         console.warn('authFetch: proceeding without Authorization header:', err.message || err);
-        return fetch(url, options);
+        const proxyUrl = url.replace('https://api.mobilitydatabase.org/v1/', '/api/');
+        return fetch(proxyUrl, options);
     });
 }
 
