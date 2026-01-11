@@ -22,8 +22,30 @@ export default async function handler(req, res) {
   try {
     console.log('🚴 Fetching Bicing station data from GBFS API...');
 
-    // Barcelona GBFS (General Bikeshare Feed Specification) API endpoint
-    const bicingUrl = 'https://barcelona.publicbikesystem.net/customer/gbfs/v2/en/station_status';
+    // Check if a specific URL is provided via query parameter
+    let bicingUrl;
+    if (req.query.url) {
+      // Decode the URL parameter and validate it
+      const requestedUrl = decodeURIComponent(req.query.url);
+
+      // Basic validation to ensure it's a GBFS endpoint
+      if (requestedUrl.includes('barcelona.publicbikesystem.net') ||
+          requestedUrl.includes('gbfs') ||
+          requestedUrl.includes('station')) {
+        bicingUrl = requestedUrl;
+        console.log('🚴 Using provided URL:', bicingUrl);
+      } else {
+        return res.status(400).json({
+          error: 'Invalid URL parameter',
+          message: 'URL must be a valid GBFS endpoint',
+          timestamp: new Date().toISOString()
+        });
+      }
+    } else {
+      // Default fallback URL
+      bicingUrl = 'https://barcelona.publicbikesystem.net/customer/gbfs/v2/en/station_status';
+      console.log('🚴 Using default URL:', bicingUrl);
+    }
 
     const response = await fetch(bicingUrl, {
       headers: {
