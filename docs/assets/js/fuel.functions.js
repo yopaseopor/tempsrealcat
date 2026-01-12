@@ -17,7 +17,7 @@ function startFuelStations() {
 
     // Initial load
     fetchFuelStations().then(function(stations) {
-        displayFuelStations(stations);
+        displayFuelStations(stations, true);
     });
 
     // Update UI
@@ -313,28 +313,33 @@ function fetchFuelStations() {
 }
 
 // Display fuel stations on map
-function displayFuelStations(stations) {
+function displayFuelStations(stations, isInitialLoad = false) {
     console.log('⛽ DISPLAYING', stations.length, 'FUEL STATIONS ON MAP...');
 
-    // Calculate separate rankings for Gas 95 and Diesel before sorting
-    var fuelStations = stations.filter(s => s.amenity === 'fuel' && s.prices);
+    // Store all stations only on initial load
+    if (isInitialLoad) {
+        allFuelStations = stations;
+    }
 
-    // Create Gas 95 ranking
-    var gas95Ranking = fuelStations.slice().sort(function(a, b) {
+    // Calculate rankings based on ALL fuel stations (not just the filtered ones)
+    var allFuelStationsWithPrices = allFuelStations.filter(s => s.amenity === 'fuel' && s.prices);
+
+    // Create Gas 95 ranking from all stations
+    var gas95Ranking = allFuelStationsWithPrices.slice().sort(function(a, b) {
         var aPrice = a.prices && a.prices.gasolina95 ? parseFloat(a.prices.gasolina95.replace(',', '.')) : Infinity;
         var bPrice = b.prices && b.prices.gasolina95 ? parseFloat(b.prices.gasolina95.replace(',', '.')) : Infinity;
         return aPrice - bPrice;
     });
 
-    // Create Diesel ranking
-    var dieselRanking = fuelStations.slice().sort(function(a, b) {
+    // Create Diesel ranking from all stations
+    var dieselRanking = allFuelStationsWithPrices.slice().sort(function(a, b) {
         var aPrice = a.prices && a.prices.diesel ? parseFloat(a.prices.diesel.replace(',', '.')) : Infinity;
         var bPrice = b.prices && b.prices.diesel ? parseFloat(b.prices.diesel.replace(',', '.')) : Infinity;
         return aPrice - bPrice;
     });
 
-    // Add rankings to each fuel station
-    fuelStations.forEach(function(station) {
+    // Add rankings to ALL fuel stations
+    allFuelStationsWithPrices.forEach(function(station) {
         if (station.amenity === 'fuel' && station.prices) {
             station.gas95Rank = gas95Ranking.findIndex(s => s.id === station.id) + 1;
             station.dieselRank = dieselRanking.findIndex(s => s.id === station.id) + 1;
@@ -375,7 +380,6 @@ function displayFuelStations(stations) {
         }
     });
     fuelStationsMarkers = [];
-    allFuelStations = stations;
 
     stations.forEach(function(station, index) {
         if (station.lat && station.lng && !isNaN(station.lat) && !isNaN(station.lng)) {
@@ -563,7 +567,7 @@ function filterFuelStations() {
     });
 
     // Display filtered stations
-    displayFuelStations(filteredStations);
+    displayFuelStations(filteredStations, false);
 }
 
 // Find matching fuel price data for an OSM station
