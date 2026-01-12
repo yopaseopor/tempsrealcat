@@ -641,8 +641,24 @@ function loadAllGtfsDatasets() {
     showGtfsLoading();
     $('#gtfs-search').val(''); // Clear search
 
-    // Fetch datasets from Mobility Database API with small limit to avoid size issues
-    fetch('https://api.mobilitydatabase.org/v1/datasets?limit=10')
+    // Detect deployment environment for API calls
+    var hostname = window.location.hostname;
+    var isGitHubPages = hostname.includes('github.io');
+    var isVercel = hostname.includes('vercel.app') || hostname.includes('now.sh');
+
+    // Function to get API URL based on environment
+    function getApiUrl(endpoint) {
+        if (isVercel) {
+            return endpoint;
+        } else if (isGitHubPages) {
+            return 'https://openlocalmap2.vercel.app' + endpoint;
+        } else {
+            return endpoint;
+        }
+    }
+
+    // Fetch datasets from Mobility Database API via Vercel proxy
+    fetch(getApiUrl('/api/gtfs-datasets?limit=10'))
         .then(response => {
             if (!response.ok) {
                 throw new Error('API request failed: ' + response.status);
@@ -650,7 +666,7 @@ function loadAllGtfsDatasets() {
             return response.json();
         })
         .then(data => {
-            gtfsDatasets = data.datasets || [];
+            gtfsDatasets = data || [];
             displayGtfsDatasets(gtfsDatasets);
         })
         .catch(error => {
@@ -689,8 +705,8 @@ function searchGtfsDatasets() {
         displayGtfsDatasets(filtered);
         hideGtfsLoading();
     } else {
-        // Fetch and filter (smaller limit to avoid size issues)
-        fetch('https://api.mobilitydatabase.org/v1/datasets?limit=10')
+        // Fetch and filter via Vercel proxy (smaller limit to avoid size issues)
+        fetch(getApiUrl('/api/gtfs-datasets?limit=10'))
             .then(response => {
                 if (!response.ok) {
                     throw new Error('API request failed: ' + response.status);
@@ -698,14 +714,14 @@ function searchGtfsDatasets() {
                 return response.json();
             })
             .then(data => {
-                gtfsDatasets = data.datasets || [];
+                gtfsDatasets = data || [];
                 var filtered = gtfsDatasets.filter(function(dataset) {
                     var searchableText = [
                         dataset.provider_name || '',
                         dataset.name || '',
-                        dataset.location.country || '',
-                        dataset.location.subdivision_name || '',
-                        dataset.location.municipality || ''
+                        dataset.location?.country || '',
+                        dataset.location?.subdivision_name || '',
+                        dataset.location?.municipality || ''
                     ].join(' ').toLowerCase();
 
                     return searchableText.includes(searchTerm);

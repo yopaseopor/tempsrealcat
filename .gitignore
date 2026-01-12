@@ -56,3 +56,5 @@ target/
 
 
 *~
+.vercel
+.env*.local

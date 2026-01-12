@@ -81,9 +81,9 @@ function fetchRealtimeBicing() {
         if (isVercel) {
             // Use Vercel proxy
             apiUrl = '/api/bicing?url=' + encodeURIComponent(url);
-        } else if (isGitHubPages) {
-            // Use Vercel proxy from GitHub Pages
-            apiUrl = 'https://openlocalmap2.vercel.app/api/bicing?url=' + encodeURIComponent(url);
+    } else if (isGitHubPages) {
+        // Use Vercel proxy from GitHub Pages
+        apiUrl = 'https://openlocalmap2-a2bfnl66b-yopaseopors-projects.vercel.app/api/bicing?url=' + encodeURIComponent(url);
         } else {
             // Local development - try direct fetch first, then fallback to proxy
             return fetch(url).catch(() => {
