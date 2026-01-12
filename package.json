@@ -21,6 +21,9 @@
   },
   "homepage": "https://github.com/yopaseopor/tempsrealcat#readme",
   "dependencies": {
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "axios": "^1.6.8",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5"
   }
 }

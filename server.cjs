@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const axios = require('axios');
 const app = express();
 
 // Import API routers
@@ -606,6 +607,121 @@ app.get('/api/geocode-road', async (req, res) => {
   }
 });
 
+// Configurable CORS Proxy endpoint - supports any URL with custom options
+app.get('/api/proxy', async (req, res) => {
+  try {
+    const targetUrl = req.query.url;
+    const method = req.query.method || 'GET';
+    const timeout = parseInt(req.query.timeout) || 30000; // Default 30 seconds
+    const userAgent = req.query.userAgent || 'OpenLocalMap-Proxy/1.0';
+
+    if (!targetUrl) {
+      setCorsHeaders(res);
+      return res.status(400).json({
+        error: 'Missing target URL parameter',
+        usage: '/api/proxy?url=https://example.com/api/data&method=GET&timeout=30000&userAgent=Custom-UA',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Validate URL format
+    try {
+      new URL(targetUrl);
+    } catch (error) {
+      setCorsHeaders(res);
+      return res.status(400).json({
+        error: 'Invalid URL format',
+        url: targetUrl,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    console.log(`🌐 Proxying ${method} request to: ${targetUrl}`);
+
+    // Prepare axios config
+    const axiosConfig = {
+      method: method.toUpperCase(),
+      url: targetUrl,
+      timeout: timeout,
+      headers: {
+        'User-Agent': userAgent,
+        'Accept': req.query.accept || '*/*'
+      },
+      responseType: 'arraybuffer' // Handle binary data
+    };
+
+    // Add custom headers if provided
+    if (req.query.headers) {
+      try {
+        const customHeaders = JSON.parse(req.query.headers);
+        axiosConfig.headers = { ...axiosConfig.headers, ...customHeaders };
+      } catch (error) {
+        console.warn('⚠️ Invalid headers JSON, using default headers');
+      }
+    }
+
+    // Add request body for POST/PUT/PATCH if provided
+    if (['POST', 'PUT', 'PATCH'].includes(method.toUpperCase()) && req.query.body) {
+      axiosConfig.data = req.query.body;
+      // Set content-type for body data
+      if (!axiosConfig.headers['Content-Type']) {
+        axiosConfig.headers['Content-Type'] = 'application/x-www-form-urlencoded';
+      }
+    }
+
+    const response = await axios(axiosConfig);
+
+    // Set response headers
+    const contentType = response.headers['content-type'] || 'application/octet-stream';
+    setCorsHeaders(res);
+    res.setHeader('Content-Type', contentType);
+
+    // Copy other relevant headers
+    const headersToCopy = ['content-length', 'cache-control', 'expires', 'last-modified'];
+    headersToCopy.forEach(header => {
+      if (response.headers[header]) {
+        res.setHeader(header, response.headers[header]);
+      }
+    });
+
+    console.log(`✅ Successfully proxied request: ${response.status} ${contentType}`);
+
+    // Send response data
+    res.status(response.status).send(response.data);
+
+  } catch (error) {
+    console.error('❌ Error proxying request:', error.message);
+
+    setCorsHeaders(res);
+    if (error.response) {
+      // Server responded with error status
+      res.status(error.response.status).json({
+        error: 'Target server error',
+        status: error.response.status,
+        message: error.response.statusText || error.message,
+        url: req.query.url,
+        timestamp: new Date().toISOString()
+      });
+    } else if (error.code === 'ECONNABORTED') {
+      // Timeout
+      res.status(408).json({
+        error: 'Request timeout',
+        message: `Request timed out after ${req.query.timeout || 30000}ms`,
+        url: req.query.url,
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      // Other error
+      res.status(500).json({
+        error: 'Proxy error',
+        message: error.message,
+        url: req.query.url,
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+});
+
 // Handle all routes by serving index.html (for SPA routing)
 // API routes are handled above, so this only handles non-API routes
 app.use((req, res, next) => {
@@ -643,4 +759,5 @@ app.listen(PORT, () => {
   console.log(`🚦 DGT Traffic API proxy: http://localhost:${PORT}/api/dgt-traffic`);
   console.log(`🚦 GENCAT RSS Traffic API proxy: http://localhost:${PORT}/api/gencat-rss-traffic`);
   console.log(`🚦 GENCAT GML Traffic API proxy: http://localhost:${PORT}/api/gencat-gml-traffic`);
+  console.log(`🌐 Configurable CORS Proxy: http://localhost:${PORT}/api/proxy?url=[target-url]`);
 });
