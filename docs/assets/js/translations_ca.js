@@ -143,6 +143,24 @@ window.translations_ca = {
     wikidata_instance_of: "Instància de",
     wikidata_subclass_of: "Subclasse de",
 
+    // Fuel pane
+    fuel_title: "⛽ Estacions de Servei",
+    fuel_description: "Visualitza les estacions de servei i punts de recàrrega disponibles al mapa.",
+    fuel_stations: "⛽ Estacions de Servei",
+    fuel_start_stations: "Mostrar estacions",
+    fuel_stop_stations: "Amagar estacions",
+    fuel_status: "Estat:",
+    fuel_status_inactive: "Inactiu",
+    fuel_status_loading: "Carregant estacions de servei...",
+    fuel_how_it_works: "📖 Com funciona",
+    fuel_step1: "Mostrar estacions de servei i punts de recàrrega al mapa",
+    fuel_step2: "Clica als marcadors per veure informació detallada",
+    fuel_step3: "Utilitza el filtre per mostrar només benzineres o punts de recàrrega",
+    fuel_step4: "Les dades provenen d'OpenStreetMap",
+    fuel_coverage: "ℹ️ Cobertura: Aquest servei mostra les estacions de servei i punts de recàrrega disponibles. Les dades provenen d'OpenStreetMap i poden no estar completes.",
+    fuel_help_title: "Ajuda",
+    fuel_help_text: "Aquest panell et permet visualitzar les estacions de servei i punts de recàrrega disponibles a la zona. Les dades provenen d'OpenStreetMap i inclouen informació bàsica sobre cada estació.",
+
     // Comments pane
     comments_title: "Comentaris",
 

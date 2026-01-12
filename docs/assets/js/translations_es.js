@@ -142,6 +142,24 @@ window.translations_es = {
     wikidata_instance_of: "Instancia de",
     wikidata_subclass_of: "Subclase de",
 
+    // Fuel pane
+    fuel_title: "⛽ Estaciones de Servicio",
+    fuel_description: "Visualiza las estaciones de servicio y puntos de recarga disponibles en el mapa.",
+    fuel_stations: "⛽ Estaciones de Servicio",
+    fuel_start_stations: "Mostrar estaciones",
+    fuel_stop_stations: "Ocultar estaciones",
+    fuel_status: "Estado:",
+    fuel_status_inactive: "Inactivo",
+    fuel_status_loading: "Cargando estaciones de servicio...",
+    fuel_how_it_works: "📖 Cómo funciona",
+    fuel_step1: "Mostrar estaciones de servicio y puntos de recarga en el mapa",
+    fuel_step2: "Haz clic en los marcadores para ver información detallada",
+    fuel_step3: "Utiliza el filtro para mostrar solo gasolineras o puntos de recarga",
+    fuel_step4: "Los datos provienen de OpenStreetMap",
+    fuel_coverage: "ℹ️ Cobertura: Este servicio muestra las estaciones de servicio y puntos de recarga disponibles. Los datos provienen de OpenStreetMap y pueden no estar completos.",
+    fuel_help_title: "Ayuda",
+    fuel_help_text: "Este panel te permite visualizar las estaciones de servicio y puntos de recarga disponibles en la zona. Los datos provienen de OpenStreetMap e incluyen información básica sobre cada estación.",
+
     // Comments pane
     comments_title: "Comentarios",
 

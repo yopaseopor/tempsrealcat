@@ -142,6 +142,24 @@ window.translations_en = {
     wikidata_instance_of: "Instance of",
     wikidata_subclass_of: "Subclass of",
 
+    // Fuel pane
+    fuel_title: "⛽ Fuel Stations",
+    fuel_description: "View fuel stations and charging points available on the map.",
+    fuel_stations: "⛽ Fuel Stations",
+    fuel_start_stations: "Show stations",
+    fuel_stop_stations: "Hide stations",
+    fuel_status: "Status:",
+    fuel_status_inactive: "Inactive",
+    fuel_status_loading: "Loading fuel stations...",
+    fuel_how_it_works: "📖 How it works",
+    fuel_step1: "Show fuel stations and charging points on the map",
+    fuel_step2: "Click markers to view detailed information",
+    fuel_step3: "Use the filter to show only gas stations or charging points",
+    fuel_step4: "Data comes from OpenStreetMap",
+    fuel_coverage: "ℹ️ Coverage: This service shows available fuel stations and charging points. Data comes from OpenStreetMap and may not be complete.",
+    fuel_help_title: "Help",
+    fuel_help_text: "This panel allows you to view fuel stations and charging points available in the area. Data comes from OpenStreetMap and includes basic information about each station.",
+
     // Comments pane
     comments_title: "Comments",
 

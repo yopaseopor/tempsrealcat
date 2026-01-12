@@ -51,6 +51,7 @@
 	<li><a href="#parking" role="tab"><i class="fa fa-car"></i><br><small>Parking</small></a></li>
 	<li><a href="#mapillary" role="tab"><i class="fa fa-street-view"></i><br><small>Street</small></a></li>
 	<li><a href="#traffic" role="tab"><i class="fa fa-road-circle-xmark"></i><br><small>Trànsit</small></a></li>
+	<li><a href="#fuel" role="tab"><i class="fa-solid fa-gas-pump"></i><br><small>Combustible</small></a></li>
 	<li><a href="#links" role="tab"><i class="fa fa-link"></i><br><small>Links</small></a></li>
 	<li><a href="#developer" role="tab"><i class="fa fa-code"></i><br><small>Expert</small></a></li>
 	<li><a href="#language" role="tab"><i class="fa fa-language"></i><br><small>Idioma</small></a></li>
@@ -219,6 +220,90 @@
 	<!--TRAFFIC-->
 	<div class="sidebar-pane" id="traffic">
 	  <!-- Content will be loaded dynamically from traffic.html -->
+	</div>
+
+	<!--FUEL-->
+	<div class="sidebar-pane" id="fuel">
+	  <div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span>
+	  </div>
+	  <h1 data-i18n="fuel_title">⛽ Estacions de Servei</h1>
+	  <p style="text-align:justify; margin-right:5px;" data-i18n="fuel_description">Visualitza les estacions de servei i punts de recàrrega disponibles al mapa.</p>
+
+	  <!-- Fuel stations controls -->
+	  <div style="margin-bottom: 15px;">
+	    <h3 style="margin-bottom: 10px; color: #333;" data-i18n="fuel_stations">⛽ Estacions de Servei</h3>
+	    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
+	      <button id="start-fuel-stations-btn" onclick="startFuelStations()" style="background:#2a2a2a; color:white; padding:10px 15px; border:none; border-radius:5px; cursor:pointer; font-size: 14px;">
+	        <i class="fa-solid fa-gas-pump"></i> <span data-i18n="fuel_start_stations">Mostrar estacions</span>
+	      </button>
+	      <button id="stop-fuel-stations-btn" onclick="stopFuelStations()" style="background:#cc0000; color:white; padding:10px 15px; border:none; border-radius:5px; cursor:pointer; font-size: 14px; display: none;">
+	        <i class="fa fa-stop"></i> <span data-i18n="fuel_stop_stations">Amagar estacions</span>
+	      </button>
+	    </div>
+
+	    <!-- Filter options -->
+	    <div style="margin-bottom: 10px;">
+	      <label for="fuel-type-filter" style="display: block; margin-bottom: 5px; font-weight: bold;">Filtrar per tipus:</label>
+	      <select id="fuel-type-filter" onchange="filterFuelStations()" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px;">
+	        <option value="all">Tots els tipus</option>
+	        <option value="fuel">Només benzineres</option>
+	        <option value="charging">Només punts de recàrrega</option>
+	      </select>
+	    </div>
+	  </div>
+
+	  <!-- Status display -->
+	  <div id="fuel-stations-status" style="background: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #ddd;">
+	    <span data-i18n="fuel_status">Status:</span> <span data-i18n="fuel_status_inactive">Inactiu</span>
+	  </div>
+
+	  <!-- Instructions -->
+	  <div style="background: #e8f4f8; padding: 15px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #b8daff;">
+	    <h4 style="margin-top: 0; color: #004085;" data-i18n="fuel_how_it_works">📖 Com funciona</h4>
+	    <ol style="font-size: 13px; color: #004085; margin: 0; padding-left: 20px;">
+	      <li data-i18n="fuel_step1">Mostra estacions de servei i punts de recàrrega al mapa</li>
+	      <li data-i18n="fuel_step2">Clica als marcadors per veure informació detallada</li>
+	      <li data-i18n="fuel_step3">Utilitza el filtre per mostrar només benzineres o punts de recàrrega</li>
+	      <li data-i18n="fuel_step4">Les dades provenen d'OpenStreetMap</li>
+	    </ol>
+	  </div>
+
+      <!-- Fuel Stations Table -->
+      <div id="fuel-stations-table-container" style="display: none; margin-top: 15px;">
+        <h4 style="margin-bottom: 10px; color: #333;"><i class="fa fa-table"></i> Llista d'estacions de servei</h4>
+        <div style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px;">
+          <table id="fuel-stations-table" style="width: 100%; border-collapse: collapse; font-size: 12px;">
+            <thead style="background: #f8f9fa; position: sticky; top: 0;">
+              <tr>
+                <th style="padding: 8px; border: 1px solid #ddd; text-align: center; font-weight: bold;">#</th>
+                <th style="padding: 8px; border: 1px solid #ddd; text-align: left; font-weight: bold;">Nom</th>
+                <th style="padding: 8px; border: 1px solid #ddd; text-align: center; font-weight: bold;">Gasolina 95</th>
+                <th style="padding: 8px; border: 1px solid #ddd; text-align: center; font-weight: bold;">Diesel</th>
+                <th style="padding: 8px; border: 1px solid #ddd; text-align: left; font-weight: bold;">Adreça</th>
+              </tr>
+            </thead>
+            <tbody id="fuel-stations-table-body">
+              <!-- Table rows will be populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top: 10px; font-size: 11px; color: #666;">
+          <i class="fa fa-info-circle"></i> Clica a una fila per centrar el mapa en l'estació
+        </div>
+      </div>
+
+      <!-- Coverage info -->
+      <div style="background: #fff3cd; padding: 10px; border-radius: 3px; border: 1px solid #ffeaa7; font-size: 12px;">
+        <strong data-i18n="fuel_coverage">ℹ️ Cobertura:</strong> Aquest servei mostra les estacions de servei i punts de recàrrega disponibles. Les dades provenen d'OpenStreetMap i poden no estar completes.
+      </div>
+
+      <br><hr width="90%">
+
+      <!-- Help section -->
+      <h3 style="color: #333;" data-i18n="fuel_help_title"><i class="fa fa-question-circle"></i> Ajuda</h3>
+      <p style="text-align:justify; margin-right:5px; font-size: 13px;" data-i18n="fuel_help_text">
+        Aquest panell et permet visualitzar les estacions de servei i punts de recàrrega disponibles a la zona. Les dades provenen d'OpenStreetMap i inclouen informació bàsica sobre cada estació.
+      </p>
 	</div>
 
 	<!--RUTES-->
@@ -2157,6 +2242,7 @@ s.setAttribute('data-timestamp', +new Date());
     <script src="assets/js/metro.functions.js"></script>
     <script src="assets/js/bicycle.functions.js"></script>
     <script src="assets/js/traffic.functions.js"></script>
+    <script src="assets/js/fuel.functions.js"></script>
 
   </body>
 </html>
