@@ -80,15 +80,15 @@ function fetchRealtimeBicing() {
         var apiUrl;
         if (isVercel) {
             // Use Vercel proxy
-            apiUrl = '/api/bicing?url=' + encodeURIComponent(url);
+            apiUrl = '/api/proxy?url=' + encodeURIComponent(url);
         } else if (isGitHubPages) {
             // Use Vercel proxy from GitHub Pages - will use the project's own Vercel deployment
-            apiUrl = 'https://tempsrealcat.vercel.app/api/bicing?url=' + encodeURIComponent(url);
+            apiUrl = 'https://tempsrealcat.vercel.app/api/proxy?url=' + encodeURIComponent(url);
         } else {
             // Local development - try direct fetch first, then fallback to proxy
             return fetch(url).catch(() => {
                 console.log('🔄 Direct fetch failed, trying proxy for:', url);
-                return fetch('/api/bicing?url=' + encodeURIComponent(url));
+                return fetch('/api/proxy?url=' + encodeURIComponent(url));
             });
         }
         return fetch(apiUrl);
