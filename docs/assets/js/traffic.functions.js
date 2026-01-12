@@ -33,7 +33,7 @@ async function loadTrafficData() {
                 return endpoint;
             } else if (isGitHubPages) {
                 // Use Vercel proxy from GitHub Pages
-                return 'https://openlocalmap2.vercel.app' + endpoint;
+                return 'https://tempsrealcat.vercel.app' + endpoint;
             } else {
                 // Local development
                 return endpoint;
