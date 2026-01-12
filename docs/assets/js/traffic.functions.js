@@ -40,11 +40,11 @@ async function loadTrafficData() {
             }
         }
 
-        // Fetch data from all sources in parallel
+        // Fetch data from all sources in parallel using proxied URLs
         const [dgtResponse, rssResponse, gmlResponse] = await Promise.allSettled([
-            fetch(getApiUrl('/api/dgt-traffic')),
-            fetch(getApiUrl('/api/gencat-rss-traffic')),
-            fetch(getApiUrl('/api/gencat-gml-traffic'))
+            fetch('https://tempsrealcat.vercel.app/api/proxy?url=https://infocar.dgt.es/datex2/sct/SituationPublication/all/content.xml'),
+            fetch('https://tempsrealcat.vercel.app/api/proxy?url=https://www.gencat.cat/transit/opendata/incidenciesGML.xml'),
+            fetch('https://tempsrealcat.vercel.app/api/proxy?url=https://www.gencat.cat/transit/opendata/incidenciesRSS.xml')
         ]);
 
         let allIncidents = [];
