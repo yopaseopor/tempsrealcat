@@ -43,9 +43,9 @@ export default async function handler(req, res) {
         });
       }
     } else {
-      // Default fallback URL
-      bicingUrl = 'https://barcelona.publicbikesystem.net/customer/gbfs/v2/en/station_status';
-      console.log('🚴 Using default URL:', bicingUrl);
+      // Default fallback URL - using proxy
+      bicingUrl = 'https://tempsrealcat.vercel.app/api/proxy?url=https://barcelona.publicbikesystem.net/customer/gbfs/v2/en/station_status';
+      console.log('🚴 Using default proxy URL:', bicingUrl);
     }
 
     const response = await fetch(bicingUrl, {
