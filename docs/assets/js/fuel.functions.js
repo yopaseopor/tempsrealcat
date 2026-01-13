@@ -15,15 +15,16 @@ function startFuelStations() {
         return;
     }
 
-    // Initial load
-    fetchFuelStations().then(function(stations) {
-        displayFuelStations(stations, true);
-    });
-
     // Update UI
     document.getElementById('start-fuel-stations-btn').style.display = 'none';
     document.getElementById('stop-fuel-stations-btn').style.display = 'inline-block';
     updateFuelStationsStatus(getTranslation('fuel_status_loading'));
+
+    // Initial load
+    fetchFuelStations().then(function(stations) {
+        allFuelStations = stations;
+        displayFuelStations(stations);
+    });
 }
 
 // Stop fuel stations visualization
@@ -254,94 +255,121 @@ function fetchFuelStations() {
         .catch(error => {
             console.error('❌ Overpass API fetch failed:', error);
 
-            // Try fallback server
-            var fallbackUrl = 'https://overpass.kumi.systems/api/interpreter?data=' + encodeURIComponent(query);
-            console.log('🔄 Trying fallback Overpass server...');
+    // Try multiple fallback servers (prioritizing main server first)
+    var fallbackServers = [
+        'https://overpass-api.de/api/interpreter', // Main server
+        'https://overpass.kumi.systems/api/interpreter', // Kumi server (second priority)
+        'https://overpass.osm.ch/api/interpreter', // Expert server
+        'https://overpass.openstreetmap.fr/api/interpreter'
+    ];
 
-            return fetch(fallbackUrl)
-                .then(response => response.json())
-                .then(data => {
-                    console.log('✅ Fallback Overpass server succeeded');
+            // Function to try servers sequentially
+            function tryFallbackServer(serverIndex) {
+                if (serverIndex >= fallbackServers.length) {
+                    console.error('❌ All Overpass fallback servers failed');
+                    alert('⛽ Error carregant les estacions de servei. Tots els servidors d\'OpenStreetMap no estan disponibles temporalment.');
+                    return Promise.resolve([]);
+                }
 
-                    var stations = [];
+                var serverUrl = fallbackServers[serverIndex];
+                var fallbackUrl = serverUrl + '?data=' + encodeURIComponent(query);
+                console.log('🔄 Trying fallback Overpass server', serverIndex + 1, 'of', fallbackServers.length, ':', serverUrl);
 
-                    data.elements.forEach(function(element) {
-                        try {
-                            var lat, lng;
-
-                            if (element.type === 'node') {
-                                lat = element.lat;
-                                lng = element.lon;
-                            } else if (element.center) {
-                                lat = element.center.lat;
-                                lng = element.center.lon;
-                            } else {
-                                return;
-                            }
-
-                            if (!lat || !lng || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-                                return;
-                            }
-
-                            var amenity = element.tags ? element.tags.amenity : null;
-                            var name = element.tags ? (element.tags.name || element.tags.brand || element.tags.operator || 'Estació sense nom') : 'Estació sense nom';
-
-                            stations.push({
-                                id: element.id,
-                                type: element.type,
-                                amenity: amenity,
-                                name: name,
-                                lat: parseFloat(lat),
-                                lng: parseFloat(lng),
-                                tags: element.tags,
-                                timestamp: new Date().getTime()
-                            });
-
-                        } catch (error) {
-                            console.warn('Error processing element at fallback:', error);
+                return fetch(fallbackUrl)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('HTTP ' + response.status + ': ' + response.statusText);
                         }
-                    });
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('✅ Fallback Overpass server', serverIndex + 1, 'succeeded');
 
-                    return stations;
-                })
-                .catch(fallbackError => {
-                    console.error('❌ Fallback Overpass server also failed:', fallbackError);
-                    alert('⛽ Error carregant les estacions de servei. L\'API d\'OpenStreetMap no està disponible temporalment.');
-                    return [];
-                });
+                        var stations = [];
+
+                        data.elements.forEach(function(element) {
+                            try {
+                                var lat, lng;
+
+                                if (element.type === 'node') {
+                                    lat = element.lat;
+                                    lng = element.lon;
+                                } else if (element.center) {
+                                    lat = element.center.lat;
+                                    lng = element.center.lon;
+                                } else {
+                                    return;
+                                }
+
+                                if (!lat || !lng || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+                                    return;
+                                }
+
+                                var amenity = element.tags ? element.tags.amenity : null;
+                                var name = element.tags ? (element.tags.name || element.tags.brand || element.tags.operator || 'Estació sense nom') : 'Estació sense nom';
+
+                                stations.push({
+                                    id: element.id,
+                                    type: element.type,
+                                    amenity: amenity,
+                                    name: name,
+                                    lat: parseFloat(lat),
+                                    lng: parseFloat(lng),
+                                    tags: element.tags,
+                                    timestamp: new Date().getTime()
+                                });
+
+                            } catch (error) {
+                                console.warn('Error processing element at fallback server', serverIndex + 1, ':', error);
+                            }
+                        });
+
+                        return stations;
+                    })
+                    .catch(fallbackError => {
+                        console.warn('❌ Fallback Overpass server', serverIndex + 1, 'failed:', fallbackError.message);
+                        // Try next server
+                        return tryFallbackServer(serverIndex + 1);
+                    });
+            }
+
+            return tryFallbackServer(0);
         });
 }
 
 // Display fuel stations on map
-function displayFuelStations(stations, isInitialLoad = false) {
+function displayFuelStations(stations) {
     console.log('⛽ DISPLAYING', stations.length, 'FUEL STATIONS ON MAP...');
 
-    // Store all stations only on initial load
-    if (isInitialLoad) {
-        allFuelStations = stations;
-    }
+    // Calculate separate rankings for Gas 95, Gas 98 and Diesel before sorting
+    var fuelStations = stations.filter(s => s.amenity === 'fuel' && s.prices);
 
-    // Calculate rankings based on ALL fuel stations (not just the filtered ones)
-    var allFuelStationsWithPrices = allFuelStations.filter(s => s.amenity === 'fuel' && s.prices);
-
-    // Create Gas 95 ranking from all stations
-    var gas95Ranking = allFuelStationsWithPrices.slice().sort(function(a, b) {
+    // Create Gas 95 ranking
+    var gas95Ranking = fuelStations.slice().sort(function(a, b) {
         var aPrice = a.prices && a.prices.gasolina95 ? parseFloat(a.prices.gasolina95.replace(',', '.')) : Infinity;
         var bPrice = b.prices && b.prices.gasolina95 ? parseFloat(b.prices.gasolina95.replace(',', '.')) : Infinity;
         return aPrice - bPrice;
     });
 
-    // Create Diesel ranking from all stations
-    var dieselRanking = allFuelStationsWithPrices.slice().sort(function(a, b) {
+    // Create Gas 98 ranking
+    var gas98Ranking = fuelStations.slice().sort(function(a, b) {
+        var aPrice = a.prices && a.prices.gasolina98 ? parseFloat(a.prices.gasolina98.replace(',', '.')) : Infinity;
+        var bPrice = b.prices && b.prices.gasolina98 ? parseFloat(b.prices.gasolina98.replace(',', '.')) : Infinity;
+        return aPrice - bPrice;
+    });
+
+    // Create Diesel ranking
+    var dieselRanking = fuelStations.slice().sort(function(a, b) {
         var aPrice = a.prices && a.prices.diesel ? parseFloat(a.prices.diesel.replace(',', '.')) : Infinity;
         var bPrice = b.prices && b.prices.diesel ? parseFloat(b.prices.diesel.replace(',', '.')) : Infinity;
         return aPrice - bPrice;
     });
 
-    // Add rankings to ALL fuel stations
-    allFuelStationsWithPrices.forEach(function(station) {
+    // Add rankings to each fuel station
+    fuelStations.forEach(function(station) {
         if (station.amenity === 'fuel' && station.prices) {
             station.gas95Rank = gas95Ranking.findIndex(s => s.id === station.id) + 1;
+            station.gas98Rank = gas98Ranking.findIndex(s => s.id === station.id) + 1;
             station.dieselRank = dieselRanking.findIndex(s => s.id === station.id) + 1;
         }
     });
@@ -396,8 +424,22 @@ function displayFuelStations(stations, isInitialLoad = false) {
 
             // Create ranking display for fuel stations
             var rankingDisplay = '';
-            if (station.amenity === 'fuel' && station.gas95Rank && station.dieselRank) {
-                rankingDisplay = station.gas95Rank + '/' + station.dieselRank;
+            if (station.amenity === 'fuel' && station.prices) {
+                var rankings = [];
+                if (station.prices.gasolina95 && station.gas95Rank) {
+                    rankings.push(station.gas95Rank);
+                }
+                if (station.prices.gasolina98 && station.gas98Rank) {
+                    rankings.push(station.gas98Rank);
+                }
+                if (station.prices.diesel && station.dieselRank) {
+                    rankings.push(station.dieselRank);
+                }
+                if (rankings.length > 0) {
+                    rankingDisplay = rankings.join('/');
+                } else {
+                    rankingDisplay = (index + 1).toString();
+                }
             } else {
                 // Fallback to sequential number for charging stations or stations without rankings
                 rankingDisplay = (index + 1).toString();
@@ -416,16 +458,16 @@ function displayFuelStations(stations, isInitialLoad = false) {
                     priceLabels.push('95: ' + gas95Price);
                 }
 
+                // Add Gasolina 98 price if available
+                if (station.prices.gasolina98 && station.prices.gasolina98 !== '') {
+                    var gas98Price = parseFloat(station.prices.gasolina98.replace(',', '.')).toFixed(3);
+                    priceLabels.push('98: ' + gas98Price);
+                }
+
                 // Add Diesel price if available
                 if (station.prices.diesel && station.prices.diesel !== '') {
                     var dieselPrice = parseFloat(station.prices.diesel.replace(',', '.')).toFixed(3);
                     priceLabels.push('D: ' + dieselPrice);
-                }
-
-                // If no preferred prices, try Gasolina 98
-                if (priceLabels.length === 0 && station.prices.gasolina98 && station.prices.gasolina98 !== '') {
-                    var gas98Price = parseFloat(station.prices.gasolina98.replace(',', '.')).toFixed(3);
-                    priceLabels.push('98: ' + gas98Price);
                 }
 
                 if (priceLabels.length > 0) {
@@ -440,8 +482,8 @@ function displayFuelStations(stations, isInitialLoad = false) {
                 icon: L.divIcon({
                     html: markerContent,
                     className: 'fuel-station-marker',
-                    iconSize: [32, 40], // Increased height to accommodate price label
-                    iconAnchor: [16, 16]
+                    iconSize: [64, 80], // Even larger size for maximum visibility
+                    iconAnchor: [32, 40]
                 })
             });
 
@@ -567,7 +609,7 @@ function filterFuelStations() {
     });
 
     // Display filtered stations
-    displayFuelStations(filteredStations, false);
+    displayFuelStations(filteredStations);
 }
 
 // Find matching fuel price data for an OSM station
@@ -656,6 +698,11 @@ function sortFuelStationsTable(field) {
                 var bPrice = b.prices && b.prices.gasolina95 ? parseFloat(b.prices.gasolina95.replace(',', '.')) : Infinity;
                 result = aPrice - bPrice;
                 break;
+            case 'gas98':
+                var aPrice = a.prices && a.prices.gasolina98 ? parseFloat(a.prices.gasolina98.replace(',', '.')) : Infinity;
+                var bPrice = b.prices && b.prices.gasolina98 ? parseFloat(b.prices.gasolina98.replace(',', '.')) : Infinity;
+                result = aPrice - bPrice;
+                break;
             case 'diesel':
                 var aPrice = a.prices && a.prices.diesel ? parseFloat(a.prices.diesel.replace(',', '.')) : Infinity;
                 var bPrice = b.prices && b.prices.diesel ? parseFloat(b.prices.diesel.replace(',', '.')) : Infinity;
@@ -699,6 +746,9 @@ function populateFuelStationsTable(stations, isSorted = false) {
                 <a href="#" onclick="sortFuelStationsTable('gas95'); return false;" style="color: #0066cc; text-decoration: none;">Gasolina 95</a>
             </th>
             <th style="padding: 8px; border: 1px solid #ddd; text-align: center; font-weight: bold;">
+                <a href="#" onclick="sortFuelStationsTable('gas98'); return false;" style="color: #0066cc; text-decoration: none;">Gasolina 98</a>
+            </th>
+            <th style="padding: 8px; border: 1px solid #ddd; text-align: center; font-weight: bold;">
                 <a href="#" onclick="sortFuelStationsTable('diesel'); return false;" style="color: #0066cc; text-decoration: none;">Diesel</a>
             </th>
             <th style="padding: 8px; border: 1px solid #ddd; text-align: left; font-weight: bold;">
@@ -725,6 +775,8 @@ function populateFuelStationsTable(stations, isSorted = false) {
         // Format prices
         var gas95Price = (station.prices && station.prices.gasolina95 && station.prices.gasolina95 !== '') ?
             station.prices.gasolina95 + ' €' : '-';
+        var gas98Price = (station.prices && station.prices.gasolina98 && station.prices.gasolina98 !== '') ?
+            station.prices.gasolina98 + ' €' : '-';
         var dieselPrice = (station.prices && station.prices.diesel && station.prices.diesel !== '') ?
             station.prices.diesel + ' €' : '-';
 
@@ -769,6 +821,7 @@ function populateFuelStationsTable(stations, isSorted = false) {
             <td style="${numberStyle}">${stationNumber}</td>
             <td style="${nameStyle}">${station.name}</td>
             <td style="padding: 8px; border: 1px solid #ddd; text-align: center; ${gas95Price !== '-' ? 'color: #28a745; font-weight: bold;' : 'color: #999;'}">${gas95Price}</td>
+            <td style="padding: 8px; border: 1px solid #ddd; text-align: center; ${gas98Price !== '-' ? 'color: #ff6b35; font-weight: bold;' : 'color: #999;'}">${gas98Price}</td>
             <td style="padding: 8px; border: 1px solid #ddd; text-align: center; ${dieselPrice !== '-' ? 'color: #007acc; font-weight: bold;' : 'color: #999;'}">${dieselPrice}</td>
             <td style="${addressStyle}">${station.address || 'Adreça desconeguda'}</td>
         `;
