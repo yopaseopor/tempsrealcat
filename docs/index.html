@@ -1,18 +1,18 @@
   <head>
   <!--MODIFICAR AQUÍ-->
-    <title>OpenLocalMap</title>
+    <title>Temps Real Cat</title>
 
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <!--MODIFICAR AQUÍ-->
-	<meta property="og:title" content="OpenLocalMap" />
+	<meta property="og:title" content="Temps Real Cat" />
     <meta property="og:type" content="website" />
 	<!--MODIFICAR AQUÍ-->
-    <meta property="og:url" content="https://osm-catalan.github.io/openlocalmap" />
+    <meta property="og:url" content="https://yopaseopor.github.io/tempsrealcat/docs" />
 	<!--MODIFICAR AQUÍ-->
     <meta property="og:image" content="https://osm-catalan.github.io/openlocalmap/assets/img/preview.jpg" />
 	<!--MODIFICAR AQUÍ-->
-    <meta property="og:description" content="Mapa de Vilanova i la Geltrú amb cerca de punts d'interès i altra informació." />
+    <meta property="og:description" content="Dades en temps real sobre transports a Catalunya." />
     <link rel="shortcut icon" href="assets/img/favicon.ico"/>
     <link rel="stylesheet" href="assets/leaflet/leaflet.css" />
     <link rel="stylesheet" href="assets/css/Control.Loading.css" />
@@ -43,6 +43,7 @@
 	<li><a href="#train" role="tab"><i class="fa fa-train"></i><br><small>RENFE</small></a></li>
 	<li><a href="#fgc" role="tab"><i class="fa fa-chevron-circle-right"></i><br><small>FGC</small></a></li>
 	<li><a href="#bus" role="tab"><i class="fa fa-bus"></i><br><small>Bus</small></a></li>
+	<li><a href="#busamb" role="tab"><i class="fa-solid fa-bus-simple"></i><br><small>Bus AMB</small></a></li>
 	<li><a href="#metro" role="tab"><i class="fa fa-subway"></i><br><small>Metro</small></a></li>
 	<li><a href="#gtfs" role="tab"><i class="fa fa-clock"></i><br><small>GTFS</small></a></li>
 	<li><a href="#wikipedia" role="tab"><i class="fa fa-book"></i><br><small>Viqui</small></a></li>
@@ -410,6 +411,11 @@
 	<!--BUS-->
 	<div class="sidebar-pane" id="bus">
 	  <!-- Content will be loaded dynamically from bus.html -->
+	</div>
+
+	<!--BUSAMB-->
+	<div class="sidebar-pane" id="busamb">
+	  <!-- Content will be loaded dynamically from busamb.html -->
 	</div>
 
 	<!--METRO-->
@@ -2239,6 +2245,7 @@ s.setAttribute('data-timestamp', +new Date());
     <script src="assets/js/renfe.functions.js"></script>
     <script src="assets/js/fgc.functions.js"></script>
     <script src="assets/js/bus.functions.js"></script>
+    <script src="assets/js/busamb.functions.js"></script>
     <script src="assets/js/metro.functions.js"></script>
     <script src="assets/js/bicycle.functions.js"></script>
     <script src="assets/js/traffic.functions.js"></script>

@@ -5,8 +5,7 @@
   bottom: 0;
   width: 100%;
   overflow: hidden;
-  z-index: 2000;
-  cursor: ew-resize; }
+  z-index: 2000; }
   .sidebar.collapsed {
     width: 50px; }
   @media (min-width: 768px) {

@@ -560,6 +560,48 @@ function loadBicycleContent() {
         });
 }
 
+// Function to load external HTML content for Bus AMB tab
+function loadBusAmbContent() {
+    const busAmbPane = document.getElementById('busamb');
+
+    // Check if content is already loaded (look for the specific Bus AMB title)
+    if (busAmbPane.querySelector('h1[data-i18n="busamb_title"]')) {
+        return; // Content already loaded
+    }
+
+    // Load the busamb.html content
+    fetch('busamb.html')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to load busamb.html');
+            }
+            return response.text();
+        })
+        .then(html => {
+            // Extract the sidebar-pane content from the HTML
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const busAmbContent = doc.querySelector('#busamb');
+
+            if (busAmbContent) {
+                // Clear existing content and add new content
+                busAmbPane.innerHTML = busAmbContent.innerHTML;
+
+                // Update language for the new content
+                updateLanguage();
+
+                console.log('Bus AMB content loaded successfully');
+            } else {
+                console.error('Could not find #busamb content in busamb.html');
+                busAmbPane.innerHTML = '<div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span></div><h1>Error loading Bus AMB content</h1>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading Bus AMB content:', error);
+            busAmbPane.innerHTML = '<div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span></div><h1>Error loading Bus AMB content</h1><p>' + error.message + '</p>';
+        });
+}
+
 // Function to load external HTML content for Traffic tab
 function loadTrafficContent() {
     const trafficPane = document.getElementById('traffic');
@@ -712,6 +754,15 @@ document.addEventListener('DOMContentLoaded', function() {
         bicycleTab.addEventListener('click', function(e) {
             // Load Bicycle content after a short delay to ensure tab is active
             setTimeout(loadBicycleContent, 100);
+        });
+    }
+
+    // Add event listener to Bus AMB tab
+    const busAmbTab = document.querySelector('a[href="#busamb"]');
+    if (busAmbTab) {
+        busAmbTab.addEventListener('click', function(e) {
+            // Load Bus AMB content after a short delay to ensure tab is active
+            setTimeout(loadBusAmbContent, 100);
         });
     }
 
