@@ -289,7 +289,8 @@ function fetchTMBStopsForLine(lineCode) {
                                 nom_parada: feature.properties.NOM_PARADA || feature.properties.nom_parada,
                                 lat: lat,
                                 lng: lng,
-                                line: lineCode
+                                line: lineCode,
+                                line_nom: allTMBLines.find(line => line.codi_linia === lineCode)?.nom_linia || lineCode
                             });
                         }
                     }
@@ -304,7 +305,8 @@ function fetchTMBStopsForLine(lineCode) {
                             nom_parada: stop.nom_parada || stop.name,
                             lat: parseFloat(stop.lat),
                             lng: parseFloat(stop.lng),
-                            line: lineCode
+                            line: lineCode,
+                            line_nom: allTMBLines.find(line => line.codi_linia === lineCode)?.nom_linia || lineCode
                         });
                     }
                 });
@@ -377,7 +379,9 @@ function fetchTMBScheduledBusesForStop(stopCode, stop) {
 // Helper function to process individual scheduled time entries
 function processScheduledEntry(schedule, scheduledArrivals, lineCode, stopCode) {
     try {
-        var routeId = schedule.codi_linia || lineCode;
+        var codiLinia = schedule.codi_linia || lineCode;
+        var lineInfo = allTMBLines.find(line => line.codi_linia === codiLinia);
+        var routeId = lineInfo ? lineInfo.nom_linia : codiLinia;
         var destination = schedule.desti_trajecte || '';
         var scheduledTimeStr = schedule.horaPas || schedule.hora || '';
 
@@ -455,7 +459,9 @@ function fetchTMBRealtimeBusesForStop(stopCode) {
                                     try {
                                         console.log('🔍 Processing TMB bus arrival:', bus, 'from line:', linia.codi_linia);
 
-                                        var routeId = linia.codi_linia || 'Unknown';
+                                        var codiLinia = linia.codi_linia || 'Unknown';
+                                        var lineInfo = allTMBLines.find(line => line.codi_linia === codiLinia);
+                                        var routeId = lineInfo ? lineInfo.nom_linia : codiLinia;
                                         var busId = linia.codi_trajecte || 'Unknown';
                                         var destination = linia.desti_trajecte || '';
                                         var timeArrival = bus.temps_arribada || 0;
@@ -1117,7 +1123,7 @@ function displayTMBTablePage() {
 
                 arrivalsHtml += '<div style="margin-bottom: 4px; font-size: 11px; border: 1px solid #eee; border-radius: 3px; padding: 4px; background: #f9f9f9;">' +
                     '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">' +
-                    '<span style="font-weight: bold; color: #c41e3a;">L' + arrival.route + '</span> ' +
+                    '<span style="font-weight: bold; color: #c41e3a;">' + arrival.route + '</span> ' +
                     '<span id="' + arrivalId + '" style="font-family: monospace; font-weight: bold; font-size: 10px;">' + countdownStr + '</span>' +
                     '</div>';
                 if (arrival.destination) {
@@ -1209,7 +1215,8 @@ function searchTMBTable() {
         var searchableText = [
             stop.codi_parada || stop.id || '',
             stop.nom_parada || '',
-            stop.line || ''
+            stop.line || '',
+            stop.line_nom || ''
         ].join(' ').toLowerCase();
 
         return searchableText.includes(searchTerm);
