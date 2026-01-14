@@ -782,16 +782,20 @@ function displayAMBStops(stops) {
                         var scheduledTimeStr = scheduledTime ? scheduledTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : '--:--';
                         var timeToArrival = arrival.timeToArrival;
 
+                        var arrivalId = 'popup-arrival-' + stop.stop_id + '-' + index;
+
                         popupContent += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; padding: 4px; background: #f9f9f9; border-radius: 3px;">' +
                             '<div style="font-size: 12px; color: #666;">' + scheduledTimeStr;
                         if (arrival.destination) {
                             popupContent += ' ➜ ' + arrival.destination;
                         }
                         popupContent += '</div>' +
-                            '<div style="font-weight: bold; font-family: monospace; font-size: 11px; color: ' +
-                            (timeToArrival <= 5 ? '#d63031' : timeToArrival <= 15 ? '#e17055' : '#0066cc') + ';">' +
-                            (timeToArrival === 0 ? 'Sortint' : timeToArrival + ' min') + '</div>' +
+                            '<div style="font-weight: bold; font-family: monospace; font-size: 11px;">' +
+                            '<span id="' + arrivalId + '">Calculating...</span></div>' +
                             '</div>';
+
+                        // Start live countdown for this popup arrival
+                        startAMBArrivalCountdown(arrivalId, scheduledTime);
                     });
 
                     // Show remaining count if more than 5
@@ -881,8 +885,10 @@ function parseCSVStopTimes(csvContent) {
         return [];
     }
 
-    // Parse data rows (limit to first 50000 for performance)
-    var maxRows = Math.min(lines.length - 1, 50000);
+    // Parse data rows (increased limit to handle all AMB bus lines - 269 lines with extensive schedules)
+    var maxRows = Math.min(lines.length - 1, 150000); // Increased from 50,000 to 150,000
+    console.log('📊 Processing', maxRows, 'stop times out of', (lines.length - 1), 'total rows');
+
     for (var i = 1; i <= maxRows; i++) {
         var line = lines[i].trim();
         if (!line) continue;
@@ -1344,8 +1350,24 @@ function showAMBFullTimetable(stopId) {
     }) : null;
 
     if (!stopData) {
-        console.error('❌ Stop data not found for:', stopId);
-        return;
+        // Try to find in GTFS data or create a fallback entry
+        if (window.gtfsData && window.gtfsData.stops) {
+            stopData = window.gtfsData.stops.find(function(stop) {
+                return stop.stop_id === stopId;
+            });
+        }
+
+        if (!stopData) {
+            // Create a fallback stop entry with default Barcelona coordinates
+            console.warn('⚠️ Stop data not found for:', stopId, '- creating fallback entry');
+            stopData = {
+                stop_id: stopId,
+                stop_name: 'Parada ' + stopId + ' (Sense dades completes)',
+                stop_lat: 41.3851, // Default Barcelona coordinates
+                stop_lon: 2.1734,
+                scheduledArrivals: []
+            };
+        }
     }
 
     // Show the timetable section
@@ -2171,42 +2193,11 @@ var ambTimetableItemsPerPage = 50;
 var ambAllTimetableEntries = [];
 var ambCurrentSortColumn = 'timeToArrivalSeconds'; // Default sort by time remaining
 var ambCurrentSortDirection = 'asc'; // 'asc' or 'desc'
-var ambShowNitBusOnly = false; // Toggle to show only NitBus routes
 var ambCurrentSearchTerm = ''; // Current search term for filtering
 
-// Check if a route is a NitBus (night bus) route
-function isNitBusRoute(routeName) {
-    if (!routeName) return false;
 
-    // NitBus routes typically start with 'N' followed by a number (N1, N2, N3, etc.)
-    // or contain 'NIT' or 'NITBUS' in the name
-    var upperRouteName = routeName.toUpperCase();
-    return upperRouteName.match(/^N\d+$/) || // N1, N2, N3, etc.
-           upperRouteName.includes('NIT') || // Contains NIT
-           upperRouteName.includes('NITBUS'); // Contains NITBUS
-}
 
-// Toggle NitBus filter
-function toggleNitBusFilter() {
-    ambShowNitBusOnly = !ambShowNitBusOnly;
-    console.log('🔄 NitBus filter toggled:', ambShowNitBusOnly ? 'ON' : 'OFF');
-
-    // Update UI to reflect filter state
-    var filterBtn = document.getElementById('nitbus-filter-btn');
-    if (filterBtn) {
-        filterBtn.innerHTML = ambShowNitBusOnly ?
-            '<i class="fa fa-moon-o"></i> Tots els autobusos' :
-            '<i class="fa fa-moon-o"></i> Només NitBus';
-        filterBtn.style.backgroundColor = ambShowNitBusOnly ? '#6c757d' : '#17a2b8';
-    }
-
-    // Re-generate timetable with filter applied
-    if (document.getElementById('amb-standalone-timetable').style.display !== 'none') {
-        showAMBStandaloneTimetable();
-    }
-}
-
-// Sort timetable entries by column
+        // Sort timetable entries by column
 function sortTimetableEntries(column, direction) {
     console.log('🔄 Sorting timetable by', column, 'in', direction, 'order');
 
@@ -2221,9 +2212,21 @@ function sortTimetableEntries(column, direction) {
                 aValue = a.route.toLowerCase();
                 bValue = b.route.toLowerCase();
                 break;
+            case 'stopId':
+                aValue = a.stopId.toLowerCase();
+                bValue = b.stopId.toLowerCase();
+                break;
+            case 'stopName':
+                aValue = (a.stopName || '').toLowerCase();
+                bValue = (b.stopName || '').toLowerCase();
+                break;
             case 'destination':
                 aValue = a.destination.toLowerCase();
                 bValue = b.destination.toLowerCase();
+                break;
+            case 'status':
+                aValue = a.status.toLowerCase();
+                bValue = b.status.toLowerCase();
                 break;
             case 'time':
                 aValue = a.scheduledTime.getTime();
@@ -2396,24 +2399,25 @@ function generateStopPopupContent(stop) {
             }
             popupContent += '</div>';
 
-            // Show up to 5 times per route
-            routeArrivals.slice(0, 5).forEach(function(arrival, index) {
-                var scheduledTime = arrival.scheduledTime;
-                var scheduledTimeStr = scheduledTime ? scheduledTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : '--:--';
-                var timeToArrivalSeconds = Math.max(0, Math.round((scheduledTime.getTime() - new Date().getTime()) / 1000));
-                var countdownText = timeToArrivalSeconds === 0 ? 'Sortint' : formatTimeRemaining(timeToArrivalSeconds);
+                            // Show up to 5 times per route
+                            routeArrivals.slice(0, 5).forEach(function(arrival, index) {
+                                var scheduledTime = arrival.scheduledTime;
+                                var scheduledTimeStr = scheduledTime ? scheduledTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : '--:--';
+                                var arrivalId = 'popup-arrival-' + stop.stop_id + '-' + index;
 
-                popupContent += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; padding: 4px; background: #f9f9f9; border-radius: 3px;">' +
-                    '<div style="font-size: 12px; color: #666;">' + scheduledTimeStr;
-                if (arrival.destination) {
-                    popupContent += ' ➜ ' + arrival.destination;
-                }
-                popupContent += '</div>' +
-                    '<div style="font-weight: bold; font-family: monospace; font-size: 11px; color: ' +
-                    (timeToArrivalSeconds <= 300 ? '#d63031' : timeToArrivalSeconds <= 900 ? '#e17055' : '#0066cc') + ';">' +
-                    countdownText + '</div>' +
-                    '</div>';
-            });
+                                popupContent += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; padding: 4px; background: #f9f9f9; border-radius: 3px;">' +
+                                    '<div style="font-size: 12px; color: #666;">' + scheduledTimeStr;
+                                if (arrival.destination) {
+                                    popupContent += ' ➜ ' + arrival.destination;
+                                }
+                                popupContent += '</div>' +
+                                    '<div style="font-weight: bold; font-family: monospace; font-size: 11px;">' +
+                                    '<span id="' + arrivalId + '">Calculating...</span></div>' +
+                                    '</div>';
+
+                                // Start live countdown for this popup arrival
+                                startAMBArrivalCountdown(arrivalId, scheduledTime);
+                            });
 
             // Show remaining count if more than 5
             if (routeArrivals.length > 5) {
@@ -2446,6 +2450,142 @@ function generateStopPopupContent(stop) {
 // Global variables for live countdown
 var countdownInterval = null;
 var lastCountdownUpdate = 0;
+
+// Store countdown intervals by stop ID (like TMB system)
+if (!window.ambCountdownIntervals) {
+    window.ambCountdownIntervals = {};
+}
+
+// Clear all AMB countdown intervals (called before re-rendering)
+function clearAMBCountdownIntervals() {
+    console.log('🧹 Clearing all AMB countdown intervals');
+
+    if (window.ambCountdownIntervals) {
+        var totalCleared = 0;
+
+        // Clear intervals for each stop
+        Object.keys(window.ambCountdownIntervals).forEach(function(stopId) {
+            var intervals = window.ambCountdownIntervals[stopId];
+            if (intervals && Array.isArray(intervals)) {
+                intervals.forEach(function(intervalId) {
+                    if (intervalId) {
+                        clearInterval(intervalId);
+                        totalCleared++;
+                    }
+                });
+            }
+            // Reset the array
+            window.ambCountdownIntervals[stopId] = [];
+        });
+
+        console.log('🧹 Cleared', totalCleared, 'AMB countdown intervals');
+    }
+}
+
+// Get countdown string for AMB bus arrival (similar to TMB)
+function getAMBCountdownString(scheduledTime) {
+    if (!scheduledTime) {
+        return '--:--:--';
+    }
+
+    var now = new Date().getTime();
+    var arrivalMs = scheduledTime.getTime();
+    var diffMs = arrivalMs - now;
+
+    if (diffMs <= 0) {
+        return 'Sortint';
+    }
+
+    // Convert to seconds, minutes, hours
+    var totalSeconds = Math.floor(diffMs / 1000);
+    var hours = Math.floor(totalSeconds / 3600);
+    var minutes = Math.floor((totalSeconds % 3600) / 60);
+    var seconds = totalSeconds % 60;
+
+    // Format for better user experience
+    if (hours > 0) {
+        // Show hours and minutes for longer waits
+        return hours + ' h ' + minutes + ' min';
+    } else if (minutes > 0) {
+        // Show minutes and seconds for shorter waits
+        return minutes + ' min ' + seconds + ' s';
+    } else {
+        // Show just seconds for very short waits
+        return seconds + ' s';
+    }
+}
+
+// Start live countdown update for a specific AMB arrival (similar to TMB)
+function startAMBArrivalCountdown(elementId, scheduledTime) {
+    if (!scheduledTime) {
+        console.warn('⚠️ startAMBArrivalCountdown called without scheduledTime for element:', elementId);
+        return;
+    }
+
+    function updateCountdown() {
+        var element = document.getElementById(elementId);
+        if (!element) {
+            // Element not found - stop this countdown
+            return;
+        }
+
+        var countdownStr = getAMBCountdownString(scheduledTime);
+
+        // Color coding based on urgency
+        var now = new Date().getTime();
+        var arrivalMs = scheduledTime.getTime();
+        var diffMs = arrivalMs - now;
+        var diffMinutes = diffMs / (1000 * 60);
+
+        var color = '#0066cc'; // Default blue
+        if (diffMs <= 0) {
+            color = '#888'; // Gray for arrived/overdue
+        } else if (diffMinutes <= 2) {
+            color = '#d63031'; // Red for very soon
+        } else if (diffMinutes <= 5) {
+            color = '#e17055'; // Orange for soon
+        }
+
+        // Update the DOM element
+        element.textContent = countdownStr;
+        element.style.color = color;
+        element.style.fontWeight = 'bold';
+        element.style.fontFamily = 'monospace';
+        element.style.fontSize = '12px';
+    }
+
+    // Update immediately
+    updateCountdown();
+
+    // Set up interval for live updates
+    var intervalId = setInterval(updateCountdown, 1000); // Update every second
+
+    // Extract stop ID from element ID (format: 'popup-arrival-STOPID-INDEX' or 'table-arrival-STOPID-INDEX')
+    var stopId = null;
+    var idParts = elementId.split('-');
+    if (idParts.length >= 4 && idParts[0] === 'popup' || idParts[0] === 'table') {
+        stopId = idParts[2]; // The stop ID is in position 2
+    }
+
+    // Store the interval ID organized by stop ID
+    if (!window.ambCountdownIntervals) {
+        window.ambCountdownIntervals = {};
+    }
+    if (stopId) {
+        if (!window.ambCountdownIntervals[stopId]) {
+            window.ambCountdownIntervals[stopId] = [];
+        }
+        window.ambCountdownIntervals[stopId].push(intervalId);
+        console.log('⏰ Stored countdown interval for stop:', stopId, 'total intervals:', window.ambCountdownIntervals[stopId].length);
+    } else {
+        // Fallback for elements without proper stop ID
+        if (!window.ambCountdownIntervals['unknown']) {
+            window.ambCountdownIntervals['unknown'] = [];
+        }
+        window.ambCountdownIntervals['unknown'].push(intervalId);
+        console.log('⏰ Stored countdown interval in unknown category');
+    }
+}
 
 // Format time remaining as HH:MM:SS
 function formatTimeRemaining(seconds) {
@@ -2617,11 +2757,6 @@ function showAMBStandaloneTimetable() {
         routes.forEach(function(route) {
             var routeName = route.route_short_name || route.route_id;
 
-            // Apply NitBus filter if enabled
-            if (ambShowNitBusOnly && !isNitBusRoute(routeName)) {
-                return; // Skip non-NitBus routes
-            }
-
             // Find all trips for this route
             var routeTrips = trips.filter(function(trip) {
                 return trip.route_id === route.route_id;
@@ -2662,20 +2797,77 @@ function showAMBStandaloneTimetable() {
 
                 // Only include arrivals within the next 24 hours
                 if (timeToArrival <= 1440) {
+                    // Create unique key to avoid duplicates
+                    var entryKey = routeName + '_' + stopTime.stop_id + '_' + scheduledTime.getTime() + '_' + (trip.trip_headsign || '');
+
+                    // Check if this entry already exists
+                    var isDuplicate = ambAllTimetableEntries.some(function(existing) {
+                        return existing.route === routeName &&
+                               existing.stopId === stopTime.stop_id &&
+                               existing.scheduledTime.getTime() === scheduledTime.getTime() &&
+                               existing.destination === (trip.trip_headsign || '');
+                    });
+
+                    // Only add if not a duplicate
+                    if (!isDuplicate) {
+                        // Get stop name
+                        var stopName = 'Sense nom';
+                        if (window.allAMBStopsMap && window.allAMBStopsMap[stopTime.stop_id]) {
+                            stopName = window.allAMBStopsMap[stopTime.stop_id].stop_name || 'Sense nom';
+                        } else if (window.gtfsData && window.gtfsData.stops) {
+                            var gtfsStop = window.gtfsData.stops.find(function(stop) {
+                                return stop.stop_id === stopTime.stop_id;
+                            });
+                            if (gtfsStop) {
+                                stopName = gtfsStop.stop_name || 'Sense nom';
+                            }
+                        }
+
+                        ambAllTimetableEntries.push({
+                            route: routeName,
+                            routeLongName: route.route_long_name || '',
+                            destination: trip.trip_headsign || '',
+                            scheduledTime: scheduledTime,
+                            timeStr: scheduledTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}),
+                            timeToArrival: timeToArrival,
+                            stopId: stopTime.stop_id,
+                            stopName: stopName,
+                            tripId: stopTime.trip_id,
+                            status: 'Horari',
+                            isRealtime: false
+                        });
+                    }
+                }
+            });
+
+            // If this route has no stop times with schedules today, add a placeholder entry
+            if (routeStopTimes.length === 0 || !routeStopTimes.some(function(stopTime) {
+                var trip = tripsMap[stopTime.trip_id];
+                if (!trip) return false;
+                return isServiceRunningToday(trip.service_id, currentDay, currentDate, window.gtfsData.calendarMap, window.gtfsData.calendarDatesMap);
+            })) {
+                // Check if we already have an entry for this route
+                var hasRouteEntry = ambAllTimetableEntries.some(function(entry) {
+                    return entry.route === routeName;
+                });
+
+                if (!hasRouteEntry) {
+                    // Add a placeholder entry for routes without current schedules
                     ambAllTimetableEntries.push({
                         route: routeName,
                         routeLongName: route.route_long_name || '',
-                        destination: trip.trip_headsign || '',
-                        scheduledTime: scheduledTime,
-                        timeStr: scheduledTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}),
-                        timeToArrival: timeToArrival,
-                        stopId: stopTime.stop_id,
-                        tripId: stopTime.trip_id,
-                        status: 'Horari',
+                        destination: 'Sense horaris disponibles',
+                        scheduledTime: new Date(now.getTime() + 24 * 60 * 60 * 1000), // Tomorrow
+                        timeStr: '--:--',
+                        timeToArrival: 1440, // 24 hours from now
+                        stopId: 'N/A',
+                        stopName: 'N/A',
+                        tripId: 'N/A',
+                        status: 'Sense servei',
                         isRealtime: false
                     });
                 }
-            });
+            }
         });
 
         // Sort all entries by time to arrival
@@ -2699,6 +2891,9 @@ function renderTimetablePage() {
     var timetableContent = document.getElementById('amb-standalone-content');
     if (!timetableContent) return;
 
+    // Clear existing countdown intervals before re-rendering
+    clearAMBCountdownIntervals();
+
     var html = '<div style="margin-bottom: 15px;">' +
         '<p style="margin: 0 0 15px 0; color: #666; font-size: 14px;">Horari complet de totes les línies d\'autobús AMB amb els seus horaris programats.</p>' +
         '<div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">' +
@@ -2706,10 +2901,10 @@ function renderTimetablePage() {
         '<div>' +
         '<label for="items-per-page" style="margin-right: 10px;">Elements per pàgina:</label>' +
         '<select id="items-per-page" onchange="changeItemsPerPage(this.value)" style="padding: 4px; border: 1px solid #ddd; border-radius: 3px;">' +
-        '<option value="25">25</option>' +
-        '<option value="50" selected>50</option>' +
-        '<option value="100">100</option>' +
-        '<option value="200">200</option>' +
+        '<option value="25"' + (ambTimetableItemsPerPage === 25 ? ' selected' : '') + '>25</option>' +
+        '<option value="50"' + (ambTimetableItemsPerPage === 50 ? ' selected' : '') + '>50</option>' +
+        '<option value="100"' + (ambTimetableItemsPerPage === 100 ? ' selected' : '') + '>100</option>' +
+        '<option value="200"' + (ambTimetableItemsPerPage === 200 ? ' selected' : '') + '>200</option>' +
         '</select>' +
         '</div>' +
         '<div style="position: relative;">' +
@@ -2717,10 +2912,6 @@ function renderTimetablePage() {
         '<i class="fa fa-search" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: #666; font-size: 12px;"></i>' +
         '<button onclick="clearTimetableSearch()" style="position: absolute; right: 30px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #999; cursor: pointer; font-size: 14px; padding: 0; display: ' + (ambCurrentSearchTerm ? 'block' : 'none') + ';" title="Netejar cerca">×</button>' +
         '</div>' +
-        '</div>' +
-        '<div>' +
-        '<button id="nitbus-filter-btn" onclick="toggleNitBusFilter()" style="background: #17a2b8; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 12px;">' +
-        '<i class="fa fa-moon-o"></i> Només NitBus</button>' +
         '</div>' +
         '</div>' +
         '</div>';
@@ -2756,19 +2947,24 @@ function renderTimetablePage() {
 
         // Table header with clickable sorting
         html += '<div style="overflow-x: auto;">' +
-            '<table style="width: 100%; border-collapse: collapse; background: white; border: 1px solid #dee2e6;">' +
+            '<table style="width: 100%; border-collapse: collapse; background: white; border: 1px solid #dee2e6; font-size: 12px;">' +
             '<thead>' +
             '<tr style="background: #f8f9fa;">' +
-            '<th style="padding: 12px; border: 1px solid #dee2e6; text-align: left; font-weight: bold; color: #495057; cursor: pointer; user-select: none;" onclick="sortTimetableEntries(\'route\', \'' + (ambCurrentSortColumn === 'route' && ambCurrentSortDirection === 'asc' ? 'desc' : 'asc') + '\')" title="Ordenar per línia">Línia ' +
+            '<th style="padding: 8px; border: 1px solid #dee2e6; text-align: left; font-weight: bold; color: #495057; cursor: pointer; user-select: none;" onclick="sortTimetableEntries(\'route\', \'' + (ambCurrentSortColumn === 'route' && ambCurrentSortDirection === 'asc' ? 'desc' : 'asc') + '\')" title="Ordenar per línia">Línia ' +
             (ambCurrentSortColumn === 'route' ? (ambCurrentSortDirection === 'asc' ? '↑' : '↓') : '') + '</th>' +
-            '<th style="padding: 12px; border: 1px solid #dee2e6; text-align: left; font-weight: bold; color: #495057; cursor: pointer; user-select: none;" onclick="sortTimetableEntries(\'destination\', \'' + (ambCurrentSortColumn === 'destination' && ambCurrentSortDirection === 'asc' ? 'desc' : 'asc') + '\')" title="Ordenar per destí">Destí ' +
+            '<th style="padding: 8px; border: 1px solid #dee2e6; text-align: left; font-weight: bold; color: #495057; cursor: pointer; user-select: none;" onclick="sortTimetableEntries(\'stopId\', \'' + (ambCurrentSortColumn === 'stopId' && ambCurrentSortDirection === 'asc' ? 'desc' : 'asc') + '\')" title="Ordenar per codi de parada">Parada ' +
+            (ambCurrentSortColumn === 'stopId' ? (ambCurrentSortDirection === 'asc' ? '↑' : '↓') : '') + '</th>' +
+            '<th style="padding: 8px; border: 1px solid #dee2e6; text-align: left; font-weight: bold; color: #495057; cursor: pointer; user-select: none;" onclick="sortTimetableEntries(\'stopName\', \'' + (ambCurrentSortColumn === 'stopName' && ambCurrentSortDirection === 'asc' ? 'desc' : 'asc') + '\')" title="Ordenar per nom de parada">Nom parada ' +
+            (ambCurrentSortColumn === 'stopName' ? (ambCurrentSortDirection === 'asc' ? '↑' : '↓') : '') + '</th>' +
+            '<th style="padding: 8px; border: 1px solid #dee2e6; text-align: left; font-weight: bold; color: #495057; cursor: pointer; user-select: none;" onclick="sortTimetableEntries(\'destination\', \'' + (ambCurrentSortColumn === 'destination' && ambCurrentSortDirection === 'asc' ? 'desc' : 'asc') + '\')" title="Ordenar per destí">Destí ' +
             (ambCurrentSortColumn === 'destination' ? (ambCurrentSortDirection === 'asc' ? '↑' : '↓') : '') + '</th>' +
-            '<th style="padding: 12px; border: 1px solid #dee2e6; text-align: left; font-weight: bold; color: #495057; cursor: pointer; user-select: none;" onclick="sortTimetableEntries(\'time\', \'' + (ambCurrentSortColumn === 'time' && ambCurrentSortDirection === 'asc' ? 'desc' : 'asc') + '\')" title="Ordenar per hora de sortida">Sortida ' +
+            '<th style="padding: 8px; border: 1px solid #dee2e6; text-align: left; font-weight: bold; color: #495057; cursor: pointer; user-select: none;" onclick="sortTimetableEntries(\'time\', \'' + (ambCurrentSortColumn === 'time' && ambCurrentSortDirection === 'asc' ? 'desc' : 'asc') + '\')" title="Ordenar per hora de sortida">Sortida ' +
             (ambCurrentSortColumn === 'time' ? (ambCurrentSortDirection === 'asc' ? '↑' : '↓') : '') + '</th>' +
-            '<th style="padding: 12px; border: 1px solid #dee2e6; text-align: left; font-weight: bold; color: #495057; cursor: pointer; user-select: none;" onclick="sortTimetableEntries(\'timeToArrivalSeconds\', \'' + (ambCurrentSortColumn === 'timeToArrivalSeconds' && ambCurrentSortDirection === 'asc' ? 'desc' : 'asc') + '\')" title="Ordenar per temps restant">Temps restant ' +
+            '<th style="padding: 8px; border: 1px solid #dee2e6; text-align: left; font-weight: bold; color: #495057; cursor: pointer; user-select: none;" onclick="sortTimetableEntries(\'timeToArrivalSeconds\', \'' + (ambCurrentSortColumn === 'timeToArrivalSeconds' && ambCurrentSortDirection === 'asc' ? 'desc' : 'asc') + '\')" title="Ordenar per temps restant">Temps restant ' +
             (ambCurrentSortColumn === 'timeToArrivalSeconds' ? (ambCurrentSortDirection === 'asc' ? '↑' : '↓') : '') + '</th>' +
-            '<th style="padding: 12px; border: 1px solid #dee2e6; text-align: left; font-weight: bold; color: #495057;">Estat</th>' +
-            '<th style="padding: 12px; border: 1px solid #dee2e6; text-align: center; font-weight: bold; color: #495057;">Accions</th>' +
+            '<th style="padding: 8px; border: 1px solid #dee2e6; text-align: left; font-weight: bold; color: #495057; cursor: pointer; user-select: none;" onclick="sortTimetableEntries(\'status\', \'' + (ambCurrentSortColumn === 'status' && ambCurrentSortDirection === 'asc' ? 'desc' : 'asc') + '\')" title="Ordenar per estat">Estat ' +
+            (ambCurrentSortColumn === 'status' ? (ambCurrentSortDirection === 'asc' ? '↑' : '↓') : '') + '</th>' +
+            '<th style="padding: 8px; border: 1px solid #dee2e6; text-align: center; font-weight: bold; color: #495057;">Accions</th>' +
             '</tr>' +
             '</thead>' +
             '<tbody>';
@@ -2778,19 +2974,49 @@ function renderTimetablePage() {
             var rowStyle = index % 2 === 0 ? 'background: #f8f9fa;' : 'background: white;';
             var hoverStyle = 'cursor: pointer; transition: background-color 0.2s;';
             var timeColor = entry.timeToArrival <= 5 ? '#dc3545' : entry.timeToArrival <= 15 ? '#fd7e14' : '#0066cc';
+            var arrivalId = 'table-arrival-' + entry.stopId + '-' + index;
+
+            // Get stop name from global stops data - check both maps and original data
+            var stopName = 'Sense nom';
+
+            // First try the lookup map
+            if (window.allAMBStopsMap && window.allAMBStopsMap[entry.stopId]) {
+                stopName = window.allAMBStopsMap[entry.stopId].stop_name || 'Sense nom';
+            }
+
+            // If not found, try the original GTFS stops data
+            if (stopName === 'Sense nom' && window.gtfsData && window.gtfsData.stops) {
+                var gtfsStop = window.gtfsData.stops.find(function(stop) {
+                    return stop.stop_id === entry.stopId;
+                });
+                if (gtfsStop) {
+                    stopName = gtfsStop.stop_name || 'Sense nom';
+                }
+            }
 
             html += '<tr style="' + rowStyle + hoverStyle + '" onclick="zoomToStop(\'' + entry.stopId + '\')" onmouseover="this.style.backgroundColor=\'#e3f2fd\'" onmouseout="this.style.backgroundColor=\'' + (index % 2 === 0 ? '#f8f9fa' : 'white') + '\'">' +
                 '<td style="padding: 10px; border: 1px solid #dee2e6; font-weight: bold; color: #0088cc;">' + entry.route + '</td>' +
+                '<td style="padding: 10px; border: 1px solid #dee2e6; color: #666;">' + entry.stopId + '</td>' +
+                '<td style="padding: 10px; border: 1px solid #dee2e6; color: #666;">' + stopName + '</td>' +
                 '<td style="padding: 10px; border: 1px solid #dee2e6; color: #666;">' + entry.destination + '</td>' +
                 '<td style="padding: 10px; border: 1px solid #dee2e6; font-family: monospace; font-weight: bold;">' + entry.timeStr + '</td>' +
-                '<td style="padding: 10px; border: 1px solid #dee2e6; font-family: monospace; font-weight: bold; color: ' + timeColor + ';">' +
-                (entry.timeToArrivalSeconds === 0 ? 'Sortint' : formatTimeRemaining(entry.timeToArrivalSeconds)) + '</td>' +
+                '<td style="padding: 10px; border: 1px solid #dee2e6; font-family: monospace; font-weight: bold;">' +
+                '<span id="' + arrivalId + '">Loading...</span></td>' +
                 '<td style="padding: 10px; border: 1px solid #dee2e6; color: #666;">' + entry.status + '</td>' +
                 '<td style="padding: 10px; border: 1px solid #dee2e6; text-align: center;">' +
                 '<button onclick="event.stopPropagation(); updateStopData(\'' + entry.stopId + '\')" data-stop-id="' + entry.stopId + '" style="background: #28a745; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 10px;" title="Actualitzar dades d\'aquesta parada">' +
                 '<i class="fa fa-refresh"></i> Actualitzar</button>' +
                 '</td>' +
                 '</tr>';
+
+            // Store countdown data for later initialization
+            if (!window.pendingCountdowns) {
+                window.pendingCountdowns = [];
+            }
+            window.pendingCountdowns.push({
+                elementId: arrivalId,
+                scheduledTime: entry.scheduledTime
+            });
         });
 
         html += '</tbody></table></div>';
@@ -2849,6 +3075,23 @@ function renderTimetablePage() {
         '</div>';
 
     timetableContent.innerHTML = html;
+
+    // Start all pending countdown timers after DOM is updated with a longer delay
+    setTimeout(startPendingCountdowns, 500);
+}
+
+// Start all pending countdown timers
+function startPendingCountdowns() {
+    if (window.pendingCountdowns && window.pendingCountdowns.length > 0) {
+        console.log('⏰ Starting', window.pendingCountdowns.length, 'pending countdown timers');
+
+        window.pendingCountdowns.forEach(function(countdownData) {
+            startAMBArrivalCountdown(countdownData.elementId, countdownData.scheduledTime);
+        });
+
+        // Clear pending countdowns
+        window.pendingCountdowns = [];
+    }
 }
 
 // Change timetable page
