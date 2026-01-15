@@ -154,7 +154,7 @@ def main():
     """Main analysis function"""
     gtfs_datasets = [
         'docs/assets/gtfs/amb_bus',
-        'docs/assets/gtfs/gencat_bus_interurba'
+        'docs/assets/gtfs/cat_bus'
     ]
 
     all_issues = {}

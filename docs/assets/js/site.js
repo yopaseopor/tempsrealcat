@@ -602,6 +602,48 @@ function loadBusAmbContent() {
         });
 }
 
+// Function to load external HTML content for Bus Cat tab
+function loadBusCatContent() {
+    const busCatPane = document.getElementById('buscat');
+
+    // Check if content is already loaded (look for the specific Bus Cat title)
+    if (busCatPane.querySelector('h1[data-i18n="buscat_title"]')) {
+        return; // Content already loaded
+    }
+
+    // Load the buscat.html content
+    fetch('buscat.html')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to load buscat.html');
+            }
+            return response.text();
+        })
+        .then(html => {
+            // Extract the sidebar-pane content from the HTML
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const busCatContent = doc.querySelector('#buscat');
+
+            if (busCatContent) {
+                // Clear existing content and add new content
+                busCatPane.innerHTML = busCatContent.innerHTML;
+
+                // Update language for the new content
+                updateLanguage();
+
+                console.log('Bus Cat content loaded successfully');
+            } else {
+                console.error('Could not find #buscat content in buscat.html');
+                busCatPane.innerHTML = '<div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span></div><h1>Error loading Bus Cat content</h1>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading Bus Cat content:', error);
+            busCatPane.innerHTML = '<div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span></div><h1>Error loading Bus Cat content</h1><p>' + error.message + '</p>';
+        });
+}
+
 // Function to load external HTML content for Traffic tab
 function loadTrafficContent() {
     const trafficPane = document.getElementById('traffic');
@@ -763,6 +805,15 @@ document.addEventListener('DOMContentLoaded', function() {
         busAmbTab.addEventListener('click', function(e) {
             // Load Bus AMB content after a short delay to ensure tab is active
             setTimeout(loadBusAmbContent, 100);
+        });
+    }
+
+    // Add event listener to Bus Cat tab
+    const busCatTab = document.querySelector('a[href="#buscat"]');
+    if (busCatTab) {
+        busCatTab.addEventListener('click', function(e) {
+            // Load Bus Cat content after a short delay to ensure tab is active
+            setTimeout(loadBusCatContent, 100);
         });
     }
 

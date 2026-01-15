@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bus Cat - Catalonia Bus Stops</title>
+    <script src="assets/js/buscat.functions.js"></script>
+</head>
+<body>
+    <!--BUS CAT-->
+    <div class="sidebar-pane" id="buscat">
+      <div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span>
+      </div>
+      <h1 data-i18n="buscat_title"><i class="fa-solid fa-van-shuttle"></i> Autobús Catalunya</h1>
+      <p style="text-align:justify; margin-right:5px;" data-i18n="buscat_description">Visualitza totes les parades d'autobús de Catalunya. Les dades provenen directament del fitxer GTFS oficial.</p>
+
+      <!-- Bus stops controls -->
+      <div style="margin-bottom: 15px;">
+        <h3 style="margin-bottom: 10px; color: #333;" data-i18n="buscat_stops_visualization"><i class="fa-solid fa-van-shuttle"></i> Visualització de parades</h3>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
+          <button id="start-buscat-stops-btn" onclick="startBusCatStops()" style="background:#2a2a2a; color:white; padding:10px 15px; border:none; border-radius:5px; cursor:pointer; font-size: 14px;">
+            <i class="fa fa-play"></i> <span data-i18n="buscat_start_stops">Mostrar parades</span>
+          </button>
+          <button id="stop-buscat-stops-btn" onclick="stopBusCatStops()" style="background:#cc0000; color:white; padding:10px 15px; border:none; border-radius:5px; cursor:pointer; font-size: 14px; display: none;">
+            <i class="fa fa-stop"></i> <span data-i18n="buscat_stop_stops">Amagar parades</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Status display -->
+      <div id="buscat-stops-status" style="background: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #ddd;">
+        <span data-i18n="buscat_status">Status:</span> <span data-i18n="buscat_status_inactive">Inactiu</span>
+      </div>
+
+      <!-- Instructions -->
+      <div style="background: #e8f4f8; padding: 15px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #b8daff;">
+        <h4 style="margin-top: 0; color: #004085;" data-i18n="buscat_how_it_works"><i class="fa fa-question-circle"></i> Com funciona</h4>
+        <ol style="font-size: 13px; color: #004085; margin: 0; padding-left: 20px;">
+          <li data-i18n="buscat_step1">Mostrar parades: Prem "Mostrar parades" per carregar totes les parades d'autobús de Catalunya al mapa</li>
+          <li data-i18n="buscat_step2">Visualitza al mapa: Les parades apareixeran com marcadors amb icones d'autobús</li>
+          <li data-i18n="buscat_step3">Clica als marcadors: Obté informació detallada sobre cada parada i horaris</li>
+          <li data-i18n="buscat_step4">Amagar quan vulguis: Prem "Amagar parades" per netejar el mapa</li>
+        </ol>
+      </div>
+
+      <!-- Coverage info -->
+      <div style="background: #fff3cd; padding: 10px; border-radius: 3px; border: 1px solid #ffeaa7; font-size: 12px;">
+        <strong data-i18n="buscat_coverage"><i class="fa fa-info-circle"></i> Cobertura:</strong> Aquest servei mostra les parades d'autobús de Catalunya. Les dades s'actualitzen segons el fitxer GTFS oficial.
+      </div>
+
+      <!-- Bus Stops Table -->
+      <div style="margin-top: 20px;">
+        <h3 style="margin-bottom: 10px; color: #333;" data-i18n="buscat_table_title"><i class="fa-solid fa-van-shuttle"></i> Llistat de parades d'autobús</h3>
+
+        <!-- Table Controls -->
+        <div style="margin-bottom: 15px;">
+          <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px;">
+            <button onclick="loadBusCatStopsTable()" style="background:#007acc; color:white; padding:8px 12px; border:none; border-radius:3px; cursor:pointer; font-size: 12px;">
+              <i class="fa fa-refresh"></i> <span data-i18n="buscat_refresh_table">Actualitzar taula</span>
+            </button>
+            <button onclick="clearBusCatTableSearch()" style="background:#666; color:white; padding:8px 12px; border:none; border-radius:3px; cursor:pointer; font-size: 12px;">
+              <i class="fa fa-eraser"></i> <span data-i18n="buscat_clear_search">Netejar cerca</span>
+            </button>
+          </div>
+
+          <!-- Search -->
+          <div style="margin-bottom: 10px;">
+            <input type="text" id="buscat-table-search" placeholder="🔍 Cerca per codi, nom o carrer..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 3px; font-size: 12px;" onkeyup="searchBusCatTable()">
+          </div>
+
+          <!-- Table Status -->
+          <div id="buscat-table-status" style="background: #f8f9fa; padding: 8px; border-radius: 3px; font-size: 11px; border: 1px solid #ddd;">
+            <span data-i18n="buscat_table_loading">Carregant dades...</span>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div style="border: 1px solid #ddd; border-radius: 3px; overflow: hidden; margin-bottom: 15px;">
+          <table id="buscat-stops-table" style="width: 100%; border-collapse: collapse; font-size: 12px; display: none;">
+            <thead>
+              <tr style="background: #f8f9fa;">
+                <th onclick="sortBusCatTable('id')" style="padding: 8px; text-align: left; border-bottom: 2px solid #ddd; cursor: pointer; font-weight: bold;">
+                  <span data-i18n="buscat_table_id">ID</span> <span id="sort-buscat-id">↕️</span>
+                </th>
+                <th onclick="sortBusCatTable('name')" style="padding: 8px; text-align: left; border-bottom: 2px solid #ddd; cursor: pointer; font-weight: bold;">
+                  <span data-i18n="buscat_table_name">Nom de la parada</span> <span id="sort-buscat-name">↕️</span>
+                </th>
+                <th onclick="sortBusCatTable('arrivals')" style="padding: 8px; text-align: left; border-bottom: 2px solid #ddd; cursor: pointer; font-weight: bold;">
+                  <span data-i18n="buscat_table_arrivals">Próxims autobusos</span> <span id="sort-buscat-arrivals">↕️</span>
+                </th>
+                <th style="padding: 8px; text-align: center; border-bottom: 2px solid #ddd; font-weight: bold;">
+                  <span data-i18n="buscat_table_actions">Accions</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody id="buscat-stops-tbody">
+              <!-- Table rows will be populated by JavaScript -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div id="buscat-pagination" style="display: none; text-align: center; margin-bottom: 15px;">
+          <button id="buscat-prev-page" onclick="changeBusCatPage(-1)" style="background:#666; color:white; padding:6px 12px; border:none; border-radius:3px; cursor:pointer; margin-right: 10px; font-size: 12px;" disabled>
+            <i class="fa fa-chevron-left"></i> <span data-i18n="buscat_prev_page">Anterior</span>
+          </button>
+          <span id="buscat-page-info" style="font-size: 12px; color: #666;"></span>
+          <button id="buscat-next-page" onclick="changeBusCatPage(1)" style="background:#666; color:white; padding:6px 12px; border:none; border-radius:3px; cursor:pointer; margin-left: 10px; font-size: 12px;" disabled>
+            <span data-i18n="buscat_next_page">Següent</span> <i class="fa fa-chevron-right"></i>
+          </button>
+        </div>
+
+        <!-- Loading indicator -->
+        <div id="buscat-table-loading" style="text-align: center; padding: 20px; display: none;">
+          <img src="assets/img/spinner.gif" alt="Loading..." style="width: 24px; height: 24px;">
+          <p style="margin: 10px 0 0 0; font-size: 12px; color: #666;" data-i18n="buscat_loading_table">Carregant dades de parades...</p>
+        </div>
+
+        <!-- No results message -->
+        <div id="buscat-no-results" style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 3px; display: none;">
+          <i class="fa fa-info-circle" style="font-size: 24px; color: #666; margin-bottom: 10px;"></i>
+          <p style="margin: 0; font-size: 12px; color: #666;" data-i18n="buscat_no_results">No s'han trobat parades que coincideixin amb la cerca.</p>
+        </div>
+      </div>
+
+      <br><hr width="90%">
+
+      <!-- Help section -->
+      <h3 style="color: #333;" data-i18n="buscat_help_title"><i class="fa fa-question-circle"></i> Ajuda</h3>
+      <p style="text-align:justify; margin-right:5px; font-size: 13px;" data-i18n="buscat_help_text">
+        Aquest panell et permet visualitzar totes les parades d'autobús de Catalunya. Les dades provenen del fitxer GTFS oficial i inclouen informació sobre ubicacions i horaris programats.
+      </p>
+    </div>
+</body>
+</html>
