@@ -1650,12 +1650,11 @@ function combineGTFSData(gtfsData) {
 
             var arrivalTime = parseGTFSTime(arrivalTimeStr);
             if (!arrivalTime) return;
-
             // Create scheduled arrival time for today
             var scheduledTime = new Date(now);
             scheduledTime.setHours(arrivalTime.hours, arrivalTime.minutes, arrivalTime.seconds, 0);
 
-            // If the scheduled time has already passed, assume it's for tomorrow
+            // If scheduled time has already passed, assume it's for tomorrow
             if (scheduledTime.getTime() < now.getTime()) {
                 scheduledTime.setDate(scheduledTime.getDate() + 1);
             }
@@ -1663,7 +1662,7 @@ function combineGTFSData(gtfsData) {
             // Calculate time to arrival in minutes
             var timeToArrival = Math.max(0, Math.round((scheduledTime.getTime() - now.getTime()) / (1000 * 60)));
 
-            // Only include arrivals within the next 24 hours
+            // Only include arrivals within next 24 hours
             if (timeToArrival <= 1440) {
                 scheduledArrivals.push({
                     route: route.route_short_name || route.route_id,
@@ -1686,7 +1685,288 @@ function combineGTFSData(gtfsData) {
     });
 
     console.log('✅ GTFS data combined successfully');
+    
+    // Analyze data completeness
+    analyzeGTFSCompleteness(gtfsData);
+    
     return stops;
+}
+
+// Analyze GTFS data completeness and identify missing data
+function analyzeGTFSCompleteness(gtfsData) {
+    console.log('📊 === GTFS DATA COMPLETENESS ANALYSIS ===');
+    
+    var stops = gtfsData.stops || [];
+    var stopTimes = gtfsData.stopTimes || [];
+    var trips = gtfsData.trips || [];
+    var routes = gtfsData.routes || [];
+    
+    console.log('Total records:');
+    console.log('  - Stops:', stops.length);
+    console.log('  - Stop Times:', stopTimes.length);
+    console.log('  - Trips:', trips.length);
+    console.log('  - Routes:', routes.length);
+    
+    // Find trips without stop times
+    var tripsWithStopTimes = new Set();
+    stopTimes.forEach(function(stopTime) {
+        if (stopTime.trip_id) {
+            tripsWithStopTimes.add(stopTime.trip_id);
+        }
+    });
+    
+    var tripsWithoutStopTimes = trips.filter(function(trip) {
+        return !tripsWithStopTimes.has(trip.trip_id);
+    });
+    
+    console.log('');
+    console.log('🔍 TRIPS ANALYSIS:');
+    console.log('  - Trips with stop times:', tripsWithStopTimes.size);
+    console.log('  - Trips WITHOUT stop times:', tripsWithoutStopTimes.length);
+    
+    if (tripsWithoutStopTimes.length > 0) {
+        console.log('');
+        console.log('⚠️ TRIPS MISSING STOP TIMES:');
+        tripsWithoutStopTimes.forEach(function(trip, index) {
+            console.log('  ' + (index + 1) + '. Trip ID:', trip.trip_id, 
+                       'Route:', trip.route_id, 
+                       'Headsign:', trip.trip_headsign || 'N/A');
+        });
+        
+        // Store missing trips data for later processing
+        window.tripsMissingStopTimes = tripsWithoutStopTimes;
+        console.log('');
+        console.log('💾 Stored', tripsWithoutStopTimes.length, 'trips missing stop times for generation');
+    }
+    
+    // Find stops without times
+    var stopsWithTimes = new Set();
+    stopTimes.forEach(function(stopTime) {
+        if (stopTime.stop_id) {
+            stopsWithTimes.add(stopTime.stop_id);
+        }
+    });
+    
+    var stopsWithoutTimes = stops.filter(function(stop) {
+        return !stopsWithTimes.has(stop.stop_id);
+    });
+    
+    console.log('');
+    console.log('🔍 STOPS ANALYSIS:');
+    console.log('  - Stops with stop times:', stopsWithTimes.size);
+    console.log('  - Stops WITHOUT stop times:', stopsWithoutTimes.length);
+    
+    if (stopsWithoutTimes.length > 0) {
+        console.log('');
+        console.log('⚠️ STOPS MISSING STOP TIMES (showing first 10):');
+        stopsWithoutTimes.slice(0, 10).forEach(function(stop, index) {
+            console.log('  ' + (index + 1) + '. Stop ID:', stop.stop_id, 'Name:', stop.stop_name);
+        });
+        if (stopsWithoutTimes.length > 10) {
+            console.log('  ... and', stopsWithoutTimes.length - 10, 'more stops');
+        }
+    }
+    
+    console.log('');
+    console.log('📊 === ANALYSIS COMPLETE ===');
+}
+
+// Generate missing stop times for trips that lack them
+function generateMissingStopTimes() {
+    if (!window.tripsMissingStopTimes || window.tripsMissingStopTimes.length === 0) {
+        console.log('✅ No trips missing stop times to generate');
+        return;
+    }
+
+    console.log('🔧 === GENERATING MISSING STOP TIMES ===');
+    console.log('Processing', window.tripsMissingStopTimes.length, 'trips without stop times...');
+
+    var generatedStopTimes = [];
+    var now = new Date();
+
+    window.tripsMissingStopTimes.forEach(function(trip, index) {
+        console.log('🔧 Processing trip', index + 1, '/', window.tripsMissingStopTimes.length, ':', trip.trip_id);
+
+        // Get route information
+        var route = window.gtfsData.routesMap[trip.route_id];
+        if (!route) {
+            console.warn('⚠️ Route not found for trip:', trip.trip_id, 'route:', trip.route_id);
+            return;
+        }
+
+        // Find existing trips for this route to use as template
+        var existingTripsForRoute = window.gtfsData.trips.filter(function(t) {
+            return t.route_id === trip.route_id && t.trip_id !== trip.trip_id;
+        });
+
+        if (existingTripsForRoute.length === 0) {
+            console.warn('⚠️ No existing trips found for route:', trip.route_id, 'to use as template');
+            return;
+        }
+
+        // Find stop times for existing trips of this route
+        var templateStopTimes = [];
+        existingTripsForRoute.forEach(function(existingTrip) {
+            var tripStopTimes = window.gtfsData.stopTimes.filter(function(st) {
+                return st.trip_id === existingTrip.trip_id;
+            });
+            if (tripStopTimes.length > 0) {
+                templateStopTimes = templateStopTimes.concat(tripStopTimes);
+            }
+        });
+
+        if (templateStopTimes.length === 0) {
+            console.warn('⚠️ No template stop times found for route:', trip.route_id);
+            return;
+        }
+
+        // Group template stop times by stop sequence
+        var stopTimesBySequence = {};
+        templateStopTimes.forEach(function(st) {
+            var key = st.stop_sequence;
+            if (!stopTimesBySequence[key] || stopTimesBySequence[key].count < 3) {
+                if (!stopTimesBySequence[key]) {
+                    stopTimesBySequence[key] = {
+                        stop_id: st.stop_id,
+                        arrival_times: [],
+                        departure_times: [],
+                        count: 0
+                    };
+                }
+                stopTimesBySequence[key].arrival_times.push(st.arrival_time);
+                stopTimesBySequence[key].departure_times.push(st.departure_time || st.arrival_time);
+                stopTimesBySequence[key].count++;
+            }
+        });
+
+        // Generate stop times for this trip based on average times
+        var generatedForTrip = [];
+        Object.keys(stopTimesBySequence).sort(function(a, b) {
+            return parseInt(a) - parseInt(b);
+        }).forEach(function(sequence) {
+            var template = stopTimesBySequence[sequence];
+            
+            // Calculate average arrival time
+            var avgArrivalTime = calculateAverageTime(template.arrival_times);
+            var avgDepartureTime = calculateAverageTime(template.departure_times);
+
+            generatedForTrip.push({
+                trip_id: trip.trip_id,
+                arrival_time: avgArrivalTime,
+                departure_time: avgDepartureTime,
+                stop_id: template.stop_id,
+                stop_sequence: parseInt(sequence),
+                timepoint: 1
+            });
+        });
+
+        generatedStopTimes = generatedStopTimes.concat(generatedForTrip);
+        console.log('✅ Generated', generatedForTrip.length, 'stop times for trip:', trip.trip_id);
+    });
+
+    if (generatedStopTimes.length > 0) {
+        // Add generated stop times to the global data
+        window.gtfsData.stopTimes = window.gtfsData.stopTimes.concat(generatedStopTimes);
+        
+        // Update the trips missing stop times list
+        window.tripsMissingStopTimes = [];
+        
+        console.log('✅ === GENERATION COMPLETE ===');
+        console.log('Generated', generatedStopTimes.length, 'stop times total');
+        console.log('Added to GTFS data - refresh displays to see updated information');
+        
+        // Re-process stops with the new data
+        if (window.gtfsData && window.gtfsData.stops) {
+            var updatedStops = combineGTFSData(window.gtfsData);
+            console.log('🔄 Re-processed stops with generated stop times');
+        }
+    } else {
+        console.log('❌ No stop times could be generated');
+    }
+}
+
+// Calculate average time from an array of time strings (HH:MM:SS format)
+function calculateAverageTime(timeStrings) {
+    if (timeStrings.length === 0) return '00:00:00';
+    
+    var totalSeconds = 0;
+    timeStrings.forEach(function(timeStr) {
+        var parts = timeStr.split(':');
+        if (parts.length === 3) {
+            var hours = parseInt(parts[0]) || 0;
+            var minutes = parseInt(parts[1]) || 0;
+            var seconds = parseInt(parts[2]) || 0;
+            totalSeconds += hours * 3600 + minutes * 60 + seconds;
+        }
+    });
+    
+    var avgSeconds = Math.round(totalSeconds / timeStrings.length);
+    var avgHours = Math.floor(avgSeconds / 3600);
+    var avgMinutes = Math.floor((avgSeconds % 3600) / 60);
+    var avgSecs = avgSeconds % 60;
+    
+    return (avgHours.toString().padStart(2, '0') + ':' + 
+            avgMinutes.toString().padStart(2, '0') + ':' + 
+            avgSecs.toString().padStart(2, '0'));
+}
+
+// Export updated GTFS data with generated stop times
+function exportUpdatedGTFSData() {
+    if (!window.gtfsData) {
+        console.error('❌ No GTFS data available to export');
+        return;
+    }
+
+    console.log('💾 === EXPORTING UPDATED GTFS DATA ===');
+    
+    // Create CSV content for updated stop_times.txt
+    var stopTimesCSV = 'trip_id,arrival_time,departure_time,stop_id,stop_sequence,timepoint\n';
+    
+    window.gtfsData.stopTimes.forEach(function(stopTime) {
+        stopTimesCSV += [
+            stopTime.trip_id || '',
+            stopTime.arrival_time || '',
+            stopTime.departure_time || '',
+            stopTime.stop_id || '',
+            stopTime.stop_sequence || '',
+            stopTime.timepoint || 1
+        ].join(',') + '\n';
+    });
+
+    // Create download link
+    var blob = new Blob([stopTimesCSV], { type: 'text/csv' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'updated_stop_times.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    console.log('✅ Exported', window.gtfsData.stopTimes.length, 'stop times to updated_stop_times.txt');
+    
+    // Also export a summary report
+    var summaryContent = 'GTFS Data Completeness Report\n';
+    summaryContent += 'Generated: ' + new Date().toISOString() + '\n\n';
+    summaryContent += 'Total Records:\n';
+    summaryContent += '- Stops: ' + window.gtfsData.stops.length + '\n';
+    summaryContent += '- Stop Times: ' + window.gtfsData.stopTimes.length + '\n';
+    summaryContent += '- Trips: ' + window.gtfsData.trips.length + '\n';
+    summaryContent += '- Routes: ' + window.gtfsData.routes.length + '\n';
+    summaryContent += '- Trips Missing Stop Times: ' + (window.tripsMissingStopTimes ? window.tripsMissingStopTimes.length : 0) + '\n';
+
+    var summaryBlob = new Blob([summaryContent], { type: 'text/plain' });
+    var summaryUrl = URL.createObjectURL(summaryBlob);
+    var summaryA = document.createElement('a');
+    summaryA.href = summaryUrl;
+    summaryA.download = 'gtfs_completeness_report.txt';
+    document.body.appendChild(summaryA);
+    summaryA.click();
+    document.body.removeChild(summaryA);
+    URL.revokeObjectURL(summaryUrl);
+
+    console.log('✅ Exported completeness report to gtfs_completeness_report.txt');
 }
 
 // Merge real-time data with scheduled arrivals
@@ -2901,6 +3181,7 @@ function renderTimetablePage() {
         '<div>' +
         '<label for="items-per-page" style="margin-right: 10px;">Elements per pàgina:</label>' +
         '<select id="items-per-page" onchange="changeItemsPerPage(this.value)" style="padding: 4px; border: 1px solid #ddd; border-radius: 3px;">' +
+        '<option value="10"' + (ambTimetableItemsPerPage === 10 ? ' selected' : '') + '>10</option>' +
         '<option value="25"' + (ambTimetableItemsPerPage === 25 ? ' selected' : '') + '>25</option>' +
         '<option value="50"' + (ambTimetableItemsPerPage === 50 ? ' selected' : '') + '>50</option>' +
         '<option value="100"' + (ambTimetableItemsPerPage === 100 ? ' selected' : '') + '>100</option>' +
@@ -2947,7 +3228,7 @@ function renderTimetablePage() {
 
         // Table header with clickable sorting
         html += '<div style="overflow-x: auto;">' +
-            '<table style="width: 100%; border-collapse: collapse; background: white; border: 1px solid #dee2e6; font-size: 12px;">' +
+            '<table style="width: 100%; border-collapse: collapse; background: white; border: 1px solid #dee2e6; font-size: 10px;">' +
             '<thead>' +
             '<tr style="background: #f8f9fa;">' +
             '<th style="padding: 8px; border: 1px solid #dee2e6; text-align: left; font-weight: bold; color: #495057; cursor: pointer; user-select: none;" onclick="sortTimetableEntries(\'route\', \'' + (ambCurrentSortColumn === 'route' && ambCurrentSortDirection === 'asc' ? 'desc' : 'asc') + '\')" title="Ordenar per línia">Línia ' +
@@ -3370,3 +3651,6 @@ window.hideAMBStandaloneTimetable = hideAMBStandaloneTimetable;
 window.createAMBReusableTimetable = createAMBReusableTimetable;
 window.analyzeGTFSBinFile = analyzeGTFSBinFile;
 window.zoomToStop = zoomToStop;
+window.generateMissingStopTimes = generateMissingStopTimes;
+window.exportUpdatedGTFSData = exportUpdatedGTFSData;
+window.analyzeGTFSCompleteness = analyzeGTFSCompleteness;
