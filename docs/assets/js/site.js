@@ -686,6 +686,48 @@ function loadTrafficContent() {
         });
 }
 
+// Function to load external HTML content for PDI tab
+function loadPdiContent() {
+    const pdiPane = document.getElementById('home');
+
+    // Check if content is already loaded (look for the specific PDI title)
+    if (pdiPane.querySelector('h1[data-i18n="home_title"]')) {
+        return; // Content already loaded
+    }
+
+    // Load the pdi.html content
+    fetch('pdi.html')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to load pdi.html');
+            }
+            return response.text();
+        })
+        .then(html => {
+            // Extract the sidebar-pane content from the HTML
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const pdiContent = doc.querySelector('#home');
+
+            if (pdiContent) {
+                // Clear existing content and add new content
+                pdiPane.innerHTML = pdiContent.innerHTML;
+
+                // Update language for the new content
+                updateLanguage();
+
+                console.log('PDI content loaded successfully');
+            } else {
+                console.error('Could not find #home content in pdi.html');
+                pdiPane.innerHTML = '<div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span></div><h1>Error loading PDI content</h1>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading PDI content:', error);
+            pdiPane.innerHTML = '<div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span></div><h1>Error loading PDI content</h1><p>' + error.message + '</p>';
+        });
+}
+
 // Function to load external HTML content for OSM tab
 function loadOsmContent() {
     const osmPane = document.getElementById('osm');
@@ -754,6 +796,15 @@ function loadOsmContent() {
 
 // Initialize train, FGC, Bus, and Metro content loading when tabs are clicked
 document.addEventListener('DOMContentLoaded', function() {
+    // Add event listener to PDI tab
+    const pdiTab = document.querySelector('a[href="#home"]');
+    if (pdiTab) {
+        pdiTab.addEventListener('click', function(e) {
+            // Load PDI content after a short delay to ensure tab is active
+            setTimeout(loadPdiContent, 100);
+        });
+    }
+
     // Add event listener to train tab
     const trainTab = document.querySelector('a[href="#train"]');
     if (trainTab) {

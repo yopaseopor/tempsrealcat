@@ -1,6 +1,3 @@
-// PDI (Points of Interest) specific functions
-// Extracted from site.functions.js to separate POI functionality
-
 var query = ''; // Global query variable for Overpass queries
 
 function get_poi(element) {
@@ -257,7 +254,7 @@ function manualPoiQuery() {
     // Only make queries if POIs are actually selected
     var checkedPois = $('#pois input:checked');
     if (checkedPois.length === 0) {
-        alert('Selecciona almenys un punt d\'interès abans de fer la consulta.');
+        alert(getTranslation('poi_select_at_least_one') || 'Selecciona almenys un punt d\'interès abans de fer la consulta.');
         return;
     }
 
@@ -265,7 +262,7 @@ function manualPoiQuery() {
     if (checkedPois.length > 5) {
         // Keep only the first 5 selected POIs
         $('#pois input:checked').slice(5).prop('checked', false);
-        alert('S\'han seleccionat massa punts d\'interès. S\'han desmarcat alguns automàticament per evitar errors de consulta.');
+        alert(getTranslation('poi_too_many_selected') || 'S\'han seleccionat massa punts d\'interès. S\'han desmarcat alguns automàticament per evitar errors de consulta.');
         checkedPois = $('#pois input:checked');
     }
 
@@ -304,6 +301,17 @@ function manualPoiQuery() {
     show_overpass_layer();
 }
 
+// Update the query completion handler to reset state
+function onPoiQueryComplete() {
+    isQueryRunning = false;
+    updateQueryButton();
+    $('#spinner').hide();
+    if (window.queryTimeout) {
+        clearTimeout(window.queryTimeout);
+        window.queryTimeout = null;
+    }
+}
+
 function stopQuery() {
     // Stop the current query and abort active requests
     isQueryRunning = false;
@@ -331,7 +339,7 @@ function updateQueryButton() {
         // Show stop buttons when query is running
         stopBtns.forEach(function(btn) {
             btn.style.display = "inline-block";
-            btn.textContent = "Atura consulta";
+            btn.textContent = getTranslation("poi_stop_search") || "Atura consulta";
         });
         // Disable and hide start buttons
         startBtns.forEach(function(btn) {
@@ -351,19 +359,8 @@ function updateQueryButton() {
             btn.style.opacity = "1";
             btn.style.cursor = "pointer";
             btn.style.display = "inline-block";
-            btn.textContent = "Carrega punts d'interès";
+            btn.textContent = getTranslation("poi_manual_search") || "Carrega punts d'interès";
         });
-    }
-}
-
-// Update the query completion handler to reset state
-function onPoiQueryComplete() {
-    isQueryRunning = false;
-    updateQueryButton();
-    $('#spinner').hide();
-    if (window.queryTimeout) {
-        clearTimeout(window.queryTimeout);
-        window.queryTimeout = null;
     }
 }
 

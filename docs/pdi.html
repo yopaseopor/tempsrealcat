@@ -1,0 +1,56 @@
+<!--PUNTS D'INTERÈS-->
+<A NAME="home_init"></A>
+<div class="sidebar-pane" id="home">
+  <div class="close-button"><span class="fa fa-xmark" onclick="javascript: sidebar.close()"></span>
+  </div>
+  <center><button style="background:#2a2a2a; color:white; padding:5px;" class="fa fa-support"
+  onClick="location.href='#help_home'"> Ajuda (PDI)</button></center>
+  <h1 data-i18n="home_title">Punts d'interès</h1>
+  <p data-i18n="home_description">Seleccioneu els punts que voleu visualitzar al mapa i després tanqueu aquest panell fent clic a
+   la <b>«X»</b> per poder visualitzar-lo més bé.</p>
+  <p class="permalink">
+  <span class="fa fa-link"></span>
+  <a id="permalink" href="#" data-i18n="home_permalink">Comparteix aquest mapa (enllaç)</a>
+  </p>
+  <center>
+    <button id="start-query-btn" class="fa fa-search manual-query-btn" type="button" onclick="manualPoiQuery();" data-i18n="poi_manual_search">Carrega punts d'interès</button>
+    <button id="stop-query-btn" class="fa fa-stop manual-stop-btn" type="button" onclick="stopQuery();">Atura consulta</button>
+    <br><small class="manual-query-note" data-i18n="poi_manual_note">Les consultes es fan manualment per evitar sobrecàrrega dels servidors</small>
+  </center>
+  <div id="pois"></div>
+  <center>
+    <button class="fa fa-search manual-query-btn" type="button" onclick="manualPoiQuery();" data-i18n="poi_manual_search">Carrega punts d'interès</button>
+    <button class="fa fa-stop manual-stop-btn" type="button" onclick="stopQuery();">Atura consulta</button>
+    <br><small class="manual-query-note" data-i18n="poi_manual_note">Les consultes es fan manualment per evitar sobrecàrrega dels servidors</small>
+  </center>
+  <!--Home - ajuda -->
+  <br><hr width="90%">
+  <A NAME="help_home"></A>
+  <h1 data-i18n="home_help_title"><span class="fa fa-support"></span> Ajuda</h1>
+  <p style="text-align:justify; margin-right:5px;" data-i18n="home_help_text1">Des d'aquesta secció podeu seleccionar els punts
+  d'interès que voleu visualitzar al mapa. Cal que seleccioneu tots aquells punts que desitgeu,
+  marcant-ne la casella corresponent:</p>
+  <center><img src="assets/img/help/pdis.png" width="80%"></center>
+  <p style="text-align:justify; margin-right:5px;" data-i18n="home_help_text2">Quan els hàgiu seleccionat podeu tancar el panell
+   fent clic sobre la <b>«X»</b> que hi ha al capdamunt a l'esquerra, i en uns segons (en funció de la
+   connexió a Internet) us apareixeran els punts d'interès sobre el mapa:</p>
+  <center><img src="assets/img/help/pdis2.png" width="90%"></center>
+  <p style="text-align:justify; margin-right:5px;" data-i18n="home_help_text3">Ara podreu seleccionar la icona de qualsevol dels
+   punts d'interès per veure'n més informació (de la base de dades d'OSM). Alguns camps com
+   el correu electrònic o el lloc web són enllaços que es poden seguir, i podreu trucar directament al
+   telèfon de contacte si utilitzeu el mapa des d'un telèfon mòbil:</p>
+  <center><img src="assets/img/help/popup.png" width="90%"></center>
+  <p style="text-align:justify; margin-right:5px;" data-i18n="home_help_text4">Si us aparegués un missatge com aquest:</p>
+  <center><img src="assets/img/help/zoom.png" width="100%"></center>
+  <p style="text-align:justify; margin-right:5px;" data-i18n="home_help_text5">Significa que no s'ha arribat al nivell mínim
+   d'apropament per visualitzar les icones, i per tant cal que us acosteu més al mapa (amb el botó
+    <b>«+»</b> del mapa, per exemple).</p>
+  <p style="text-align:justify; margin-right:5px;" data-i18n="home_help_text6">Si seguiu l'enllaç <b>«Informació al detall
+   (expert)»</b> que tenen tots els punts d'interès, s'obrirà automàticament el panell «Expert» amb la
+   informació de les etiquetes del punt d'interès a OpenStreetMap, i també enllaços per visualitzar
+    el punt d'interès a OSM o inclús per editar-lo:</p>
+  <center><img src="assets/img/help/expert.png" width="90%"></center>
+  <br>
+  <center><button style="background:#2a2a2a; color:white; padding:5px;" class="fa fa-arrow-up"
+  onClick="location.href='#home_init'" data-i18n="home_help_back"> Inici</button></center>
+</div>
