@@ -701,5 +701,23 @@ window.translations_en = {
     bicycle_form_title: "Manual Bicing data entry",
     bicycle_form_placeholder: "Paste Bicing JSON data here...",
     bicycle_form_instructions_title: "Copy instructions",
-    bicycle_form_instructions_text: "STEPS TO COPY BICING DATA:\n\n1. Go to the Bicing tab that opened\n2. Press Ctrl+A (select all)\n3. Press Ctrl+C (copy)\n4. Return here and press Ctrl+V (paste)\n5. Click 'Process Real Data'\n\nURL: https://opendata-ajuntament.barcelona.cat/data/dataset/6aa3416d-ce1a-494d-861b-7bd07f069600/resource/1b215493-9e63-4a12-8980-2d7e0fa19f85/download"
+    bicycle_form_instructions_text: "STEPS TO COPY BICING DATA:\n\n1. Go to the Bicing tab that opened\n2. Press Ctrl+A (select all)\n3. Press Ctrl+C (copy)\n4. Return here and press Ctrl+V (paste)\n5. Click 'Process Real Data'\n\nURL: https://opendata-ajuntament.barcelona.cat/data/dataset/6aa3416d-ce1a-494d-861b-7bd07f069600/resource/1b215493-9e63-4a12-8980-2d7e0fa19f85/download",
+
+    // Bus Cat translations
+    buscat_title: "🚌 Bus Cat",
+    buscat_description: "Visualize all Bus Cat bus stops in Catalonia. Data comes directly from official GTFS files.",
+    buscat_stops_visualization: "📍 Stop Visualization",
+    buscat_start_stops: "Show stops",
+    buscat_how_it_works: "📖 How it works",
+    buscat_step1: "Show stops: Click \"Show stops\" to load all Bus Cat bus stops on the map",
+    buscat_step2: "View on map: Stops will appear as markers with bus icons and colors by route",
+    buscat_step3: "Click markers: Get detailed information about each stop including schedules",
+    buscat_step4: "Hide when desired: Click \"Hide stops\" to clear the map",
+    buscat_coverage: "ℹ️ Coverage: This service shows bus stops in Catalonia. Data comes from official GTFS files and updates automatically.",
+    buscat_table_title: "📋 Bus stops table",
+    buscat_refresh_table: "Refresh table",
+    buscat_clear_search: "Clear search",
+    buscat_table_loading: "Loading data...",
+    buscat_help_title: "Help",
+    buscat_help_text: "This panel allows you to visualize all Bus Cat bus stops in Catalonia. Data comes from official GTFS files and includes information about location, codes, and schedules. Stops with schedule data appear in green, others in blue."
 };

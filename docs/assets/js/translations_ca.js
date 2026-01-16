@@ -703,5 +703,23 @@ window.translations_ca = {
     bicycle_form_title: "Entrada manual de dades Bicing",
     bicycle_form_placeholder: "Enganxa aquí les dades JSON de Bicing...",
     bicycle_form_instructions_title: "Copiar instruccions",
-    bicycle_form_instructions_text: "PASSOS PER COPIAR LES DADES BICING:\n\n1. Ves a la pestanya Bicing que s'ha obert\n2. Prem Ctrl+A (seleccionar tot)\n3. Prem Ctrl+C (copiar)\n4. Torna aquí i prem Ctrl+V (enganxar)\n5. Clica 'Processar Dades Reals'\n\nURL: https://opendata-ajuntament.barcelona.cat/data/dataset/6aa3416d-ce1a-494d-861b-7bd07f069600/resource/1b215493-9e63-4a12-8980-2d7e0fa19f85/download"
+    bicycle_form_instructions_text: "PASSOS PER COPIAR LES DADES BICING:\n\n1. Ves a la pestanya Bicing que s'ha obert\n2. Prem Ctrl+A (seleccionar tot)\n3. Prem Ctrl+C (copiar)\n4. Torna aquí i prem Ctrl+V (enganxar)\n5. Clica 'Processar Dades Reals'\n\nURL: https://opendata-ajuntament.barcelona.cat/data/dataset/6aa3416d-ce1a-494d-861b-7bd07f069600/resource/1b215493-9e63-4a12-8980-2d7e0fa19f85/download",
+
+    // Traduccions de Bus Cat
+    buscat_title: "🚌 Bus Cat",
+    buscat_description: "Visualitza totes les parades d'autobús Bus Cat a Catalunya. Les dades provenen directament dels fitxers GTFS oficials.",
+    buscat_stops_visualization: "📍 Visualització de parades",
+    buscat_start_stops: "Mostrar parades",
+    buscat_how_it_works: "📖 Com funciona",
+    buscat_step1: "Mostrar parades: Prem \"Mostrar parades\" per carregar totes les parades d'autobús Bus Cat al mapa",
+    buscat_step2: "Visualitza al mapa: Les parades apareixeran com marcadors amb icones d'autobús i colors per ruta",
+    buscat_step3: "Clica als marcadors: Obtén informació detallada sobre cada parada inclosos horaris",
+    buscat_step4: "Amaga quan vulguis: Prem \"Amagar parades\" per netejar el mapa",
+    buscat_coverage: "ℹ️ Cobertura: Aquest servei mostra les parades d'autobús a Catalunya. Les dades provenen dels fitxers GTFS oficials i s'actualitzen automàticament.",
+    buscat_table_title: "📋 Taula de parades d'autobús",
+    buscat_refresh_table: "Actualitzar taula",
+    buscat_clear_search: "Netejar cerca",
+    buscat_table_loading: "Carregant dades...",
+    buscat_help_title: "Ajuda",
+    buscat_help_text: "Aquest panell et permet visualitzar totes les parades d'autobús Bus Cat a Catalunya. Les dades provenen dels fitxers GTFS oficials i inclouen informació sobre ubicació, codis i horaris. Les parades amb dades d'horaris apareixen en verd, les altres en blau."
 };

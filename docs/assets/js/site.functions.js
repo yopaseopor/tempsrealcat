@@ -1,48 +1,6 @@
-var query = ''; // Global query variable for Overpass queries
 
-function get_poi(element) {
-    if ($('#expert-mode').is(':checked'))
-        return {
-            name: 'Custom Query',
-            iconName: 'notvisited'
-        }
 
-    // TODO: improve this
-    var type = ''
-    if (element.tags.internet_access) type = 'internet_access';
-    if (element.tags.highway) {
-        if (type == '') type = element.tags.highway;
-    }
-    if (element.tags.amenity) {
-        if (type == '') type = element.tags.amenity;
-    }
-    if (element.tags.tourism) {
-        if (type == '') type = element.tags.tourism;
-    }
-    if (element.tags.shop) {
-        if (element.tags.car_repair == 'wheel_repair') type = 'wheel_repair';
-        if (type == '') type = element.tags.shop;
-    }
-    if (element.tags.sport) {
-        if (element.tags.shooting == 'paintball') type = 'paintball';
-        if (type == '') type = element.tags.shooting;
-    }
-    if (element.tags.leisure) {
-        if (type == '') type = element.tags.leisure;
-    }
-    if (element.tags.office) {
-        if (type == '') type = element.tags.office;
-    }
-    if (element.tags.craft) {
-        if (type == '') type = element.tags.craft;
-    }
-    if (element.tags.historic) {
-        if (type == '') type = element.tags.historic;
-    }
 
-    var poi = pois[type];
-    return poi;
-}
 
 
 // https://github.com/kartenkarsten/leaflet-layer-overpass
