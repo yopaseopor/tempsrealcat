@@ -112,32 +112,18 @@ function updateAMBStatus(status) {
     }
 }
 
-// Fetch all AMB bus stops from GTFS static feed and merge with real-time data
+// Fetch all AMB bus stops from local GTFS static feed and merge with real-time protobuf data
 function fetchAllAMBStops() {
-    console.log('🚌 Starting to fetch AMB bus stops from GTFS...');
+    console.log('🚌 Starting to fetch AMB bus stops from local GTFS files...');
 
-    // Use CORS proxy to access AMB GTFS data
+    // Load GTFS static data from local files instead of zip
+    var gtfsPromise = loadLocalGTFSData();
+
+    // Fetch real-time trip updates from protobuf
     var proxyUrl = 'https://tempsrealcat.vercel.app/api/proxy?url=';
-    var gtfsUrl = proxyUrl + encodeURIComponent('https://www.ambmobilitat.cat/OpenData/google_transit.zip');
-
-    console.log('🚌 Using proxy URL:', gtfsUrl);
-
-    // First fetch GTFS static data
-    var gtfsPromise = fetch(gtfsUrl)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('GTFS download failed: ' + response.status);
-            }
-            return response.arrayBuffer();
-        })
-        .then(buffer => {
-            return parseGTFSStops(buffer);
-        });
-
-    // Then fetch real-time trip updates
     var tripUpdatesUrl = proxyUrl + encodeURIComponent('https://www.ambmobilitat.cat/transit/trips-updates/trips.bin');
 
-    console.log('🚌 Fetching trip updates from:', tripUpdatesUrl);
+    console.log('🚌 Fetching real-time trip updates from:', tripUpdatesUrl);
 
     var tripUpdatesPromise = fetch(tripUpdatesUrl)
         .then(response => {
@@ -178,7 +164,86 @@ function fetchAllAMBStops() {
         });
 }
 
-// Parse GTFS stops.txt from zip buffer
+// Load GTFS data from local CSV files instead of zip
+function loadLocalGTFSData() {
+    console.log('📁 Loading GTFS data from local CSV files...');
+
+    var gtfsBasePath = 'docs/assets/gtfs/amb_bus/';
+
+    // Define all the GTFS files we need to load
+    var filePromises = [
+        // Load stops.txt
+        fetch(gtfsBasePath + 'stops.txt')
+            .then(response => response.ok ? response.text() : Promise.reject('Failed to load stops.txt'))
+            .then(content => {
+                console.log('✅ Loaded stops.txt');
+                return { type: 'stops', data: parseCSVStops(content) };
+            }),
+
+        // Load stop_times.txt
+        fetch(gtfsBasePath + 'stop_times.txt')
+            .then(response => response.ok ? response.text() : Promise.reject('Failed to load stop_times.txt'))
+            .then(content => {
+                console.log('✅ Loaded stop_times.txt');
+                return { type: 'stopTimes', data: parseCSVStopTimes(content) };
+            }),
+
+        // Load trips.txt
+        fetch(gtfsBasePath + 'trips.txt')
+            .then(response => response.ok ? response.text() : Promise.reject('Failed to load trips.txt'))
+            .then(content => {
+                console.log('✅ Loaded trips.txt');
+                return { type: 'trips', data: parseCSVTrips(content) };
+            }),
+
+        // Load routes.txt
+        fetch(gtfsBasePath + 'routes.txt')
+            .then(response => response.ok ? response.text() : Promise.reject('Failed to load routes.txt'))
+            .then(content => {
+                console.log('✅ Loaded routes.txt');
+                return { type: 'routes', data: parseCSVRoutes(content) };
+            }),
+
+        // Load calendar.txt
+        fetch(gtfsBasePath + 'calendar.txt')
+            .then(response => response.ok ? response.text() : Promise.reject('Failed to load calendar.txt'))
+            .then(content => {
+                console.log('✅ Loaded calendar.txt');
+                return { type: 'calendar', data: parseCSVCalendar(content) };
+            }),
+
+        // Load calendar_dates.txt
+        fetch(gtfsBasePath + 'calendar_dates.txt')
+            .then(response => response.ok ? response.text() : Promise.reject('Failed to load calendar_dates.txt'))
+            .then(content => {
+                console.log('✅ Loaded calendar_dates.txt');
+                return { type: 'calendarDates', data: parseCSVCalendarDates(content) };
+            })
+    ];
+
+    // Wait for all files to load and parse
+    return Promise.all(filePromises)
+        .then(function(results) {
+            // Combine all loaded data into GTFS data object
+            var gtfsData = {};
+            results.forEach(function(result) {
+                gtfsData[result.type] = result.data;
+            });
+
+            console.log('✅ All GTFS files loaded successfully');
+
+            // Process the combined data
+            var processedStops = combineGTFSData(gtfsData);
+            console.log('✅ GTFS data processed and combined');
+            return processedStops;
+        })
+        .catch(function(error) {
+            console.error('❌ Error loading local GTFS files:', error);
+            throw new Error('Failed to load GTFS data from local files: ' + error);
+        });
+}
+
+// Parse GTFS stops.txt from zip buffer (kept for backward compatibility)
 function parseGTFSStops(buffer) {
     return new Promise(function(resolve, reject) {
         // Import JSZip dynamically

@@ -168,7 +168,7 @@ window.translations_ca = {
     parking_title: "Zona Verda a Vilanova i la Geltrú",
     parking_load: "Carrega el mapa",
 
-    // Mapillary pane
+    // Mapillary pane (legacy - replaced by Panoramax)
     mapillary_title: "Mapillary",
     mapillary_description: "Mapillary és l'Street View lliure, està realitzat per voluntaris i les imatges es distribueixen sota una llicència CC BY-SA 4.0.",
     mapillary_random: "Troba 10 llocs a l'atzar a Mapillary",
@@ -178,6 +178,16 @@ window.translations_ca = {
     mapillary_help_text2: "En seleccionar un dels marcadors us apareixerà una bafarada amb la fotografia a Mapillary de la zona:",
     mapillary_help_text3: "Si seguiu l'enllaç «Continua la seqüència a Mapillary» s'obrirà la pàgina de Mapillary en una altra pestanya, en el punt exacte on éreu. I des d'allà podreu resseguir tota la ruta:",
     mapillary_help_back: "Tornar a l'inici",
+
+    // Panoramax pane
+    panoramax_title: "Panoramax",
+    panoramax_description: "Panoramax és una plataforma oberta per compartir imatges de carrer, desenvolupada per la comunitat OpenStreetMap. Les imatges es distribueixen sota llicències obertes i contribueixen a millorar el mapa col·laboratiu.",
+    panoramax_random: "Troba imatges de carrer a Panoramax",
+    panoramax_clear: "Neteja els marcadors de Panoramax",
+    panoramax_help_title: "Ajuda",
+    panoramax_help_text1: "Des d'aquesta secció podeu trobar imatges de carrer de la vostra vista del mapa utilitzant Panoramax. Si us interessa localitzar imatges en una zona concreta, és recomanable apropar-vos el màxim a aquella zona abans de fer clic a «Troba imatges de carrer a Panoramax». Després de fer-ho us apareixeran marcadors al mapa amb les imatges disponibles:",
+    panoramax_help_text2: "En seleccionar un dels marcadors us apareixerà una bafarada amb la imatge de carrer de Panoramax de la zona. Les imatges de Panoramax són obertes i contribueixen a millorar el mapa col·laboratiu d'OpenStreetMap.",
+    panoramax_help_back: "Tornar a l'inici",
 
     // Links pane
     links_title: "Enllaços d'interès",
@@ -705,21 +715,4 @@ window.translations_ca = {
     bicycle_form_instructions_title: "Copiar instruccions",
     bicycle_form_instructions_text: "PASSOS PER COPIAR LES DADES BICING:\n\n1. Ves a la pestanya Bicing que s'ha obert\n2. Prem Ctrl+A (seleccionar tot)\n3. Prem Ctrl+C (copiar)\n4. Torna aquí i prem Ctrl+V (enganxar)\n5. Clica 'Processar Dades Reals'\n\nURL: https://opendata-ajuntament.barcelona.cat/data/dataset/6aa3416d-ce1a-494d-861b-7bd07f069600/resource/1b215493-9e63-4a12-8980-2d7e0fa19f85/download",
 
-    // Traduccions de Bus Cat
-    buscat_title: "🚌 Bus Cat",
-    buscat_description: "Visualitza totes les parades d'autobús Bus Cat a Catalunya. Les dades provenen directament dels fitxers GTFS oficials.",
-    buscat_stops_visualization: "📍 Visualització de parades",
-    buscat_start_stops: "Mostrar parades",
-    buscat_how_it_works: "📖 Com funciona",
-    buscat_step1: "Mostrar parades: Prem \"Mostrar parades\" per carregar totes les parades d'autobús Bus Cat al mapa",
-    buscat_step2: "Visualitza al mapa: Les parades apareixeran com marcadors amb icones d'autobús i colors per ruta",
-    buscat_step3: "Clica als marcadors: Obtén informació detallada sobre cada parada inclosos horaris",
-    buscat_step4: "Amaga quan vulguis: Prem \"Amagar parades\" per netejar el mapa",
-    buscat_coverage: "ℹ️ Cobertura: Aquest servei mostra les parades d'autobús a Catalunya. Les dades provenen dels fitxers GTFS oficials i s'actualitzen automàticament.",
-    buscat_table_title: "📋 Taula de parades d'autobús",
-    buscat_refresh_table: "Actualitzar taula",
-    buscat_clear_search: "Netejar cerca",
-    buscat_table_loading: "Carregant dades...",
-    buscat_help_title: "Ajuda",
-    buscat_help_text: "Aquest panell et permet visualitzar totes les parades d'autobús Bus Cat a Catalunya. Les dades provenen dels fitxers GTFS oficials i inclouen informació sobre ubicació, codis i horaris. Les parades amb dades d'horaris apareixen en verd, les altres en blau."
 };

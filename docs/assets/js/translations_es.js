@@ -703,21 +703,4 @@ window.translations_es = {
     bicycle_form_instructions_title: "Copiar instrucciones",
     bicycle_form_instructions_text: "PASOS PARA COPIAR LOS DATOS BICING:\n\n1. Ve a la pestaña Bicing que se abrió\n2. Presiona Ctrl+A (seleccionar todo)\n3. Presiona Ctrl+C (copiar)\n4. Regresa aquí y presiona Ctrl+V (pegar)\n5. Haz clic en 'Procesar Datos Reales'\n\nURL: https://opendata-ajuntament.barcelona.cat/data/dataset/6aa3416d-ce1a-494d-861b-7bd07f069600/resource/1b215493-9e63-4a12-8980-2d7e0fa19f85/download",
 
-    // Traducciones de Bus Cat
-    buscat_title: "🚌 Bus Cat",
-    buscat_description: "Visualiza todas las paradas de autobús Bus Cat en Catalunya. Los datos provienen directamente de los archivos GTFS oficiales.",
-    buscat_stops_visualization: "📍 Visualización de paradas",
-    buscat_start_stops: "Mostrar paradas",
-    buscat_how_it_works: "📖 Cómo funciona",
-    buscat_step1: "Mostrar paradas: Pulsa \"Mostrar paradas\" para cargar todas las paradas de autobús Bus Cat en el mapa",
-    buscat_step2: "Visualiza en el mapa: Las paradas aparecerán como marcadores con iconos de autobús y colores por ruta",
-    buscat_step3: "Haz clic en los marcadores: Obtén información detallada sobre cada parada incluyendo horarios",
-    buscat_step4: "Oculta cuando quieras: Pulsa \"Ocultar paradas\" para limpiar el mapa",
-    buscat_coverage: "ℹ️ Cobertura: Este servicio muestra las paradas de autobús en Catalunya. Los datos provienen de los archivos GTFS oficiales y se actualizan automáticamente.",
-    buscat_table_title: "📋 Tabla de paradas de autobús",
-    buscat_refresh_table: "Actualizar tabla",
-    buscat_clear_search: "Limpiar búsqueda",
-    buscat_table_loading: "Cargando datos...",
-    buscat_help_title: "Ayuda",
-    buscat_help_text: "Este panel te permite visualizar todas las paradas de autobús Bus Cat en Catalunya. Los datos provienen de los archivos GTFS oficiales e incluyen información sobre ubicación, códigos y horarios. Las paradas con datos de horarios aparecen en verde, las otras en azul."
 };

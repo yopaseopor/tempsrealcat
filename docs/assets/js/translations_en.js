@@ -167,7 +167,7 @@ window.translations_en = {
     parking_title: "Green Zone in Vilanova i la Geltrú",
     parking_load: "Load map",
 
-    // Mapillary pane
+    // Mapillary pane (legacy - replaced by Panoramax)
     mapillary_title: "Mapillary",
     mapillary_description: "Mapillary is the free Street View, made by volunteers and the images are distributed under a CC BY-SA 4.0 license.",
     mapillary_random: "Find 10 random locations on Mapillary",
@@ -177,6 +177,16 @@ window.translations_en = {
     mapillary_help_text2: "When selecting one of the markers, a popup will appear with the Mapillary photo of the area:",
     mapillary_help_text3: "If you follow the «Continue sequence on Mapillary» link, the Mapillary page will open in another tab, at the exact point where you were. And from there you can follow the entire route:",
     mapillary_help_back: "Back to top",
+
+    // Panoramax pane
+    panoramax_title: "Panoramax",
+    panoramax_description: "Panoramax is an open platform for sharing street images, developed by the OpenStreetMap community. Images are distributed under open licenses and contribute to improving the collaborative map.",
+    panoramax_random: "Find street images on Panoramax",
+    panoramax_clear: "Clear Panoramax markers",
+    panoramax_help_title: "Help",
+    panoramax_help_text1: "From this section you can find street images from your map view using Panoramax. If you are interested in locating images in a specific area, it is recommended to zoom in as much as possible on that area before clicking «Find street images on Panoramax». After doing so, markers will appear on the map with available images:",
+    panoramax_help_text2: "When selecting one of the markers, a popup will appear with the Panoramax street image of the area. Panoramax images are open and contribute to improving the collaborative map of OpenStreetMap.",
+    panoramax_help_back: "Back to top",
 
     // Links pane
     links_title: "Useful links",
@@ -703,21 +713,4 @@ window.translations_en = {
     bicycle_form_instructions_title: "Copy instructions",
     bicycle_form_instructions_text: "STEPS TO COPY BICING DATA:\n\n1. Go to the Bicing tab that opened\n2. Press Ctrl+A (select all)\n3. Press Ctrl+C (copy)\n4. Return here and press Ctrl+V (paste)\n5. Click 'Process Real Data'\n\nURL: https://opendata-ajuntament.barcelona.cat/data/dataset/6aa3416d-ce1a-494d-861b-7bd07f069600/resource/1b215493-9e63-4a12-8980-2d7e0fa19f85/download",
 
-    // Bus Cat translations
-    buscat_title: "🚌 Bus Cat",
-    buscat_description: "Visualize all Bus Cat bus stops in Catalonia. Data comes directly from official GTFS files.",
-    buscat_stops_visualization: "📍 Stop Visualization",
-    buscat_start_stops: "Show stops",
-    buscat_how_it_works: "📖 How it works",
-    buscat_step1: "Show stops: Click \"Show stops\" to load all Bus Cat bus stops on the map",
-    buscat_step2: "View on map: Stops will appear as markers with bus icons and colors by route",
-    buscat_step3: "Click markers: Get detailed information about each stop including schedules",
-    buscat_step4: "Hide when desired: Click \"Hide stops\" to clear the map",
-    buscat_coverage: "ℹ️ Coverage: This service shows bus stops in Catalonia. Data comes from official GTFS files and updates automatically.",
-    buscat_table_title: "📋 Bus stops table",
-    buscat_refresh_table: "Refresh table",
-    buscat_clear_search: "Clear search",
-    buscat_table_loading: "Loading data...",
-    buscat_help_title: "Help",
-    buscat_help_text: "This panel allows you to visualize all Bus Cat bus stops in Catalonia. Data comes from official GTFS files and includes information about location, codes, and schedules. Stops with schedule data appear in green, others in blue."
 };

@@ -117,16 +117,6 @@ var zoomHome = L.Control.zoomHome();
 zoomHome.addTo(map);
 var notesLayer = new leafletOsmNotes();
 
-// Mapillary popoups
-var onEachFeature = function(feature, layer) {
-    console.log(arguments);
-    var content = '<div><center><img width="100%" src="'+feature.properties.image+'"></img><br><a style="font-size:1.1em;" href="http://www.mapillary.com/map/im/'+feature.properties.key+'" target="_blank">Continua la seqüència a Mapillary</a><br><img style="vertical-align:middle;" src="assets/img/mapillary.png" width="25" height="25"></center></div>'
-    layer.bindPopup(content);
-};
-mapillaryLayer = L.geoJson(null, {
-                        onEachFeature: onEachFeature
-                    })
-mapillaryLayer.addTo(map);
 
 // https://github.com/Turbo87/sidebar-v2/
 var sidebar = L.control.sidebar('sidebar').addTo(map);
@@ -602,47 +592,7 @@ function loadBusAmbContent() {
         });
 }
 
-// Function to load external HTML content for Bus Cat tab
-function loadBusCatContent() {
-    const busCatPane = document.getElementById('buscat');
 
-    // Check if content is already loaded (look for the specific Bus Cat title)
-    if (busCatPane.querySelector('h1[data-i18n="buscat_title"]')) {
-        return; // Content already loaded
-    }
-
-    // Load the buscat.html content
-    fetch('buscat.html')
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Failed to load buscat.html');
-            }
-            return response.text();
-        })
-        .then(html => {
-            // Extract the sidebar-pane content from the HTML
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-            const busCatContent = doc.querySelector('#buscat');
-
-            if (busCatContent) {
-                // Clear existing content and add new content
-                busCatPane.innerHTML = busCatContent.innerHTML;
-
-                // Update language for the new content
-                updateLanguage();
-
-                console.log('Bus Cat content loaded successfully');
-            } else {
-                console.error('Could not find #buscat content in buscat.html');
-                busCatPane.innerHTML = '<div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span></div><h1>Error loading Bus Cat content</h1>';
-            }
-        })
-        .catch(error => {
-            console.error('Error loading Bus Cat content:', error);
-            busCatPane.innerHTML = '<div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span></div><h1>Error loading Bus Cat content</h1><p>' + error.message + '</p>';
-        });
-}
 
 // Function to load external HTML content for Traffic tab
 function loadTrafficContent() {
@@ -725,6 +675,53 @@ function loadPdiContent() {
         .catch(error => {
             console.error('Error loading PDI content:', error);
             pdiPane.innerHTML = '<div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span></div><h1>Error loading PDI content</h1><p>' + error.message + '</p>';
+        });
+}
+
+// Function to load external HTML content for Panoramax tab
+function loadPanoramaxContent() {
+    const panoramaxPane = document.getElementById('panoramax');
+
+    // Check if content is already loaded (look for the specific Panoramax title)
+    if (panoramaxPane.querySelector('h1[data-i18n="panoramax_title"]')) {
+        return; // Content already loaded
+    }
+
+    // Load the panoramax.html content
+    fetch('panoramax.html')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to load panoramax.html');
+            }
+            return response.text();
+        })
+        .then(html => {
+            // Extract the sidebar-pane content from the HTML
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const panoramaxContent = doc.querySelector('#panoramax');
+
+            if (panoramaxContent) {
+                // Clear existing content and add new content
+                panoramaxPane.innerHTML = panoramaxContent.innerHTML;
+
+                // Update language for the new content
+                updateLanguage();
+
+                // Initialize Panoramax functionality after content is loaded
+                if (typeof initPanoramax === 'function') {
+                    initPanoramax();
+                }
+
+                console.log('Panoramax content loaded successfully');
+            } else {
+                console.error('Could not find #panoramax content in panoramax.html');
+                panoramaxPane.innerHTML = '<div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span></div><h1>Error loading Panoramax content</h1>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading Panoramax content:', error);
+            panoramaxPane.innerHTML = '<div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span></div><h1>Error loading Panoramax content</h1><p>' + error.message + '</p>';
         });
 }
 
@@ -859,12 +856,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Add event listener to Bus Cat tab
-    const busCatTab = document.querySelector('a[href="#buscat"]');
-    if (busCatTab) {
-        busCatTab.addEventListener('click', function(e) {
-            // Load Bus Cat content after a short delay to ensure tab is active
-            setTimeout(loadBusCatContent, 100);
+    // Add event listener to Panoramax tab
+    const panoramaxTab = document.querySelector('a[href="#panoramax"]');
+    if (panoramaxTab) {
+        panoramaxTab.addEventListener('click', function(e) {
+            // Load Panoramax content after a short delay to ensure tab is active
+            setTimeout(loadPanoramaxContent, 100);
         });
     }
 
@@ -1001,33 +998,6 @@ function clear_layer()
 	}
 }
 
-function refreshMapillary() {
-    // Use base location bounds instead of current map view
-    var bounds = baseLocation.bounds || map.getBounds();
-
- $.ajax({
-
-    dataType: "json",
-    url: "http://api.mapillary.com/v1/im/search?",
-             url: "http://api.mapillary.com/v1/im/search?",
-            data: {
-                'max-results': 10,
-                'geojson': true,
-                'min-lat': bounds.getSouth(),
-                'max-lat': bounds.getNorth(),
-                'min-lon': bounds.getWest(),
-                'max-lon': bounds.getEast()
-            },
-            success: function(data) {
-                    clear_layer();
-                $(data.features).each(function(key, data) {
-                    console.log('data',data);
-                    mapillaryLayer.addData(data);
-		    sidebar.close()
-                });
-            }
-    });
-}
 
 // OSM notes
 function addnotes() {
