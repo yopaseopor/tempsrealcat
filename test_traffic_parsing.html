@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Traffic Parsing</title>
+</head>
+<body>
+    <h1>Testing DGT Traffic Parsing</h1>
+    <button onclick="testParsing()">Test AP-7 Parsing</button>
+    <div id="results"></div>
+
+    <script>
+        async function testParsing() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<p>Testing...</p>';
+            
+            try {
+                console.log('🔍 Testing DGT XML parsing...');
+                
+                // Fetch the same data as the traffic system
+                const response = await fetch('https://tempsrealcat.vercel.app/api/proxy?url=https://infocar.dgt.es/datex2/sct/SituationPublication/all/content.xml');
+                
+                if (!response.ok) {
+                    results.innerHTML = `<p>❌ Failed to fetch: ${response.status}</p>`;
+                    return;
+                }
+                
+                const xmlText = await response.text();
+                console.log('✅ Fetched XML data, length:', xmlText.length);
+                
+                // Test parsing
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+                
+                // Test the fixed selector
+                const situationRecords = xmlDoc.querySelectorAll('situationRecord, _0\\:situationRecord');
+                console.log('📊 Found situation records:', situationRecords.length);
+                
+                let ap7Count = 0;
+                let ap7Incidents = [];
+                
+                situationRecords.forEach((record, index) => {
+                    const recordText = record.textContent || '';
+                    if (recordText.toLowerCase().includes('ap-7')) {
+                        ap7Count++;
+                        
+                        const recordType = record.getAttribute('xsi:type');
+                        const situationId = record.closest('situation, _0\\:situation')?.getAttribute('id') || `incident-${index}`;
+                        
+                        // Test validity extraction
+                        const validity = record.querySelector('validity, _0\\:validity');
+                        const isActive = validity?.querySelector('validityStatus, _0\\:validityStatus')?.textContent === 'active';
+                        
+                        // Test road number extraction
+                        const roadNumber = record.querySelector('roadNumber, _0\\:roadNumber');
+                        const roadName = roadNumber ? roadNumber.textContent : 'Unknown';
+                        
+                        ap7Incidents.push({
+                            index: index,
+                            id: situationId,
+                            type: recordType,
+                            active: isActive,
+                            road: roadName
+                        });
+                    }
+                });
+                
+                console.log('🛣️ Total AP-7 records found:', ap7Count);
+                console.log('AP-7 incidents:', ap7Incidents);
+                
+                // Display results
+                let html = `<h2>Results</h2>`;
+                html += `<p>Total situation records: ${situationRecords.length}</p>`;
+                html += `<p>AP-7 incidents found: ${ap7Count}</p>`;
+                
+                if (ap7Incidents.length > 0) {
+                    html += `<h3>AP-7 Incidents:</h3>`;
+                    ap7Incidents.forEach((incident, i) => {
+                        html += `<div style="border: 1px solid #ccc; margin: 10px; padding: 10px;">`;
+                        html += `<strong>Incident ${i+1}:</strong><br>`;
+                        html += `ID: ${incident.id}<br>`;
+                        html += `Type: ${incident.type}<br>`;
+                        html += `Active: ${incident.active}<br>`;
+                        html += `Road: ${incident.road}<br>`;
+                        html += `</div>`;
+                    });
+                } else {
+                    html += `<p style="color: red;">❌ No AP-7 incidents found!</p>`;
+                    
+                    // Check raw mentions
+                    const rawAp7Matches = xmlText.match(/ap-7/gi) || [];
+                    html += `<p>Raw AP-7 mentions in XML: ${rawAp7Matches.length}</p>`;
+                }
+                
+                results.innerHTML = html;
+                
+            } catch (error) {
+                console.error('❌ Error:', error);
+                results.innerHTML = `<p style="color: red;">❌ Error: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

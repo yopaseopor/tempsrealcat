@@ -40,11 +40,11 @@ async function loadTrafficData() {
             }
         }
 
-        // Fetch data from all sources in parallel using proxied URLs
+        // Fetch data from all sources in parallel using proper URLs
         const [dgtResponse, rssResponse, gmlResponse] = await Promise.allSettled([
-            fetch('https://tempsrealcat.vercel.app/api/proxy?url=https://infocar.dgt.es/datex2/sct/SituationPublication/all/content.xml'),
-            fetch('https://tempsrealcat.vercel.app/api/proxy?url=https://www.gencat.cat/transit/opendata/incidenciesGML.xml'),
-            fetch('https://tempsrealcat.vercel.app/api/proxy?url=https://www.gencat.cat/transit/opendata/incidenciesRSS.xml')
+            fetch(getApiUrl('/api/dgt-traffic')),
+            fetch(getApiUrl('/api/gencat-rss-traffic')),
+            fetch(getApiUrl('/api/gencat-gml-traffic'))
         ]);
 
         let allIncidents = [];
@@ -109,8 +109,8 @@ function parseDGTXML(xmlText) {
     const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
     const incidents = [];
 
-    // Find all situation records
-    const situationRecords = xmlDoc.querySelectorAll('situationRecord');
+    // Find all situation records - try both with and without namespace prefixes
+    const situationRecords = xmlDoc.querySelectorAll('situationRecord, _0\\:situationRecord');
     console.log('Found', situationRecords.length, 'situation records in XML');
 
     // Count record types
@@ -140,11 +140,11 @@ function parseDGTXML(xmlText) {
 // Parse individual situation record
 function parseSituationRecord(record, index) {
     const recordType = record.getAttribute('xsi:type');
-    const situationId = record.closest('situation')?.getAttribute('id') || `incident-${index}`;
+    const situationId = record.closest('situation, _0\\:situation')?.getAttribute('id') || `incident-${index}`;
 
     // Extract basic information
-    const validity = record.querySelector('validity');
-    const isActive = validity?.querySelector('validityStatus')?.textContent === 'active';
+    const validity = record.querySelector('validity, _0\\:validity');
+    const isActive = validity?.querySelector('validityStatus, _0\\:validityStatus')?.textContent === 'active';
 
     if (!isActive) return null;
 
@@ -278,10 +278,10 @@ function extractLocationInfo(record) {
 
     // DATEX2 Location Types Support
     // 1. PointByCoordinates - Geographic coordinates
-    const pointCoordinates = record.querySelector('pointCoordinates');
+    const pointCoordinates = record.querySelector('pointCoordinates, _0\\:pointCoordinates');
     if (pointCoordinates) {
-        const latitude = pointCoordinates.querySelector('latitude');
-        const longitude = pointCoordinates.querySelector('longitude');
+        const latitude = pointCoordinates.querySelector('latitude, _0\\:latitude');
+        const longitude = pointCoordinates.querySelector('longitude, _0\\:longitude');
 
         if (latitude && longitude) {
             location.lat = parseFloat(latitude.textContent);
@@ -292,11 +292,11 @@ function extractLocationInfo(record) {
     }
 
     // 2. ReferencePoint - Road reference points (PK)
-    const referencePoint = record.querySelector('referencePoint');
+    const referencePoint = record.querySelector('referencePoint, _0\\:referencePoint');
     if (referencePoint && !location.hasCoordinates) {
-        const roadNumber = referencePoint.querySelector('roadNumber');
-        const referencePointIdentifier = referencePoint.querySelector('referencePointIdentifier');
-        const referencePointDistance = referencePoint.querySelector('referencePointDistance');
+        const roadNumber = referencePoint.querySelector('roadNumber, _0\\:roadNumber');
+        const referencePointIdentifier = referencePoint.querySelector('referencePointIdentifier, _0\\:referencePointIdentifier');
+        const referencePointDistance = referencePoint.querySelector('referencePointDistance, _0\\:referencePointDistance');
 
         if (roadNumber) location.roadNumber = roadNumber.textContent;
         if (referencePointIdentifier) location.referencePointId = referencePointIdentifier.textContent;
@@ -308,9 +308,9 @@ function extractLocationInfo(record) {
     }
 
     // 3. AlertCPoint - AlertC table reference
-    const alertCPoint = record.querySelector('alertCPoint');
+    const alertCPoint = record.querySelector('alertCPoint, _0\\:alertCPoint');
     if (alertCPoint && !location.hasCoordinates) {
-        const alertCLocation = alertCPoint.querySelector('alertCLocation');
+        const alertCLocation = alertCPoint.querySelector('alertCLocation, _0\\:alertCLocation');
         if (alertCLocation) {
             location.alertCLocation = alertCLocation.textContent;
         }
@@ -320,7 +320,7 @@ function extractLocationInfo(record) {
     }
 
     // 4. TPEGPointLocation - TPEG-Loc structure
-    const tpegPointLocation = record.querySelector('tpegPointLocation');
+    const tpegPointLocation = record.querySelector('tpegPointLocation, _0\\:tpegPointLocation');
     if (tpegPointLocation && !location.hasCoordinates) {
         location.locationType = 'TPEGPointLocation';
         location.description = 'Localització TPEG (sense coordenades disponibles)';
@@ -328,9 +328,9 @@ function extractLocationInfo(record) {
     }
 
     // 5. Linear locations (ReferencePointLinear, AlertCLinear, TPEGLinearLocation)
-    const linearLocation = record.querySelector('referencePointLinear') ||
-                          record.querySelector('alertCLinear') ||
-                          record.querySelector('tpegLinearLocation');
+    const linearLocation = record.querySelector('referencePointLinear, _0\\:referencePointLinear') ||
+                          record.querySelector('alertCLinear, _0\\:alertCLinear') ||
+                          record.querySelector('tpegLinearLocation, _0\\:tpegLinearLocation');
     if (linearLocation && !location.hasCoordinates) {
         const fromPoint = linearLocation.querySelector('from referencePoint');
         const toPoint = linearLocation.querySelector('to referencePoint');
@@ -341,8 +341,8 @@ function extractLocationInfo(record) {
     }
 
     // 6. Area locations (AlertCArea, TPEGAreaLocation)
-    const areaLocation = record.querySelector('alertCArea') ||
-                        record.querySelector('tpegAreaLocation');
+    const areaLocation = record.querySelector('alertCArea, _0\\:alertCArea') ||
+                        record.querySelector('tpegAreaLocation, _0\\:tpegAreaLocation');
     if (areaLocation && !location.hasCoordinates) {
         location.locationType = 'Area';
         location.description = 'Àrea geogràfica (sense coordenades disponibles)';
@@ -350,24 +350,24 @@ function extractLocationInfo(record) {
     }
 
     // Extract road information
-    const roadName = record.querySelector('roadName value');
+    const roadName = record.querySelector('roadName value, _0\\:roadName _0\\:value');
     if (roadName) {
         location.road = roadName.textContent;
     }
 
-    const roadNumber = record.querySelector('roadNumber');
+    const roadNumber = record.querySelector('roadNumber, _0\\:roadNumber');
     if (roadNumber && !location.roadNumber) {
         location.roadNumber = roadNumber.textContent;
     }
 
     // Extract town name
-    const townName = record.querySelector('townName value');
+    const townName = record.querySelector('townName value, _0\\:townName _0\\:value');
     if (townName) {
         location.town = townName.textContent;
     }
 
     // Extract direction information
-    const directionBound = record.querySelector('directionBound');
+    const directionBound = record.querySelector('directionBound, _0\\:directionBound');
     if (directionBound) {
         location.direction = directionBound.textContent;
     }
@@ -388,7 +388,7 @@ function extractMaintenanceInfo(record) {
     let info = 'Obres de manteniment en curs.';
 
     // Add any additional details if available
-    const roadworksType = record.querySelector('roadworksTypeOfWork');
+    const roadworksType = record.querySelector('roadworksTypeOfWork, _0\\:roadworksTypeOfWork');
     if (roadworksType) {
         info += ` Tipus: ${roadworksType.textContent}.`;
     }
@@ -400,7 +400,7 @@ function extractMaintenanceInfo(record) {
 function extractAbnormalTrafficInfo(record) {
     let info = 'Circulació anormal detectada.';
 
-    const abnormalTrafficType = record.querySelector('abnormalTrafficType');
+    const abnormalTrafficType = record.querySelector('abnormalTrafficType, _0\\:abnormalTrafficType');
     if (abnormalTrafficType) {
         const trafficType = abnormalTrafficType.textContent;
         switch (trafficType) {
