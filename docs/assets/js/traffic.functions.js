@@ -164,6 +164,9 @@ function parseSituationRecord(record, index) {
     let level = 1;
     let levelColor = '#28a745'; // Green for level 1
 
+    // Get record text once for closure detection
+    const recordText = record.textContent || '';
+
     switch (recordType) {
         case '_0:MaintenanceWorks':
             incidentDetails.category = 'maintenance';
@@ -172,6 +175,16 @@ function parseSituationRecord(record, index) {
             incidentDetails.icon = '🔧';
             level = 2;
             levelColor = '#ffc107'; // Yellow for level 2
+            
+            // Check if this maintenance work involves road closure
+            if (recordText.toLowerCase().includes('tall') || recordText.toLowerCase().includes('tancada') || recordText.toLowerCase().includes('closure')) {
+                incidentDetails.category = 'closure';
+                incidentDetails.title = 'Carretera tancada per obres';
+                incidentDetails.icon = '🚧';
+                level = 5;
+                levelColor = '#000000'; // Black for closures (level 5)
+                console.log('🚧 Maintenance work detected as CLOSURE for AP-7:', incidentDetails.id);
+            }
             break;
 
         case '_0:AbnormalTraffic':
@@ -219,6 +232,13 @@ function parseSituationRecord(record, index) {
             incidentDetails.icon = '🔄';
             level = 5;
             levelColor = '#000000'; // Black for level 5
+            
+            // Check if this network management involves road closure
+            if (recordText.toLowerCase().includes('tall') || recordText.toLowerCase().includes('tancada') || recordText.toLowerCase().includes('closure')) {
+                incidentDetails.title = 'Carretera tancada (Gestió de xarxa)';
+                incidentDetails.icon = '🚧';
+                console.log('🚧 Network management detected as CLOSURE for AP-7:', incidentDetails.id);
+            }
             break;
 
         case '_0:PoorEnvironmentConditions':
@@ -448,10 +468,22 @@ function extractReroutingInfo(record) {
 // Extract obstruction type and information
 function extractObstructionType(record) {
     // Check for obstruction cause
-    const animalPresence = record.querySelector('animalPresenceTypeOfObstruction');
-    const environmentalObstruction = record.querySelector('environmentalObstructionType');
-    const equipmentDamage = record.querySelector('equipmentDamageType');
-    const vehicleObstruction = record.querySelector('vehicleObstructionType');
+    const animalPresence = record.querySelector('animalPresenceTypeOfObstruction, _0\\:animalPresenceTypeOfObstruction');
+    const environmentalObstruction = record.querySelector('environmentalObstructionType, _0\\:environmentalObstructionType');
+    const equipmentDamage = record.querySelector('equipmentDamageType, _0\\:equipmentDamageType');
+    const vehicleObstruction = record.querySelector('vehicleObstructionType, _0\\:vehicleObstructionType');
+    
+    // Check for road closed indicator
+    const roadClosed = record.querySelector('roadClosed, _0\\:roadClosed');
+    if (roadClosed && roadClosed.textContent === 'true') {
+        return {
+            category: 'closure',
+            title: 'Carretera tancada',
+            description: 'Carretera completament tancada al trànsit',
+            icon: '🚧',
+            color: '#dc3545'
+        };
+    }
 
     if (animalPresence) {
         return {
@@ -833,8 +865,9 @@ async function displayTrafficIncidents(incidents) {
             <th style="padding: 8px; text-align: center; border: 1px solid #dee2e6; cursor: pointer;" onclick="sortTable(2)" id="sort-location">LOCATION ▼</th>
             <th style="padding: 8px; text-align: center; border: 1px solid #dee2e6; cursor: pointer;" onclick="sortTable(3)" id="sort-pk">PK ▼</th>
             <th style="padding: 8px; text-align: center; border: 1px solid #dee2e6; cursor: pointer;" onclick="sortTable(4)" id="sort-direction">DIRECTION ▼</th>
-            <th style="padding: 8px; text-align: center; border: 1px solid #dee2e6; cursor: pointer;" onclick="sortTable(5)" id="sort-description">DESCRIPTION ▼</th>
-            <th style="padding: 8px; text-align: center; border: 1px solid #dee2e6; cursor: pointer;" onclick="sortTable(6)" id="sort-source">SOURCE ▼</th>
+            <th style="padding: 8px; text-align: center; border: 1px solid #dee2e6; cursor: pointer;" onclick="sortTable(5)" id="sort-reason">REASON ▼</th>
+            <th style="padding: 8px; text-align: center; border: 1px solid #dee2e6; cursor: pointer;" onclick="sortTable(6)" id="sort-observations">OBSERVATIONS ▼</th>
+            <th style="padding: 8px; text-align: center; border: 1px solid #dee2e6; cursor: pointer;" onclick="sortTable(7)" id="sort-source">SOURCE ▼</th>
             <th style="padding: 8px; text-align: center; border: 1px solid #dee2e6; width: 120px;">LOCATE</th>
         </tr>
     `;
@@ -944,6 +977,37 @@ function addTrafficMarker(incident) {
         popupContent += `<p style="margin: 4px 0; font-size: 11px; color: #856404; background: #fff3cd; padding: 4px; border-radius: 3px;"><strong>📍 Ubicació aproximada</strong> (sense coordenades exactes)</p>`;
     } else if (incident.location.geocoded === true) {
         popupContent += `<p style="margin: 4px 0; font-size: 11px; color: #155724; background: #d4edda; padding: 4px; border-radius: 3px;"><strong>✅ Ubicació geocodificada</strong> (des d'OSM)</p>`;
+    }
+
+    // Add GML observations if available
+    if (incident.source === 'GENCAT_GML' && incident.observations) {
+        const obs = incident.observations;
+        popupContent += `<div style="margin: 8px 0; padding: 8px; background: #f8f9fa; border-radius: 4px; border: 1px solid #dee2e6;">
+            <h5 style="margin: 0 0 6px 0; font-size: 12px; color: #495057;"><strong>📋 Observacions GML:</strong></h5>`;
+        
+        if (obs.dataInici) {
+            popupContent += `<p style="margin: 2px 0; font-size: 11px;"><strong>Data inici:</strong> ${obs.dataInici}</p>`;
+        }
+        if (obs.dataFi) {
+            popupContent += `<p style="margin: 2px 0; font-size: 11px;"><strong>Data fi:</strong> ${obs.dataFi}</p>`;
+        }
+        if (obs.fase) {
+            popupContent += `<p style="margin: 2px 0; font-size: 11px;"><strong>Fase:</strong> ${obs.fase}</p>`;
+        }
+        if (obs.tipusCirculacio) {
+            popupContent += `<p style="margin: 2px 0; font-size: 11px;"><strong>Tipus circulació:</strong> ${obs.tipusCirculacio}</p>`;
+        }
+        if (obs.tipusAfectacio) {
+            popupContent += `<p style="margin: 2px 0; font-size: 11px;"><strong>Tipus afectació:</strong> ${obs.tipusAfectacio}</p>`;
+        }
+        if (obs.tipusIncidencia) {
+            popupContent += `<p style="margin: 2px 0; font-size: 11px;"><strong>Tipus incidència:</strong> ${obs.tipusIncidencia}</p>`;
+        }
+        if (obs.causa) {
+            popupContent += `<p style="margin: 2px 0; font-size: 11px;"><strong>Causa:</strong> ${obs.causa}</p>`;
+        }
+        
+        popupContent += `</div>`;
     }
 
     popupContent += `<p style="margin: 4px 0; font-size: 11px; color: #666;">ID: ${incident.id}</p>
@@ -1120,7 +1184,9 @@ function parseGENCATRSSItem(item, index) {
     let levelColor = '#28a745'; // Green for level 1
 
     const titleLower = title.toLowerCase();
-    if (titleLower.includes('obres') || titleLower.includes('manteniment') || titleLower.includes('reparaci')) {
+    if (titleLower.includes('obres') || titleLower.includes('manteniment') || titleLower.includes('reparaci') ||
+       titleLower.includes('treballs') || titleLower.includes('millora') || titleLower.includes('construcció') ||
+       titleLower.includes('instal·lacions') || titleLower.includes('ferm') || titleLower.includes('reforçament')) {
         category = 'maintenance';
         icon = '🔧';
         level = 2; // Maintenance is medium severity
@@ -1130,12 +1196,16 @@ function parseGENCATRSSItem(item, index) {
         icon = '🚨';
         level = 4; // Accidents are high severity
         levelColor = '#dc3545'; // Red for level 4
-    } else if (titleLower.includes('tall') || titleLower.includes('tancat')) {
+    } else if (titleLower.includes('tall') || titleLower.includes('tancat') || titleLower.includes('tallada') ||
+               titleLower.includes('cortada') || titleLower.includes('tallat') || titleLower.includes('tancada') ||
+               titleLower.includes('desviament') || titleLower.includes('desvi') || titleLower.includes('desviament')) {
         category = 'closure';
         icon = '🚧';
         level = 5; // Closures are highest severity
-        levelColor = '#6f42c1'; // Purple for level 5
-    } else if (titleLower.includes('manifestaci') || titleLower.includes('retenci')) {
+        levelColor = '#000000'; // Black for level 5
+        console.log('🚧 RSS Closure detected - Level 5 (Black):', title);
+    } else if (titleLower.includes('manifestaci') || titleLower.includes('retenci') || titleLower.includes('retenció') ||
+               titleLower.includes('congestió') || titleLower.includes('densitat')) {
         category = 'congestion';
         icon = '🚗';
         level = 3; // Congestion is medium-high severity
@@ -1144,7 +1214,7 @@ function parseGENCATRSSItem(item, index) {
         category = 'weather';
         icon = '❄️';
         level = 5; // Weather incidents are high severity
-        levelColor = '#6f42c1'; // Purple for level 5
+        levelColor = '#000000'; // Black for level 5
     }
 
     return {
@@ -1201,6 +1271,14 @@ function parseGENCATGMLFeature(member, index) {
     const descripcioTipus = mct2Data.querySelector('cite\\:descripcio_tipus, descripcio_tipus')?.textContent;
     const sentit = mct2Data.querySelector('cite\\:sentit, sentit')?.textContent;
     const nivell = parseInt(mct2Data.querySelector('cite\\:nivell, nivell')?.textContent || '1');
+    
+    // Extract additional observation fields
+    const dataInici = mct2Data.querySelector('cite\\:data_inici, data_inici')?.textContent;
+    const dataFi = mct2Data.querySelector('cite\\:data_fi, data_fi')?.textContent;
+    const fase = mct2Data.querySelector('cite\\:fase, fase')?.textContent;
+    const tipusIncidencia = mct2Data.querySelector('cite\\:tipus_incidencia, tipus_incidencia')?.textContent;
+    const tipusAfectacio = mct2Data.querySelector('cite\\:tipus_afectacio, tipus_afectacio')?.textContent;
+    const tipusCirculacio = mct2Data.querySelector('cite\\:tipus_circulacio, tipus_circulacio')?.textContent;
 
     // Extract coordinates - try multiple possible locations and formats
     let coordinates = null;
@@ -1410,32 +1488,44 @@ function parseGENCATGMLFeature(member, index) {
         icon = '❄️';
         level = 5; // Weather incidents are highest severity
         levelColor = '#000000'; // Black for level 5
-    } else if (descLower.includes('tall') || descLower.includes('tancat') || nivell >= 5) {
+    } else if (descLower.includes('tall') || descLower.includes('tancat') || descLower.includes('tallada') || 
+               descLower.includes('cortada') || descLower.includes('tallat') || descLower.includes('tancada') ||
+               descLower.includes('desviament') || descLower.includes('desvi') || descLower.includes('desviament') ||
+               tipusLower.includes('tall') || tipusLower.includes('tancat') || tipusLower.includes('tallada') ||
+               tipusLower.includes('cortada') || tipusLower.includes('tallat') || tipusLower.includes('tancada') ||
+               causaLower.includes('tall') || causaLower.includes('tancat') || causaLower.includes('tallada') ||
+               causaLower.includes('cortada') || causaLower.includes('tallat') || causaLower.includes('tancada') ||
+               nivell >= 5) {
         category = 'closure';
         icon = '🚧';
         level = 5; // Closures are highest severity
         levelColor = '#000000'; // Black for level 5
+        console.log('🚧 GML Closure detected - Level 5 (Black):', descripcio, 'Level:', nivell);
     } else if (tipusLower.includes('accident') || causaLower.includes('accident')) {
         category = 'accident';
         icon = '🚨';
         level = 4; // Accidents are high severity
         levelColor = '#dc3545'; // Red for level 4
-    } else if (tipusLower.includes('retenci') || causaLower.includes('circulaci') || causaLower.includes('manifestaci')) {
+    } else if (tipusLower.includes('retenci') || causaLower.includes('circulaci') || causaLower.includes('manifestaci') ||
+               tipusLower.includes('congestió') || tipusLower.includes('densitat') || causaLower.includes('retenció')) {
         category = 'congestion';
         icon = '🚗';
         level = 3; // Congestion is medium-high severity
         levelColor = '#fd7e14'; // Orange for level 3
-    } else if (tipusLower.includes('obres') || causaLower.includes('manteniment') || causaLower.includes('reparaci')) {
+    } else if (tipusLower.includes('obres') || causaLower.includes('manteniment') || causaLower.includes('reparaci') ||
+               tipusLower.includes('treballs') || causaLower.includes('millora') || tipusLower.includes('construcció') ||
+               tipusLower.includes('instal·lacions') || causaLower.includes('ferm') || tipusLower.includes('reforçament')) {
         category = 'maintenance';
         icon = '🔧';
         level = 2; // Maintenance is medium severity
         levelColor = '#ffc107'; // Yellow for level 2
     } else if (nivell >= 4) {
-        // High level incidents from XML
+        // High level incidents from XML - should be closures
         category = 'closure';
         icon = '🚧';
-        level = 4;
-        levelColor = '#dc3545'; // Red for level 4
+        level = 5; // High level should be black (closures)
+        levelColor = '#000000'; // Black for level 5
+        console.log('🚧 GML High Level (>=4) - Level 5 (Black):', descripcio, 'Level:', nivell);
     } else {
         // Low severity incidents
         category = 'other';
@@ -1456,7 +1546,20 @@ function parseGENCATGMLFeature(member, index) {
         level: level,
         location: incidentLocation,
         nivell: nivell, // Store the level for table display
-        active: true
+        active: true,
+        // GML observation fields for detailed display
+        observations: {
+            dataInici: dataInici,
+            dataFi: dataFi,
+            fase: fase,
+            tipusIncidencia: tipusIncidencia,
+            tipusAfectacio: tipusAfectacio,
+            tipusCirculacio: tipusCirculacio,
+            causa: causa,
+            descripcio: descripcio,
+            descripcioTipus: descripcioTipus,
+            sentit: sentit
+        }
     };
 }
 
@@ -1856,6 +1959,21 @@ function addIncidentToTableWithLocate(incident, tbody) {
     };
     const source = sourceMap[incident.source] || incident.source;
 
+    // Build GML observations string if available
+    let gmlObservations = '';
+    if (incident.source === 'GENCAT_GML' && incident.observations) {
+        const obs = incident.observations;
+        const obsParts = [
+            obs.dataInici || '',
+            obs.dataFi || '',
+            obs.fase || '',
+            obs.tipusCirculacio || '',
+            obs.tipusAfectacio || '',
+            obs.tipusIncidencia || ''
+        ].filter(part => part.trim() !== '');
+        gmlObservations = obsParts.join(' ');
+    }
+
     row.innerHTML = `
         <td style="padding: 8px; text-align: center; border: 1px solid #dee2e6; font-size: 11px; font-weight: bold; background: ${incident.color}; color: white; border-left: 3px solid ${incident.color};">${displayLevel}</td>
         <td style="padding: 8px; text-align: center; border: 1px solid #dee2e6; font-size: 11px; font-weight: bold; color: ${incident.color};">${road}</td>
@@ -1863,6 +1981,7 @@ function addIncidentToTableWithLocate(incident, tbody) {
         <td style="padding: 8px; text-align: center; border: 1px solid #dee2e6; font-size: 11px;">${pk}</td>
         <td style="padding: 8px; text-align: center; border: 1px solid #dee2e6; font-size: 11px;">${direction}</td>
         <td style="padding: 8px; text-align: left; border: 1px solid #dee2e6; font-size: 11px; max-width: 300px; word-wrap: break-word;">${shortDesc}</td>
+        <td style="padding: 8px; text-align: left; border: 1px solid #dee2e6; font-size: 11px; max-width: 200px; word-wrap: break-word;">${gmlObservations}</td>
         <td style="padding: 8px; text-align: center; border: 1px solid #dee2e6; font-size: 11px;">${source}</td>
         <td style="padding: 8px; text-align: center; border: 1px solid #dee2e6;"></td>
     `;
@@ -1980,11 +2099,27 @@ function addIncidentToTable(incident, tbody) {
     };
     const source = sourceMap[incident.source] || incident.source;
 
+    // Build GML observations string if available
+    let gmlObservations = '';
+    if (incident.source === 'GENCAT_GML' && incident.observations) {
+        const obs = incident.observations;
+        const obsParts = [
+            obs.dataInici || '',
+            obs.dataFi || '',
+            obs.fase || '',
+            obs.tipusCirculacio || '',
+            obs.tipusAfectacio || '',
+            obs.tipusIncidencia || ''
+        ].filter(part => part.trim() !== '');
+        gmlObservations = obsParts.join(' ');
+    }
+
     row.innerHTML = `
         <td style="padding: 6px; text-align: center; border: 1px solid #dee2e6; font-weight: bold; color: ${incident.color};">${level}</td>
         <td style="padding: 6px; text-align: center; border: 1px solid #dee2e6;">${road}</td>
         <td style="padding: 6px; text-align: center; border: 1px solid #dee2e6;">${location}</td>
         <td style="padding: 6px; text-align: left; border: 1px solid #dee2e6; max-width: 300px; word-wrap: break-word;">${description}</td>
+        <td style="padding: 6px; text-align: left; border: 1px solid #dee2e6; max-width: 200px; word-wrap: break-word; font-size: 12px;">${gmlObservations}</td>
         <td style="padding: 6px; text-align: center; border: 1px solid #dee2e6;">${source}</td>
     `;
 
@@ -2076,10 +2211,262 @@ function clearTrafficData() {
         map.removeLayer(marker);
     });
     trafficMarkers = [];
+    
+    // Clear cameras as well
+    clearTrafficCameras();
 
     // Hide clear button and traffic sections
     document.getElementById('clear-traffic-btn').style.display = 'none';
     document.getElementById('traffic-table-section').style.display = 'none';
     document.getElementById('traffic-cards-section').style.display = 'none';
     document.getElementById('status-text').textContent = 'Preparat per carregar dades';
+}
+
+// Update status display
+function updateStatus(message) {
+    const statusElement = document.getElementById('status-text');
+    if (statusElement) {
+        statusElement.textContent = message;
+    }
+}
+
+// Traffic cameras functionality
+let trafficCameraMarkers = [];
+
+// Load traffic cameras from GENCAT
+async function loadTrafficCameras() {
+    try {
+        console.log('📹 Loading traffic cameras from GENCAT...');
+        updateStatus('Carregant càmeres de trànsit...');
+        
+        // Fetch cameras XML data
+        const response = await fetch('https://www.gencat.cat/transit/opendata/cameres.xml');
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const xmlText = await response.text();
+        console.log('✅ Successfully fetched cameras XML');
+        
+        // Parse cameras
+        const cameras = parseCamerasXML(xmlText);
+        console.log(`📹 Found ${cameras.length} cameras`);
+        
+        // Display cameras
+        displayTrafficCameras(cameras);
+        
+        // Show cameras section
+        document.getElementById('traffic-cameras-section').style.display = 'block';
+        document.getElementById('clear-traffic-btn').style.display = 'inline-block';
+        
+        updateStatus(`S'han carregat ${cameras.length} càmeres de trànsit`);
+        
+    } catch (error) {
+        console.error('❌ Error loading traffic cameras:', error);
+        updateStatus(`Error carregant càmeres: ${error.message}`);
+    }
+}
+
+// Parse cameras XML data
+function parseCamerasXML(xmlText) {
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+    const cameras = [];
+    
+    // Find all camera elements (GENCAT uses cite:cameres)
+    const cameraElements = xmlDoc.querySelectorAll('cite\\:cameres, cameres');
+    console.log(`Found ${cameraElements.length} camera elements`);
+    
+    cameraElements.forEach((camera, index) => {
+        try {
+            const cameraData = parseCameraElement(camera, index);
+            if (cameraData) {
+                cameras.push(cameraData);
+            }
+        } catch (error) {
+            console.warn(`Error parsing camera ${index}:`, error);
+        }
+    });
+    
+    return cameras;
+}
+
+// Parse individual camera element
+function parseCameraElement(camera, index) {
+    // Extract camera information from GENCAT structure
+    const id = camera.getAttribute('fid') || camera.querySelector('cite\\:id, id')?.textContent || `camera-${index}`;
+    const road = camera.querySelector('cite\\:carretera, carretera')?.textContent;
+    const municipality = camera.querySelector('cite\\:municipi, municipi')?.textContent;
+    const pk = camera.querySelector('cite\\:pk, pk')?.textContent;
+    const imageUrl = camera.querySelector('cite\\:link, link, cite\\:font, font')?.textContent;
+    
+    // Extract coordinates from gml:coordinates
+    let latitude = null, longitude = null;
+    const coordinates = camera.querySelector('gml\\:coordinates, coordinates')?.textContent;
+    if (coordinates) {
+        const coords = coordinates.split(',');
+        if (coords.length >= 2) {
+            longitude = parseFloat(coords[0].trim());
+            latitude = parseFloat(coords[1].trim());
+        }
+    }
+    
+    // Validate coordinates
+    if (isNaN(latitude) || isNaN(longitude)) {
+        console.warn(`Camera ${id} has invalid coordinates: lat=${latitude}, lng=${longitude}`);
+        return null;
+    }
+    
+    // Check if coordinates are in reasonable range for Catalonia
+    if (latitude < 40 || latitude > 43 || longitude < 0 || longitude > 4) {
+        console.warn(`Camera ${id} has coordinates outside Catalonia: lat=${latitude}, lng=${longitude}`);
+        return null;
+    }
+    
+    // Create name from available information
+    const name = municipality || road || `Càmera ${index}`;
+    const description = `${road || ''} ${pk ? `PK ${pk}` : ''} ${municipality ? `(${municipality})` : ''}`.trim();
+    
+    return {
+        id: id,
+        name: name,
+        lat: latitude,
+        lng: longitude,
+        imageUrl: imageUrl,
+        road: road,
+        pk: pk,
+        municipality: municipality,
+        direction: '', // Not available in this XML
+        description: description
+    };
+}
+
+// Display traffic cameras on map and in list
+function displayTrafficCameras(cameras) {
+    // Clear existing camera markers
+    clearTrafficCameras();
+    
+    const camerasContainer = document.getElementById('cameras-container');
+    camerasContainer.innerHTML = '';
+    
+    // Create grid layout for camera thumbnails
+    const cameraGrid = document.createElement('div');
+    cameraGrid.style.cssText = `
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 15px;
+    `;
+    
+    cameras.forEach(camera => {
+        // Add marker to map
+        addCameraMarker(camera);
+        
+        // Add thumbnail to list
+        addCameraThumbnail(camera, cameraGrid);
+    });
+    
+    camerasContainer.appendChild(cameraGrid);
+    
+    console.log(`✅ Displayed ${cameras.length} traffic cameras`);
+}
+
+// Add camera marker to map
+function addCameraMarker(camera) {
+    const marker = L.marker([camera.lat, camera.lng], {
+        icon: L.divIcon({
+            html: `<div style="background: #17a2b8; border: 2px solid white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">📹</div>`,
+            className: 'camera-marker',
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
+        })
+    });
+    
+    // Create popup content
+    let popupContent = `<div style="max-width: 250px;">
+        <h4 style="margin: 0 0 8px 0; color: #17a2b8;">📹 ${camera.name}</h4>`;
+    
+    if (camera.road) {
+        popupContent += `<p style="margin: 4px 0; font-size: 12px;"><strong>Carretera:</strong> ${camera.road}</p>`;
+    }
+    
+    if (camera.municipality) {
+        popupContent += `<p style="margin: 4px 0; font-size: 12px;"><strong>Municipi:</strong> ${camera.municipality}</p>`;
+    }
+    
+    if (camera.pk) {
+        popupContent += `<p style="margin: 4px 0; font-size: 12px;"><strong>PK:</strong> ${camera.pk}</p>`;
+    }
+    
+    if (camera.imageUrl) {
+        popupContent += `<p style="margin: 8px 0;"><img src="${camera.imageUrl}" alt="${camera.name}" style="max-width: 100%; border-radius: 4px; border: 1px solid #ddd;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+        <span style="display: none; color: #666; font-size: 11px;">Imatge no disponible</span></p>`;
+        popupContent += `<p style="margin: 4px 0;"><a href="${camera.imageUrl}" target="_blank" style="color: #17a2b8; text-decoration: none; font-size: 12px;">🔗 Obrir imatge en finestra nova</a></p>`;
+    }
+    
+    popupContent += `<p style="margin: 4px 0; font-size: 11px; color: #666;">ID: ${camera.id}</p>
+        <p style="margin: 4px 0; font-size: 10px; color: #999;">${camera.lat.toFixed(4)}, ${camera.lng.toFixed(4)}</p>
+        </div>`;
+    
+    marker.bindPopup(popupContent);
+    marker.addTo(map);
+    trafficCameraMarkers.push(marker);
+}
+
+// Add camera thumbnail to list
+function addCameraThumbnail(camera, container) {
+    const thumbnail = document.createElement('div');
+    thumbnail.style.cssText = `
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 10px;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    `;
+    
+    thumbnail.innerHTML = `
+        <div style="font-weight: bold; color: #17a2b8; margin-bottom: 5px; font-size: 12px;">📹 ${camera.name}</div>
+        <div style="font-size: 11px; color: #666; margin-bottom: 8px;">${camera.description || 'Sense descripció'}</div>
+        ${camera.imageUrl ? `<img src="${camera.imageUrl}" alt="${camera.name}" style="width: 100%; height: 80px; object-fit: cover; border-radius: 4px; border: 1px solid #eee;" onerror="this.style.display='none';">` : '<div style="width: 100%; height: 80px; background: #f8f9fa; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #999; font-size: 11px;">Sense imatge</div>'}
+        <div style="margin-top: 8px; font-size: 10px; color: #999;">${camera.lat.toFixed(4)}, ${camera.lng.toFixed(4)}</div>
+    `;
+    
+    // Hover effects
+    thumbnail.onmouseover = () => {
+        thumbnail.style.transform = 'translateY(-2px)';
+        thumbnail.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)';
+    };
+    
+    thumbnail.onmouseout = () => {
+        thumbnail.style.transform = 'translateY(0)';
+        thumbnail.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+    };
+    
+    // Click to zoom to camera
+    thumbnail.onclick = () => {
+        map.setView([camera.lat, camera.lng], 16);
+        // Find and open the corresponding marker popup
+        trafficCameraMarkers.forEach(marker => {
+            const markerLatLng = marker.getLatLng();
+            if (Math.abs(markerLatLng.lat - camera.lat) < 0.0001 && 
+                Math.abs(markerLatLng.lng - camera.lng) < 0.0001) {
+                marker.openPopup();
+            }
+        });
+    };
+    
+    container.appendChild(thumbnail);
+}
+
+// Clear traffic cameras from map and list
+function clearTrafficCameras() {
+    // Remove all camera markers from map
+    trafficCameraMarkers.forEach(marker => {
+        map.removeLayer(marker);
+    });
+    trafficCameraMarkers = [];
+    
+    // Hide cameras section
+    document.getElementById('traffic-cameras-section').style.display = 'none';
 }
