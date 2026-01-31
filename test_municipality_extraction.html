@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Municipality Extraction</title>
+</head>
+<body>
+    <h1>Test Municipality Extraction from RSS</h1>
+    <div id="test-results"></div>
+    
+    <script>
+        // Test data from the RSS feed
+        const testDescription = "A-2 | JORBA | Sentit Oest cap a LLEIDA-DESVIAMENT PER CALÇADA SENTIT BARCELONA | Punt km. 545-544.2 | 08:04";
+        
+        // Simulate the parsing logic
+        function testMunicipalityExtraction(description) {
+            const descParts = description.split(' | ').map(part => part.trim());
+            console.log('Description parts:', descParts);
+            
+            if (descParts.length >= 2) {
+                const municipality = descParts[1];
+                console.log('Extracted municipality:', municipality);
+                return municipality;
+            }
+            return null;
+        }
+        
+        // Run the test
+        const municipality = testMunicipalityExtraction(testDescription);
+        
+        // Display results
+        const resultsDiv = document.getElementById('test-results');
+        resultsDiv.innerHTML = `
+            <p><strong>Original Description:</strong> ${testDescription}</p>
+            <p><strong>Description Parts:</strong> ${JSON.stringify(testDescription.split(' | ').map(part => part.trim()))}</p>
+            <p><strong>Extracted Municipality:</strong> ${municipality || 'NOT FOUND'}</p>
+            <p><strong>Expected Municipality:</strong> JORBA</p>
+            <p><strong>Test Result:</strong> ${municipality === 'JORBA' ? '✅ PASS' : '❌ FAIL'}</p>
+        `;
+    </script>
+</body>
+</html>

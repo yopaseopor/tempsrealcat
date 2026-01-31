@@ -22,7 +22,7 @@ export default async function handler(req, res) {
   try {
     console.log('📰 Fetching GENCAT RSS traffic data...');
 
-    const gencatRssUrl = 'https://www.gencat.cat/transit/rss/ca/';
+    const gencatRssUrl = 'https://www.gencat.cat/transit/opendata/incidenciesRSS.xml';
 
     const response = await fetch(gencatRssUrl, {
       headers: {

@@ -28,7 +28,7 @@
         <!-- Legend toggle button -->
         <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
           <button id="bicing-legend-btn" onclick="toggleBicingLegend()" style="background:#666; color:white; padding:8px 12px; border:none; border-radius:5px; cursor:pointer; font-size: 12px; display: none;">
-            <i class="fa fa-list"></i> <span>Mostrar Llegenda</span>
+            <i class="fa fa-list"></i> <span data-i18n="bicycle_legend_show">Mostrar Llegenda</span>
           </button>
         </div>
       </div>
@@ -43,42 +43,42 @@
         <h4 style="margin-bottom: 10px; color: #333;" data-i18n="bicycle_manual_entry">📝 Introduir Dades Manualment</h4>
         <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
           <button onclick="showBicingDataEntry()" style="background:#007bff; color:white; padding:8px 12px; border:none; border-radius:5px; cursor:pointer; font-size: 12px;">
-            <i class="fa fa-edit"></i> <span>Introduir dades</span>
+            <i class="fa fa-edit"></i> <span data-i18n="bicycle_button_enter_data">Introduir dades</span>
           </button>
           <button onclick="openBicingJson()" style="background:#28a745; color:white; padding:8px 12px; border:none; border-radius:5px; cursor:pointer; font-size: 12px;">
-            <i class="fa fa-external-link"></i> <span>Obrir URL</span>
+            <i class="fa fa-external-link"></i> <span data-i18n="bicycle_button_open_url">Obrir URL</span>
           </button>
         </div>
 
         <!-- Hidden manual data entry form -->
         <div id="bicing-manual-data-entry" style="display: none; background: #f8f9fa; padding: 15px; border-radius: 5px; margin-top: 10px; border: 1px solid #ddd;">
-          <h5 style="margin-top: 0; color: #007bff;">Entrada manual de dades Bicing</h5>
+          <h5 style="margin-top: 0; color: #007bff;" data-i18n="bicycle_form_title">Entrada manual de dades Bicing</h5>
           <div style="margin-bottom: 10px;">
-            <textarea id="bicing-manual-json-data" placeholder="Enganxa aquí les dades JSON de Bicing..." style="width: 100%; height: 150px; padding: 8px; border: 1px solid #ccc; border-radius: 3px; font-family: monospace; font-size: 12px;"></textarea>
+            <textarea id="bicing-manual-json-data" data-i18n-placeholder="bicycle_form_placeholder" placeholder="Enganxa aquí les dades JSON de Bicing..." style="width: 100%; height: 150px; padding: 8px; border: 1px solid #ccc; border-radius: 3px; font-family: monospace; font-size: 12px;"></textarea>
           </div>
           <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
             <button onclick="processBicingManualJsonData()" style="background:#28a745; color:white; padding:8px 12px; border:none; border-radius:3px; cursor:pointer; font-size: 12px;">
-              <i class="fa fa-check"></i> Processar Dades Reals
+              <i class="fa fa-check"></i> <span data-i18n="bicycle_button_process_data">Processar Dades Reals</span>
             </button>
             <button onclick="testBicingSampleData()" style="background:#ffc107; color:black; padding:8px 12px; border:none; border-radius:3px; cursor:pointer; font-size: 12px;">
-              <i class="fa fa-flask"></i> Dades d'exemple
+              <i class="fa fa-flask"></i> <span data-i18n="bicycle_button_sample_data">Dades d'exemple</span>
             </button>
             <button onclick="clearBicingTextarea()" style="background:#6c757d; color:white; padding:8px 12px; border:none; border-radius:3px; cursor:pointer; font-size: 12px;">
-              <i class="fa fa-trash"></i> Netejar
+              <i class="fa fa-trash"></i> <span data-i18n="bicycle_button_clear">Netejar</span>
             </button>
           </div>
-          <div id="bicing-json-status" style="font-size: 12px; color: #666; margin-bottom: 10px;">
+          <div id="bicing-json-status" style="font-size: 12px; color: #666; margin-bottom: 10px;" data-i18n="bicycle_json_status_ready">
             Status: Preparat per enganxar dades.
           </div>
           <div style="display: flex; gap: 10px; flex-wrap: wrap;">
             <button onclick="copyBicingUrl()" style="background:#17a2b8; color:white; padding:6px 10px; border:none; border-radius:3px; cursor:pointer; font-size: 11px;">
-              <i class="fa fa-copy"></i> Copiar URL
+              <i class="fa fa-copy"></i> <span data-i18n="bicycle_button_copy_url">Copiar URL</span>
             </button>
             <button onclick="copyBicingInstructions()" style="background:#6f42c1; color:white; padding:6px 10px; border:none; border-radius:3px; cursor:pointer; font-size: 11px;">
-              <i class="fa fa-question-circle"></i> Instruccions
+              <i class="fa fa-question-circle"></i> <span data-i18n="bicycle_button_instructions">Instruccions</span>
             </button>
             <button onclick="shareBicingMapUrl()" style="background:#fd7e14; color:white; padding:6px 10px; border:none; border-radius:3px; cursor:pointer; font-size: 11px;">
-              <i class="fa fa-share"></i> Compartir mapa
+              <i class="fa fa-share"></i> <span data-i18n="bicycle_button_share_map">Compartir mapa</span>
             </button>
           </div>
         </div>

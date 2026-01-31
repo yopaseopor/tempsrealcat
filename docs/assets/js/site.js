@@ -53,43 +53,78 @@ var tileLayerData = {
 	attribution: 'Tessel·les <a href="http://thunderforest.com/outdoors/" target="_blank">ThunderForest</a>',
 	zoom: '18'
     },
+    transportdark: {
+	name: 'Transport Dark',
+	url: 'http://{s}.tile.thunderforest.com/transport-dark/{z}/{x}/{y}.png' + apikey,
+	attribution: 'Tessel·les <a href="http://thunderforest.com/transport-dark/" target="_blank">ThunderForest</a>',
+	zoom: '18'
+    },
+    spinalmap: {
+	name: 'Spinal Map',
+	url: 'http://{s}.tile.thunderforest.com/spinal-map/{z}/{x}/{y}.png' + apikey,
+	attribution: 'Tessel·les <a href="http://thunderforest.com/spinal-map/" target="_blank">ThunderForest</a>',
+	zoom: '18'
+    },
+    pioneer: {
+	name: 'Pioneer',
+	url: 'http://{s}.tile.thunderforest.com/pioneer/{z}/{x}/{y}.png' + apikey,
+	attribution: 'Tessel·les <a href="http://thunderforest.com/pioneer/" target="_blank">ThunderForest</a>',
+	zoom: '18'
+    },
+    mobileatlas: {
+	name: 'Mobile Atlas',
+	url: 'http://{s}.tile.thunderforest.com/mobile-atlas/{z}/{x}/{y}.png' + apikey,
+	attribution: 'Tessel·les <a href="http://thunderforest.com/mobile-atlas/" target="_blank">ThunderForest</a>',
+	zoom: '18'
+    },
+    neighbourhood: {
+	name: 'Neighbourhood',
+	url: 'http://{s}.tile.thunderforest.com/neighbourhood/{z}/{x}/{y}.png' + apikey,
+	attribution: 'Tessel·les <a href="http://thunderforest.com/neighbourhood/" target="_blank">ThunderForest</a>',
+	zoom: '18'
+    },
+    atlas: {
+	name: 'Atlas',
+	url: 'http://{s}.tile.thunderforest.com/atlas/{z}/{x}/{y}.png' + apikey,
+	attribution: 'Tessel·les <a href="http://thunderforest.com/atlas/" target="_blank">ThunderForest</a>',
+	zoom: '18'
+    },
+    icgc_estandard: {
+	name: 'ICGC - Estàndard',
+	url: 'https://geoserveis.icgc.cat/servei/catalunya/mapa-base/wms',
+	layers: 'topografic',
+	transparent: 'false',
+	format: 'image/png',
+	attribution: 'ICGC - Cartogràfia oficial de Catalunya',
+	zoom: '19',
+	isWMS: true
+    },
+    icgc_orto: {
+	name: 'ICGC - Ortofotografia',
+	url: 'https://geoserveis.icgc.cat/servei/catalunya/mapa-base/wms',
+	layers: 'orto',
+	transparent: 'false',
+	format: 'image/png',
+	attribution: 'ICGC - Ortofotografia de Catalunya',
+	zoom: '19',
+	isWMS: true
+    },
+    icgc_orto_hibrida: {
+	name: 'ICGC - Ortofotografia híbrida',
+	url: 'https://geoserveis.icgc.cat/servei/catalunya/mapa-base/wms',
+	layers: 'orto-hibrida',
+	transparent: 'false',
+	format: 'image/png',
+	attribution: 'ICGC - Ortofotografia híbrida de Catalunya',
+	zoom: '19',
+	isWMS: true
+    },
 //    lyrk: {
 //	name: 'Lyrk',
 //	url: 'http://tiles.lyrk.org/ls/{z}/{x}/{y}?apikey=3d836013a4ab468f965bfd1328d89522',
 //	attribution: 'Tessel·les <a href="http://lyrk.de/" target="_blank">Lyrk</a>',
 //	zoom: '18'
 //    },
-    mapbox: {
-	name: 'MapBox (satèl·lit)',
-	url: 'https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}.png' + token,
-	attribution: 'Tessel·les <a href="http://mapbox.com/" target="_blank">MapBox</a>',
-	zoom: '19'
-    },
-    mapquest: {
-	name: 'MapQuest Open',
-	url: 'http://otile{s}.mqcdn.com/tiles/1.0.0/osm/{z}/{x}/{y}.png',
-	attribution: 'Tessel·les <a href="http://mapquest.com/" target="_blank">MapQuest</a>',
-	subdomains: '123',
-	zoom: '18'
-    },
-    mapsurfer: {
-	name: 'OpenMapSurfer (3D)',
-	url: 'http://openmapsurfer.uni-hd.de/tiles/roads/x={x}&y={y}&z={z}',
-	attribution: 'Tessel·les <a href="http://giscience.uni-hd.de/" target="_blank">GIScience Research Group @ Heidelberg University</a>',
-	zoom: '19'
-    },
-    toner: {
-	name: 'Tòner',
-	url: 'http://{s}.tile.stamen.com/toner/{z}/{x}/{y}.png',
-	attribution: 'Tessel·les d\'<a href="http://stamen.com" target="_blank">Stamen Design</a>',
-	zoom: '20'
-    },
-    watercolor: {
-	name: 'Aquarel·la',
-	url: 'http://{s}.tile.stamen.com/watercolor/{z}/{x}/{y}.png',
-	attribution: 'Tessel·les d\'<a href="http://stamen.com" target="_blank">Stamen Design</a>',
-	zoom: '16'
-    }
 };
 
 var tileLayers = {};
@@ -102,10 +137,26 @@ for (tile in tileLayerData) {
     }
     else tileAttribution = attribution;
 
-    tileLayers[tileLayerData[tile].name] = L.tileLayer(
-	tileLayerData[tile].url,
-	{maxNativeZoom: tilemaxZoom, maxZoom: 20, attribution: tileAttribution, subdomains: subdomains}
-    )
+    // Check if it's a WMS layer
+    if (tileLayerData[tile].isWMS) {
+        // Create WMS layer
+        tileLayers[tileLayerData[tile].name] = L.tileLayer.wms(
+            tileLayerData[tile].url,
+            {
+                layers: tileLayerData[tile].layers,
+                format: tileLayerData[tile].format,
+                transparent: tileLayerData[tile].transparent === 'true',
+                attribution: tileAttribution,
+                maxZoom: 20
+            }
+        );
+    } else {
+        // Create regular tile layer
+        tileLayers[tileLayerData[tile].name] = L.tileLayer(
+            tileLayerData[tile].url,
+            {maxNativeZoom: tilemaxZoom, maxZoom: 20, attribution: tileAttribution, subdomains: subdomains}
+        );
+    }
 }
 
 tileLayers['Estàndard (Mapnik)'].addTo(map);

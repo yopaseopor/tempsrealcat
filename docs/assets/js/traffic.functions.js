@@ -1,4 +1,4 @@
- // Traffic functions for DGT DATEX2 data
+// Traffic functions for SCT (Servei Català de Trànsit) data
 
 // Global variables
 let trafficMarkers = [];
@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Traffic functions loaded');
 });
 
-// Load traffic data from DGT API and GENCAT APIs
+// Load traffic data from SCT APIs only
 async function loadTrafficData() {
     const statusText = document.getElementById('status-text');
     const loadBtn = document.getElementById('load-traffic-btn');
@@ -40,45 +40,32 @@ async function loadTrafficData() {
             }
         }
 
-        // Fetch data from all sources in parallel using proper URLs
-        const [dgtResponse, rssResponse, gmlResponse] = await Promise.allSettled([
-            fetch(getApiUrl('/api/dgt-traffic')),
+        // Fetch data from SCT sources only
+        const [rssResponse, gmlResponse] = await Promise.allSettled([
             fetch(getApiUrl('/api/gencat-rss-traffic')),
             fetch(getApiUrl('/api/gencat-gml-traffic'))
         ]);
 
         let allIncidents = [];
 
-        // Process DGT data
-        if (dgtResponse.status === 'fulfilled' && dgtResponse.value.ok) {
-            const dgtXmlText = await dgtResponse.value.text();
-            console.log('✅ DGT traffic XML data received');
-            const dgtIncidents = parseDGTXML(dgtXmlText);
-            allIncidents = allIncidents.concat(dgtIncidents.map(incident => ({ ...incident, source: 'DGT' })));
-        } else {
-            console.warn('⚠️ Failed to fetch DGT data:', dgtResponse.status === 'rejected' ? dgtResponse.reason : dgtResponse.value.statusText);
-        }
-
-        // Process GENCAT RSS data
+        // Process GENCAT RSS data (SCT)
         if (rssResponse.status === 'fulfilled' && rssResponse.value.ok) {
             const rssXmlText = await rssResponse.value.text();
-            console.log('✅ GENCAT RSS traffic XML data received');
-            const rssIncidents = parseGENCATRSS(rssXmlText);
-            console.log('📊 GENCAT RSS parsed incidents:', rssIncidents.length);
-            allIncidents = allIncidents.concat(rssIncidents.map(incident => ({ ...incident, source: 'GENCAT_RSS' })));
+            console.log('✅ SCT RSS traffic XML data received');
+            const rssIncidents = parseRSSXML(rssXmlText);
+            allIncidents = allIncidents.concat(rssIncidents.map(incident => ({ ...incident, source: 'SCT_RSS' })));
         } else {
-            console.warn('⚠️ Failed to fetch GENCAT RSS data:', rssResponse.status === 'rejected' ? rssResponse.reason : rssResponse.value.statusText);
+            console.warn('⚠️ Failed to fetch SCT RSS data:', rssResponse.status === 'rejected' ? rssResponse.reason : rssResponse.value.statusText);
         }
 
-        // Process GENCAT GML data
+        // Process GENCAT GML data (SCT)
         if (gmlResponse.status === 'fulfilled' && gmlResponse.value.ok) {
             const gmlXmlText = await gmlResponse.value.text();
-            console.log('✅ GENCAT GML traffic XML data received');
+            console.log('✅ SCT GML traffic XML data received');
             const gmlIncidents = parseGENCATGML(gmlXmlText);
-            console.log('📊 GENCAT GML parsed incidents:', gmlIncidents.length);
-            allIncidents = allIncidents.concat(gmlIncidents.map(incident => ({ ...incident, source: 'GENCAT_GML' })));
+            allIncidents = allIncidents.concat(gmlIncidents.map(incident => ({ ...incident, source: 'SCT_GML' })));
         } else {
-            console.warn('⚠️ Failed to fetch GENCAT GML data:', gmlResponse.status === 'rejected' ? gmlResponse.reason : gmlResponse.value.statusText);
+            console.warn('⚠️ Failed to fetch SCT GML data:', gmlResponse.status === 'rejected' ? gmlResponse.reason : gmlResponse.value.statusText);
         }
 
         // Combine and deduplicate incidents based on road reference and PK
@@ -103,33 +90,25 @@ async function loadTrafficData() {
     }
 }
 
-// Parse DGT DATEX2 XML data
-function parseDGTXML(xmlText) {
+// Parse RSS XML data (SCT)
+function parseRSSXML(xmlText) {
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
     const incidents = [];
 
-    // Find all situation records - try both with and without namespace prefixes
-    const situationRecords = xmlDoc.querySelectorAll('situationRecord, _0\\:situationRecord');
-    console.log('Found', situationRecords.length, 'situation records in XML');
+    // Find all item elements
+    const items = xmlDoc.querySelectorAll('item');
+    console.log('Found', items.length, 'items in RSS XML');
 
-    // Count record types
-    const recordTypes = {};
-    situationRecords.forEach(record => {
-        const recordType = record.getAttribute('xsi:type');
-        recordTypes[recordType] = (recordTypes[recordType] || 0) + 1;
-    });
-    console.log('Record types found:', recordTypes);
-
-    situationRecords.forEach((record, index) => {
+    items.forEach(item => {
         try {
-            const incident = parseSituationRecord(record, index);
+            const incident = parseRSSItem(item);
             if (incident) {
                 incidents.push(incident);
                 console.log('Parsed incident:', incident.category, incident.title);
             }
         } catch (error) {
-            console.warn('Error parsing situation record:', error);
+            console.warn('Error parsing RSS item:', error);
         }
     });
 
@@ -137,528 +116,98 @@ function parseDGTXML(xmlText) {
     return incidents;
 }
 
-// Parse individual situation record
-function parseSituationRecord(record, index) {
-    const recordType = record.getAttribute('xsi:type');
-    const situationId = record.closest('situation, _0\\:situation')?.getAttribute('id') || `incident-${index}`;
+// Parse individual RSS item
+function parseRSSItem(item) {
+    const title = item.querySelector('title');
+    const description = item.querySelector('description');
+    const link = item.querySelector('link');
+    const pubDate = item.querySelector('pubDate');
+    const category = item.querySelector('category');
 
-    // Extract basic information
-    const validity = record.querySelector('validity, _0\\:validity');
-    const isActive = validity?.querySelector('validityStatus, _0\\:validityStatus')?.textContent === 'active';
+    if (!title || !description || !link || !pubDate || !category) return null;
 
-    if (!isActive) return null;
-
-    // Extract location information
-    const location = extractLocationInfo(record);
-    // Don't filter out incidents without coordinates - they can still be displayed in the list
-
-    // Extract incident details based on type
-    let incidentDetails = {
-        id: situationId,
-        type: recordType,
-        location: location,
-        active: true
+    const incident = {
+        id: link.textContent,
+        title: title.textContent,
+        description: description.textContent,
+        category: category.textContent,
+        pubDate: pubDate.textContent
     };
 
-    // Determine level and color based on incident type (1=lowest to 5=highest severity)
+    // Extract location information
+    const location = extractLocationInfo(item);
+    incident.location = location;
+
+    // Determine level and color based on incident category
     let level = 1;
     let levelColor = '#28a745'; // Green for level 1
 
-    // Get record text once for closure detection
-    const recordText = record.textContent || '';
-
-    switch (recordType) {
-        case '_0:MaintenanceWorks':
-            incidentDetails.category = 'maintenance';
-            incidentDetails.title = 'Obres de manteniment';
-            incidentDetails.description = extractMaintenanceInfo(record);
-            incidentDetails.icon = '🔧';
+    switch (incident.category) {
+        case 'Obres':
+            incident.icon = '🔧';
             level = 2;
             levelColor = '#ffc107'; // Yellow for level 2
-            
-            // Check if this maintenance work involves road closure
-            if (recordText.toLowerCase().includes('tall') || recordText.toLowerCase().includes('tancada') || recordText.toLowerCase().includes('closure')) {
-                incidentDetails.category = 'closure';
-                incidentDetails.title = 'Carretera tancada per obres';
-                incidentDetails.icon = '🚧';
-                level = 5;
-                levelColor = '#000000'; // Black for closures (level 5)
-                console.log('🚧 Maintenance work detected as CLOSURE for AP-7:', incidentDetails.id);
-            }
             break;
 
-        case '_0:AbnormalTraffic':
-            incidentDetails.category = 'congestion';
-            incidentDetails.title = 'Trànsit anormal';
-            incidentDetails.description = extractAbnormalTrafficInfo(record);
-            incidentDetails.icon = '🚗';
-            level = 3;
-            levelColor = '#fd7e14'; // Orange for level 3
-            break;
-
-        case '_0:Accident':
-            incidentDetails.category = 'accident';
-            incidentDetails.title = 'Accident';
-            incidentDetails.description = extractAccidentInfo(record);
-            incidentDetails.icon = '🚨';
+        case 'Incident':
+            incident.icon = '🚨';
             level = 4;
             levelColor = '#dc3545'; // Red for level 4
-            console.log('Found DGT accident incident:', incidentDetails.id);
             break;
 
-        case '_0:Obstruction':
-            const obstructionType = extractObstructionType(record);
-            incidentDetails.category = obstructionType.category;
-            incidentDetails.title = obstructionType.title;
-            incidentDetails.description = obstructionType.description;
-            incidentDetails.icon = obstructionType.icon;
+        case 'Circulació':
+            incident.icon = '🚗';
             level = 3;
             levelColor = '#fd7e14'; // Orange for level 3
-            break;
-
-        case '_0:PoorRoadInfrastructure':
-            incidentDetails.category = 'maintenance';
-            incidentDetails.title = 'Infraestructura danyada';
-            incidentDetails.description = extractPoorInfrastructureInfo(record);
-            incidentDetails.icon = '⚠️';
-            level = 2;
-            levelColor = '#ffc107'; // Yellow for level 2
-            break;
-
-        case '_0:NetworkManagement':
-            incidentDetails.category = 'closure';
-            incidentDetails.title = 'Gestió de xarxa';
-            incidentDetails.description = extractNetworkManagementInfo(record);
-            incidentDetails.icon = '🔄';
-            level = 5;
-            levelColor = '#000000'; // Black for level 5
-            
-            // Check if this network management involves road closure
-            if (recordText.toLowerCase().includes('tall') || recordText.toLowerCase().includes('tancada') || recordText.toLowerCase().includes('closure')) {
-                incidentDetails.title = 'Carretera tancada (Gestió de xarxa)';
-                incidentDetails.icon = '🚧';
-                console.log('🚧 Network management detected as CLOSURE for AP-7:', incidentDetails.id);
-            }
-            break;
-
-        case '_0:PoorEnvironmentConditions':
-            incidentDetails.category = 'weather';
-            incidentDetails.title = 'Condicions ambientals adverses';
-            incidentDetails.description = extractPoorEnvironmentInfo(record);
-            incidentDetails.icon = '🌤️';
-            level = 5;
-            levelColor = '#000000'; // Black for level 5
-            break;
-
-        case '_0:SignSetting':
-            incidentDetails.category = 'other';
-            incidentDetails.title = 'Senyalització';
-            incidentDetails.description = extractSignSettingInfo(record);
-            incidentDetails.icon = '📋';
-            level = 1;
-            levelColor = '#17a2b8'; // Blue for level 1
-            break;
-
-        case '_0:RoadsideAssistance':
-            incidentDetails.category = 'other';
-            incidentDetails.title = 'Assistència en carretera';
-            incidentDetails.description = extractRoadsideAssistanceInfo(record);
-            incidentDetails.icon = '🚐';
-            level = 1;
-            levelColor = '#28a745'; // Green for level 1
-            break;
-
-        case '_0:Activities':
-            incidentDetails.category = 'other';
-            incidentDetails.title = 'Activitats';
-            incidentDetails.description = extractActivitiesInfo(record);
-            incidentDetails.icon = '👷';
-            level = 1;
-            levelColor = '#28a745'; // Green for level 1
             break;
 
         default:
-            incidentDetails.category = 'other';
-            incidentDetails.title = `Incident: ${recordType}`;
-            incidentDetails.description = 'Tipus d\'incident no identificat';
-            incidentDetails.icon = '⚠️';
+            incident.icon = '⚠️';
             level = 1;
             levelColor = '#28a745'; // Green for level 1
     }
 
-    incidentDetails.level = level;
-    incidentDetails.color = levelColor;
+    incident.level = level;
+    incident.color = levelColor;
 
-    return incidentDetails;
+    return incident;
 }
 
-// Extract location information from the record
-function extractLocationInfo(record) {
+// Extract location information from the RSS item
+function extractLocationInfo(item) {
     const location = {};
 
-    // DATEX2 Location Types Support
-    // 1. PointByCoordinates - Geographic coordinates
-    const pointCoordinates = record.querySelector('pointCoordinates, _0\\:pointCoordinates');
-    if (pointCoordinates) {
-        const latitude = pointCoordinates.querySelector('latitude, _0\\:latitude');
-        const longitude = pointCoordinates.querySelector('longitude, _0\\:longitude');
-
-        if (latitude && longitude) {
-            location.lat = parseFloat(latitude.textContent);
-            location.lng = parseFloat(longitude.textContent);
-            location.hasCoordinates = true;
-            location.locationType = 'PointByCoordinates';
-        }
-    }
-
-    // 2. ReferencePoint - Road reference points (PK)
-    const referencePoint = record.querySelector('referencePoint, _0\\:referencePoint');
-    if (referencePoint && !location.hasCoordinates) {
-        const roadNumber = referencePoint.querySelector('roadNumber, _0\\:roadNumber');
-        const referencePointIdentifier = referencePoint.querySelector('referencePointIdentifier, _0\\:referencePointIdentifier');
-        const referencePointDistance = referencePoint.querySelector('referencePointDistance, _0\\:referencePointDistance');
-
-        if (roadNumber) location.roadNumber = roadNumber.textContent;
-        if (referencePointIdentifier) location.referencePointId = referencePointIdentifier.textContent;
-        if (referencePointDistance) location.distance = parseFloat(referencePointDistance.textContent);
-
-        location.locationType = 'ReferencePoint';
-        location.description = `PK ${location.distance || 'unknown'} - Carretera ${location.roadNumber || 'unknown'}`;
-        console.log('ReferencePoint location found (no coordinates):', location.description);
-    }
-
-    // 3. AlertCPoint - AlertC table reference
-    const alertCPoint = record.querySelector('alertCPoint, _0\\:alertCPoint');
-    if (alertCPoint && !location.hasCoordinates) {
-        const alertCLocation = alertCPoint.querySelector('alertCLocation, _0\\:alertCLocation');
-        if (alertCLocation) {
-            location.alertCLocation = alertCLocation.textContent;
-        }
-        location.locationType = 'AlertCPoint';
-        location.description = `Referència AlertC: ${location.alertCLocation || 'unknown'}`;
-        console.log('AlertCPoint location found (no coordinates):', location.description);
-    }
-
-    // 4. TPEGPointLocation - TPEG-Loc structure
-    const tpegPointLocation = record.querySelector('tpegPointLocation, _0\\:tpegPointLocation');
-    if (tpegPointLocation && !location.hasCoordinates) {
-        location.locationType = 'TPEGPointLocation';
-        location.description = 'Localització TPEG (sense coordenades disponibles)';
-        console.log('TPEGPointLocation found (no coordinates)');
-    }
-
-    // 5. Linear locations (ReferencePointLinear, AlertCLinear, TPEGLinearLocation)
-    const linearLocation = record.querySelector('referencePointLinear, _0\\:referencePointLinear') ||
-                          record.querySelector('alertCLinear, _0\\:alertCLinear') ||
-                          record.querySelector('tpegLinearLocation, _0\\:tpegLinearLocation');
-    if (linearLocation && !location.hasCoordinates) {
-        const fromPoint = linearLocation.querySelector('from referencePoint');
-        const toPoint = linearLocation.querySelector('to referencePoint');
-
-        location.locationType = 'Linear';
-        location.description = 'Secció lineal de carretera (sense coordenades disponibles)';
-        console.log('Linear location found (no coordinates)');
-    }
-
-    // 6. Area locations (AlertCArea, TPEGAreaLocation)
-    const areaLocation = record.querySelector('alertCArea, _0\\:alertCArea') ||
-                        record.querySelector('tpegAreaLocation, _0\\:tpegAreaLocation');
-    if (areaLocation && !location.hasCoordinates) {
-        location.locationType = 'Area';
-        location.description = 'Àrea geogràfica (sense coordenades disponibles)';
-        console.log('Area location found (no coordinates)');
-    }
-
     // Extract road information
-    const roadName = record.querySelector('roadName value, _0\\:roadName _0\\:value');
+    const roadName = item.querySelector('roadName');
     if (roadName) {
         location.road = roadName.textContent;
     }
 
-    const roadNumber = record.querySelector('roadNumber, _0\\:roadNumber');
-    if (roadNumber && !location.roadNumber) {
+    const roadNumber = item.querySelector('roadNumber');
+    if (roadNumber) {
         location.roadNumber = roadNumber.textContent;
     }
 
-    // Extract town name
-    const townName = record.querySelector('townName value, _0\\:townName _0\\:value');
-    if (townName) {
-        location.town = townName.textContent;
-    }
-
     // Extract direction information
-    const directionBound = record.querySelector('directionBound, _0\\:directionBound');
-    if (directionBound) {
-        location.direction = directionBound.textContent;
+    const direction = item.querySelector('direction');
+    if (direction) {
+        location.direction = direction.textContent;
     }
 
-    // For locations without coordinates, create a description
-    if (!location.hasCoordinates && location.locationType) {
-        location.displayText = location.description ||
-                              `${location.locationType}: ${location.roadNumber || ''} ${location.road || ''}`.trim() ||
-                              'Localització sense coordenades';
+    // Get description and parse it to extract municipality
+    const description = item.querySelector('description');
+    if (description && description.textContent) {
+        const descText = description.textContent.trim();
+        const parts = descText.split(' | ').map(part => part.trim());
+        
+        if (parts.length >= 2) {
+            // Format is: ROAD | MUNICIPALITY | DIRECTION | PK_RANGE | SPECIFIC_LOCATION
+            // Municipality is the second element
+            location.town = parts[1];
+        }
     }
 
-    // Always return location object, even without coordinates - incidents can still be displayed in cards
     return location;
-}
-
-// Extract maintenance works information
-function extractMaintenanceInfo(record) {
-    let info = 'Obres de manteniment en curs.';
-
-    // Add any additional details if available
-    const roadworksType = record.querySelector('roadworksTypeOfWork, _0\\:roadworksTypeOfWork');
-    if (roadworksType) {
-        info += ` Tipus: ${roadworksType.textContent}.`;
-    }
-
-    return info;
-}
-
-// Extract abnormal traffic information
-function extractAbnormalTrafficInfo(record) {
-    let info = 'Circulació anormal detectada.';
-
-    const abnormalTrafficType = record.querySelector('abnormalTrafficType, _0\\:abnormalTrafficType');
-    if (abnormalTrafficType) {
-        const trafficType = abnormalTrafficType.textContent;
-        switch (trafficType) {
-            case 'stopAndGo':
-                info = 'Trànsit molt dens amb parades i arrencades.';
-                break;
-            case 'queuingTraffic':
-                info = 'Cua de vehicles significativa.';
-                break;
-            case 'slowTraffic':
-                info = 'Trànsit lent.';
-                break;
-        }
-    }
-
-    return info;
-}
-
-// Extract accident information
-function extractAccidentInfo(record) {
-    let info = 'Accident de trànsit.';
-
-    // Add accident type if available
-    const accidentType = record.querySelector('accidentType');
-    if (accidentType) {
-        info += ` Tipus: ${accidentType.textContent}.`;
-    }
-
-    return info;
-}
-
-// Extract rerouting information
-function extractReroutingInfo(record) {
-    let info = 'Desviament de trànsit actiu.';
-
-    // Add rerouting details if available
-    const reroutingType = record.querySelector('reroutingTypeOfWork');
-    if (reroutingType) {
-        info += ` Tipus: ${reroutingType.textContent}.`;
-    }
-
-    return info;
-}
-
-// Extract obstruction type and information
-function extractObstructionType(record) {
-    // Check for obstruction cause
-    const animalPresence = record.querySelector('animalPresenceTypeOfObstruction, _0\\:animalPresenceTypeOfObstruction');
-    const environmentalObstruction = record.querySelector('environmentalObstructionType, _0\\:environmentalObstructionType');
-    const equipmentDamage = record.querySelector('equipmentDamageType, _0\\:equipmentDamageType');
-    const vehicleObstruction = record.querySelector('vehicleObstructionType, _0\\:vehicleObstructionType');
-    
-    // Check for road closed indicator
-    const roadClosed = record.querySelector('roadClosed, _0\\:roadClosed');
-    if (roadClosed && roadClosed.textContent === 'true') {
-        return {
-            category: 'closure',
-            title: 'Carretera tancada',
-            description: 'Carretera completament tancada al trànsit',
-            icon: '🚧',
-            color: '#dc3545'
-        };
-    }
-
-    if (animalPresence) {
-        return {
-            category: 'accident',
-            title: 'Obstrucció per animals',
-            description: `Presència d'animals a la carretera: ${animalPresence.textContent}`,
-            icon: '🦌',
-            color: '#fd7e14'
-        };
-    }
-
-    if (environmentalObstruction) {
-        return {
-            category: 'closure',
-            title: 'Obstrucció ambiental',
-            description: `Obstrucció per causes ambientals: ${environmentalObstruction.textContent}`,
-            icon: '🌊',
-            color: '#20c997'
-        };
-    }
-
-    if (equipmentDamage) {
-        return {
-            category: 'maintenance',
-            title: 'Equipament danyat',
-            description: `Equipament danyat: ${equipmentDamage.textContent}`,
-            icon: '⚙️',
-            color: '#ffc107'
-        };
-    }
-
-    if (vehicleObstruction) {
-        return {
-            category: 'accident',
-            title: 'Obstrucció per vehicle',
-            description: `Obstrucció causada per vehicle: ${vehicleObstruction.textContent}`,
-            icon: '🚧',
-            color: '#dc3545'
-        };
-    }
-
-    // Default obstruction
-    return {
-        category: 'closure',
-        title: 'Obstrucció de carretera',
-        description: 'Obstrucció general de la carretera',
-        icon: '🚧',
-        color: '#6c757d'
-    };
-}
-
-// Extract poor road infrastructure information
-function extractPoorInfrastructureInfo(record) {
-    let info = 'Infraestructura de carretera en mal estat.';
-
-    const malfunctioningControls = record.querySelector('malfunctioningTrafficControls');
-    if (malfunctioningControls) {
-        info += ' Controls de trànsit defectuosos.';
-    }
-
-    return info;
-}
-
-// Extract network management information
-function extractNetworkManagementInfo(record) {
-    let info = 'Gestió de la xarxa de carreteres activa.';
-
-    // Add management type if available
-    const managementType = record.querySelector('networkManagementType');
-    if (managementType) {
-        info += ` Tipus: ${managementType.textContent}.`;
-    }
-
-    return info;
-}
-
-// Extract sign setting information
-function extractSignSettingInfo(record) {
-    let info = 'Informació de senyalització variable.';
-
-    const message = record.querySelector('message');
-    if (message) {
-        info += ` Missatge: ${message.textContent}`;
-    }
-
-    return info;
-}
-
-// Extract roadside assistance information
-function extractRoadsideAssistanceInfo(record) {
-    let info = 'Servei d\'assistència en carretera disponible.';
-
-    const assistanceType = record.querySelector('roadsideAssistanceType');
-    if (assistanceType) {
-        info += ` Tipus: ${assistanceType.textContent}.`;
-    }
-
-    return info;
-}
-
-// Extract activities information
-function extractActivitiesInfo(record) {
-    let info = 'Activitats que afecten el trànsit.';
-
-    const activityType = record.querySelector('activityType');
-    if (activityType) {
-        info += ` Tipus: ${activityType.textContent}.`;
-    }
-
-    return info;
-}
-
-// Extract poor environment conditions information
-function extractPoorEnvironmentInfo(record) {
-    let info = 'Condicions ambientals adverses detectades.';
-
-    // Check for specific environmental conditions
-    const poorEnvironmentType = record.querySelector('poorEnvironmentType');
-    if (poorEnvironmentType) {
-        const condition = poorEnvironmentType.textContent;
-        switch (condition) {
-            case 'badWeather':
-                info = 'Mal temps que afecta la circulació.';
-                break;
-            case 'blizzard':
-                info = 'Tempesta de neu intensa.';
-                break;
-            case 'damagingHail':
-                info = 'Calamarsa danyina.';
-                break;
-            case 'denseFog':
-                info = 'Boira densa que redueix la visibilitat.';
-                break;
-            case 'extremeCold':
-                info = 'Fred extrem que afecta les condicions de circulació.';
-                break;
-            case 'extremeHeat':
-                info = 'Calor extrema que afecta les condicions de circulació.';
-                break;
-            case 'flooding':
-                info = 'Inundacions que afecten la carretera.';
-                break;
-            case 'gales':
-                info = 'Vent fort (galerna) que afecta la circulació.';
-                break;
-            case 'heavyRain':
-                info = 'Pluja intensa.';
-                break;
-            case 'heavySnowfall':
-                info = 'Nevada intensa.';
-                break;
-            case 'snowfall':
-                info = 'Nevada en curs.';
-                break;
-            case 'lowVisibility':
-                info = 'Baixa visibilitat per condicions meteorològiques.';
-                break;
-            case 'precipitation':
-                info = 'Precipitació que afecta la circulació.';
-                break;
-            case 'severeFrost':
-                info = 'Gelada severa.';
-                break;
-            case 'smoke':
-                info = 'Fum que redueix la visibilitat.';
-                break;
-            case 'strongWinds':
-                info = 'Vent fort que afecta la circulació.';
-                break;
-            default:
-                info = `Condició ambiental adversa: ${condition}.`;
-        }
-    }
-
-    return info;
 }
 
 // Geocode incidents without coordinates using server API
@@ -751,87 +300,6 @@ async function geocodeViaServer(roadRef) {
     }
 }
 
-// Geocode a single incident using Overpass API
-async function geocodeIncidentLocation(incident) {
-    const roadRef = incident.location.roadNumber || incident.location.road;
-    const placeName = incident.location.town;
-
-    if (!roadRef) {
-        console.log(`Cannot geocode incident ${incident.id}: no road reference`);
-        return null;
-    }
-
-    try {
-        // Try multiple Overpass servers to avoid timeouts
-        const overpassServers = [
-            'https://overpass-api.de/api/interpreter',
-            'https://overpass.kumi.systems/api/interpreter',
-            'https://overpass.openstreetmap.fr/api/interpreter'
-        ];
-
-        let response = null;
-        let serverTried = null;
-
-        for (const server of overpassServers) {
-            try {
-                // Build simpler Overpass query to avoid timeouts
-                const overpassQuery = `
-                    [out:json][timeout:15];
-                    way["highway"]["ref"="${roadRef}"](around:30000,41.5912,1.5209);
-                    out center;
-                `;
-
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-
-                response = await fetch(server, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: `data=${encodeURIComponent(overpassQuery)}`,
-                    signal: controller.signal
-                });
-
-                clearTimeout(timeoutId);
-                serverTried = server;
-
-                if (response.ok) break; // Use first successful response
-
-            } catch (error) {
-                console.warn(`Overpass server ${server} failed:`, error.message);
-                continue;
-            }
-        }
-
-        if (!response || !response.ok) {
-            throw new Error(`All Overpass servers failed or returned ${response?.status}`);
-        }
-
-        if (!response.ok) {
-            throw new Error(`Overpass API error: ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        if (data.elements && data.elements.length > 0) {
-            // Return the center coordinates of the first matching element
-            const element = data.elements[0];
-            return {
-                lat: element.center ? element.center.lat : element.lat,
-                lng: element.center ? element.center.lon : element.lon
-            };
-        }
-
-        console.log(`No OSM data found for road ${roadRef}`);
-        return null;
-
-    } catch (error) {
-        console.warn(`Overpass API error for road ${roadRef}:`, error);
-        return null;
-    }
-}
-
 // Display traffic incidents on the map and in the list
 async function displayTrafficIncidents(incidents) {
     // Clear existing markers
@@ -847,6 +315,39 @@ async function displayTrafficIncidents(incidents) {
     tableContainer.innerHTML = '';
     cardsContainer.innerHTML = '';
 
+    // Create table container with scrolling
+    const scrollableTableContainer = document.createElement('div');
+    scrollableTableContainer.style.cssText = `
+        max-height: 450px;
+        overflow: auto;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        margin-bottom: 20px;
+        scrollbar-width: thin;
+        scrollbar-color: #888 #f1f1f1;
+    `;
+
+    // Add custom scrollbar styles for webkit browsers
+    const style = document.createElement('style');
+    style.textContent = `
+        #table-container > div::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        #table-container > div::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        #table-container > div::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        #table-container > div::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    `;
+    document.head.appendChild(style);
+
     // Create table with road references and locate buttons
     const table = document.createElement('table');
     table.style.cssText = `
@@ -854,21 +355,31 @@ async function displayTrafficIncidents(incidents) {
         border-collapse: collapse;
         font-size: 11px;
         background: white;
-        min-width: 700px;
+        min-width: 500px;
+        position: relative;
+        table-layout: fixed;
     `;
 
     const thead = document.createElement('thead');
+    thead.style.cssText = `
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: white;
+    `;
     thead.innerHTML = `
         <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
-            <th style="padding: 8px; text-align: center; border: 1px solid #dee2e6; width: 40px; cursor: pointer;" onclick="sortTable(0)" id="sort-level">LEVEL ▼</th>
-            <th style="padding: 8px; text-align: center; border: 1px solid #dee2e6; cursor: pointer;" onclick="sortTable(1)" id="sort-road">ROAD REF ▼</th>
-            <th style="padding: 8px; text-align: center; border: 1px solid #dee2e6; cursor: pointer;" onclick="sortTable(2)" id="sort-location">LOCATION ▼</th>
-            <th style="padding: 8px; text-align: center; border: 1px solid #dee2e6; cursor: pointer;" onclick="sortTable(3)" id="sort-pk">PK ▼</th>
-            <th style="padding: 8px; text-align: center; border: 1px solid #dee2e6; cursor: pointer;" onclick="sortTable(4)" id="sort-direction">DIRECTION ▼</th>
-            <th style="padding: 8px; text-align: center; border: 1px solid #dee2e6; cursor: pointer;" onclick="sortTable(5)" id="sort-reason">REASON ▼</th>
-            <th style="padding: 8px; text-align: center; border: 1px solid #dee2e6; cursor: pointer;" onclick="sortTable(6)" id="sort-observations">OBSERVATIONS ▼</th>
-            <th style="padding: 8px; text-align: center; border: 1px solid #dee2e6; cursor: pointer;" onclick="sortTable(7)" id="sort-source">SOURCE ▼</th>
-            <th style="padding: 8px; text-align: center; border: 1px solid #dee2e6; width: 120px;">LOCATE</th>
+            <th style="padding: 0; width: 20px; border: 1px solid #dee2e6;"></th>
+            <th style="padding: 6px; text-align: center; border: 1px solid #dee2e6; cursor: pointer; width: 30px;" onclick="sortTable(1)" id="sort-level"># ▼</th>
+            <th style="padding: 6px; text-align: left; border: 1px solid #dee2e6; cursor: pointer; width: 60px; min-width: 60px;" onclick="sortTable(2)" id="sort-road">${getTranslation('traffic_via')} ▼</th>
+            <th style="padding: 6px; text-align: center; border: 1px solid #dee2e6; cursor: pointer; width: 70px;" onclick="sortTable(3)" id="sort-pk">${getTranslation('traffic_km_inici_fi')} ▼</th>
+            <th style="padding: 6px; text-align: left; border: 1px solid #dee2e6; cursor: pointer; width: 70px;" onclick="sortTable(4)" id="sort-reason">${getTranslation('traffic_causa')} ▼</th>
+            <th style="padding: 6px; text-align: left; border: 1px solid #dee2e6; cursor: pointer; width: 100px;" onclick="sortTable(5)" id="sort-type">${getTranslation('traffic_tipus')} ▼</th>
+            <th style="padding: 6px; text-align: center; border: 1px solid #dee2e6; cursor: pointer; width: 40px;" onclick="sortTable(6)" id="sort-length">${getTranslation('traffic_long')} ▼</th>
+            <th style="padding: 6px; text-align: center; border: 1px solid #dee2e6; cursor: pointer; width: 50px;" onclick="sortTable(7)" id="sort-direction">${getTranslation('traffic_sentit')} ▼</th>
+            <th style="padding: 6px; text-align: left; border: 1px solid #dee2e6; cursor: pointer; width: 80px;" onclick="sortTable(8)" id="sort-municipi">${getTranslation('traffic_municipality')} ▼</th>
+            <th style="padding: 6px; text-align: left; border: 1px solid #dee2e6; cursor: pointer; width: 120px;" onclick="sortTable(9)" id="sort-dest">${getTranslation('traffic_cap_a')} / ${getTranslation('traffic_observacions')} ▼</th>
+            <th style="padding: 6px; text-align: center; border: 1px solid #dee2e6; cursor: pointer; width: 80px;" onclick="sortTable(10)" id="sort-start">${getTranslation('traffic_inici')} ▼</th>
         </tr>
     `;
     table.appendChild(thead);
@@ -900,7 +411,8 @@ async function displayTrafficIncidents(incidents) {
     });
 
     table.appendChild(tbody);
-    tableContainer.appendChild(table);
+    scrollableTableContainer.appendChild(table);
+    tableContainer.appendChild(scrollableTableContainer);
     cardsContainer.appendChild(cardGrid);
 
     // Show both sections
@@ -945,9 +457,8 @@ function addTrafficMarker(incident) {
 
     // Create popup content
     const sourceMap = {
-        'DGT': 'DGT (Dirección General de Tráfico)',
-        'GENCAT_RSS': 'GENCAT (Generalitat de Catalunya - RSS)',
-        'GENCAT_GML': 'GENCAT (Generalitat de Catalunya - GML)'
+        'SCT_RSS': 'SCT (Servei Català de Trànsit - RSS)',
+        'SCT_GML': 'SCT (Servei Català de Trànsit - GML)'
     };
     const sourceDisplay = sourceMap[incident.source] || incident.source;
 
@@ -1047,7 +558,7 @@ function addIncidentToList(incident, container) {
         </div>
     `;
 
-    // Click handler to zoom to incident
+    // Click handler to zoom to incident or show location info
     incidentDiv.onclick = () => {
         if (incident.location.hasCoordinates) {
             map.setView([incident.location.lat, incident.location.lng], 15);
@@ -1058,6 +569,36 @@ function addIncidentToList(incident, container) {
                     marker.openPopup();
                 }
             });
+        } else {
+            // Show location information popup if no coordinates
+            const locationInfo = `
+                <div style="padding: 10px;">
+                    <h4 style="margin: 0 0 10px 0; color: #333;">${getTranslation('traffic_location_info_title')}</h4>
+                    <div style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin-bottom: 10px;">
+                        <strong>${getTranslation('traffic_location_road')}</strong> ${incident.location.roadNumber || 'Desconeguda'}<br>
+                        <strong>${getTranslation('traffic_location_pk')}</strong> ${incident.location.pkStart || 'N/A'} - ${incident.location.pkEnd || 'N/A'}<br>
+                        <strong>${getTranslation('traffic_location_direction')}</strong> ${incident.location.direction || 'N/A'}<br>
+                        <strong>${getTranslation('traffic_location_description')}</strong> ${incident.location.description || 'N/A'}
+                    </div>
+                    <div style="font-size: 12px; color: #666; font-style: italic;">
+                        <i class="fa fa-info-circle"></i> ${getTranslation('traffic_location_no_gps')}
+                    </div>
+                </div>
+            `;
+            
+            // Create a temporary popup at the center of the map
+            const centerLat = map.getCenter().lat;
+            const centerLng = map.getCenter().lng;
+            
+            const tempPopup = L.popup()
+                .setLatLng([centerLat, centerLng])
+                .setContent(locationInfo)
+                .openOn(map);
+            
+            // Auto-close after 5 seconds
+            setTimeout(() => {
+                map.closePopup(tempPopup);
+            }, 5000);
         }
     };
 
@@ -1130,14 +671,31 @@ function parseGENCATRSSItem(item, index) {
     const title = item.querySelector('title')?.textContent || 'Incident sense títol';
     const description = item.querySelector('description')?.textContent || '';
 
-    // Parse description format: "ROAD | LOCATION | DIRECTION | PK_RANGE | TIME"
+    // Parse description format: "ROAD | MUNICIPALITY | DIRECTION | PK_RANGE | SPECIFIC_LOCATION"
     const descParts = description.split(' | ').map(part => part.trim());
+    console.log('RSS Description parts:', descParts);
+    
     if (descParts.length < 4) {
         console.warn('Invalid GENCAT RSS description format:', description);
         return null;
     }
 
-    const [roadRef, location, direction, pkRange] = descParts;
+    // Ensure we have the correct number of parts, even if specificLocation is missing
+    const roadRef = descParts[0];
+    const municipality = descParts[1];  // This is the value we want in the Tram field
+    const direction = descParts[2];
+    const pkRange = descParts[3];
+    const specificLocation = descParts[4] || '';  // Optional specific location
+    
+    console.log('RSS Parsed:', { 
+        roadRef, 
+        municipality,  // Should go to Tram field
+        direction, 
+        pkRange, 
+        specificLocation  // Should go to Cap a/Observacions field
+    });
+    
+    // Store municipality as town for Tram field
 
     // Extract road reference and PK from pkRange (e.g., "Punt km. 545-544.2")
     const pkMatch = pkRange.match(/Punt km\. (.+)/);
@@ -1166,15 +724,17 @@ function parseGENCATRSSItem(item, index) {
     // Create location object
     const incidentLocation = {
         roadNumber: roadRef,
-        town: location,
+        town: municipality,
+        comarca: municipality, // Store municipality in comarca for Tram field
         direction: direction,
         pkStart: pkStart,
         pkEnd: pkEnd,
         lat: lat,
         lng: lng,
-        description: `${roadRef} - ${location} (${pkRange})`,
-        hasCoordinates: hasCoords, // Check if coordinates were found
-        displayText: `${roadRef} - ${location} (${pkRange})`
+        cap_a: specificLocation || '', // Only store specific location in cap_a
+        description: `${roadRef} - ${municipality} (${pkRange})`,
+        hasCoordinates: hasCoords,
+        displayText: `${roadRef} - ${municipality} (${pkRange})`
     };
 
     // Determine level and color based on severity (1=lowest to 5=highest)
@@ -1210,11 +770,12 @@ function parseGENCATRSSItem(item, index) {
         icon = '🚗';
         level = 3; // Congestion is medium-high severity
         levelColor = '#fd7e14'; // Orange for level 3
-    } else if (titleLower.includes('neu') || titleLower.includes('meteorol')) {
+    } else if (titleLower.includes('neu') || titleLower.includes('meteorol') || titleLower.includes('cadenes')) {
         category = 'weather';
         icon = '❄️';
-        level = 5; // Weather incidents are high severity
-        levelColor = '#000000'; // Black for level 5
+        level = 4; // Snow/weather incidents are level 4 when road is open
+        levelColor = '#dc3545'; // Red for level 4
+        console.log('❄️ RSS/DGT Snow/Weather incident detected - Level 4 (Red, road open):', title);
     }
 
     return {
@@ -1270,11 +831,24 @@ function parseGENCATGMLFeature(member, index) {
     const descripcio = mct2Data.querySelector('cite\\:descripcio, descripcio')?.textContent;
     const descripcioTipus = mct2Data.querySelector('cite\\:descripcio_tipus, descripcio_tipus')?.textContent;
     const sentit = mct2Data.querySelector('cite\\:sentit, sentit')?.textContent;
+    const cap_a = mct2Data.querySelector('cite\\:cap_a, cap_a')?.textContent; // Missing field!
     const nivell = parseInt(mct2Data.querySelector('cite\\:nivell, nivell')?.textContent || '1');
+    
+    // Extract region/province information
+    const municipi = mct2Data.querySelector('cite\\:municipi, municipi')?.textContent;
+    const comarca = mct2Data.querySelector('cite\\:comarca, comarca')?.textContent;
+    const provincia = mct2Data.querySelector('cite\\:provincia, provincia')?.textContent;
+    const regio = mct2Data.querySelector('cite\\:regio, regio')?.textContent;
+    const demarcacio = mct2Data.querySelector('cite\\:demarcacio, demarcacio')?.textContent;
     
     // Extract additional observation fields
     const dataInici = mct2Data.querySelector('cite\\:data_inici, data_inici')?.textContent;
     const dataFi = mct2Data.querySelector('cite\\:data_fi, data_fi')?.textContent;
+    const data = mct2Data.querySelector('cite\\:data, data')?.textContent;
+    const dataPublicacio = mct2Data.querySelector('cite\\:data_publicacio, data_publicacio')?.textContent;
+    const dataActualitzacio = mct2Data.querySelector('cite\\:data_actualitzacio, data_actualitzacio')?.textContent;
+    const horaInici = mct2Data.querySelector('cite\\:hora_inici, hora_inici')?.textContent;
+    const horaFi = mct2Data.querySelector('cite\\:hora_fi, hora_fi')?.textContent;
     const fase = mct2Data.querySelector('cite\\:fase, fase')?.textContent;
     const tipusIncidencia = mct2Data.querySelector('cite\\:tipus_incidencia, tipus_incidencia')?.textContent;
     const tipusAfectacio = mct2Data.querySelector('cite\\:tipus_afectacio, tipus_afectacio')?.textContent;
@@ -1469,70 +1043,299 @@ function parseGENCATGMLFeature(member, index) {
         hasCoordinates: (lat !== null && lng !== null),
         lat: lat,
         lng: lng,
+        town: municipi,
+        comarca: comarca,
+        region: regio || demarcacio || provincia || comarca,
+        province: provincia,
+        demarcacio: demarcacio,
+        cap_a: cap_a,
+        dataInici: dataInici,
+        dataFi: dataFi,
+        data: data,
+        dataPublicacio: dataPublicacio,
+        dataActualitzacio: dataActualitzacio,
+        horaInici: horaInici,
+        horaFi: horaFi,
+        fase: fase,
         description: `${carretera || 'Unknown'} - PK ${pkInici}-${pkFi}`,
         displayText: `${carretera || 'Unknown'} - PK ${pkInici}-${pkFi} (${sentit || ''})`
     };
 
-    // Determine level and color based on severity (consistent with DGT and RSS logic)
-    let level = 1;
-    let category = 'other';
-    let icon = '⚠️';
-    let levelColor = '#28a745'; // Green for level 1
-
-    const causaLower = (causa || '').toLowerCase();
-    const descLower = (descripcio || '').toLowerCase();
-    const tipusLower = (descripcioTipus || '').toLowerCase();
-
-    if (causaLower.includes('neu') || tipusLower.includes('meteorol')) {
-        category = 'weather';
-        icon = '❄️';
-        level = 5; // Weather incidents are highest severity
-        levelColor = '#000000'; // Black for level 5
-    } else if (descLower.includes('tall') || descLower.includes('tancat') || descLower.includes('tallada') || 
-               descLower.includes('cortada') || descLower.includes('tallat') || descLower.includes('tancada') ||
-               descLower.includes('desviament') || descLower.includes('desvi') || descLower.includes('desviament') ||
-               tipusLower.includes('tall') || tipusLower.includes('tancat') || tipusLower.includes('tallada') ||
-               tipusLower.includes('cortada') || tipusLower.includes('tallat') || tipusLower.includes('tancada') ||
-               causaLower.includes('tall') || causaLower.includes('tancat') || causaLower.includes('tallada') ||
-               causaLower.includes('cortada') || causaLower.includes('tallat') || causaLower.includes('tancada') ||
-               nivell >= 5) {
-        category = 'closure';
-        icon = '🚧';
-        level = 5; // Closures are highest severity
-        levelColor = '#000000'; // Black for level 5
-        console.log('🚧 GML Closure detected - Level 5 (Black):', descripcio, 'Level:', nivell);
-    } else if (tipusLower.includes('accident') || causaLower.includes('accident')) {
-        category = 'accident';
-        icon = '🚨';
-        level = 4; // Accidents are high severity
-        levelColor = '#dc3545'; // Red for level 4
-    } else if (tipusLower.includes('retenci') || causaLower.includes('circulaci') || causaLower.includes('manifestaci') ||
-               tipusLower.includes('congestió') || tipusLower.includes('densitat') || causaLower.includes('retenció')) {
-        category = 'congestion';
-        icon = '🚗';
-        level = 3; // Congestion is medium-high severity
-        levelColor = '#fd7e14'; // Orange for level 3
-    } else if (tipusLower.includes('obres') || causaLower.includes('manteniment') || causaLower.includes('reparaci') ||
-               tipusLower.includes('treballs') || causaLower.includes('millora') || tipusLower.includes('construcció') ||
-               tipusLower.includes('instal·lacions') || causaLower.includes('ferm') || tipusLower.includes('reforçament')) {
-        category = 'maintenance';
-        icon = '🔧';
-        level = 2; // Maintenance is medium severity
-        levelColor = '#ffc107'; // Yellow for level 2
-    } else if (nivell >= 4) {
-        // High level incidents from XML - should be closures
-        category = 'closure';
-        icon = '🚧';
-        level = 5; // High level should be black (closures)
-        levelColor = '#000000'; // Black for level 5
-        console.log('🚧 GML High Level (>=4) - Level 5 (Black):', descripcio, 'Level:', nivell);
-    } else {
-        // Low severity incidents
-        category = 'other';
-        icon = '⚠️';
-        level = 1;
-        levelColor = '#28a745'; // Green for level 1
+    // Comprehensive incident classification using all text fields
+    function classifyIncidentComprehensive(incident) {
+        const causa = (incident.causa || '').toLowerCase();
+        const descripcio = (incident.descripcio || '').toLowerCase();
+        const descripcioTipus = (incident.descripcio_tipus || '').toLowerCase();
+        const cap_a = (incident.cap_a || '').toLowerCase();
+        const nivell = parseInt(incident.nivell || '1');
+        
+        // Combine all text for comprehensive analysis
+        const allText = `${causa} ${descripcio} ${descripcioTipus} ${cap_a}`;
+        
+        // Priority 1: Road closures (Level 5)
+        if (isRoadClosure(allText, descripcio, descripcioTipus, causa)) {
+            return {
+                category: 'closure',
+                level: 5,
+                icon: '🚧',
+                color: '#000000',
+                reason: extractClosureReason(allText, causa, descripcio),
+                observations: extractObservations(descripcio, cap_a, descripcioTipus)
+            };
+        }
+        
+        // Priority 2: Snow/Weather incidents (Level 4 when open, Level 5 when closed)
+        if (isSnowWeatherIncident(allText, causa, descripcioTipus)) {
+            const isClosed = isRoadClosure(allText, descripcio, descripcioTipus, causa);
+            return {
+                category: 'weather',
+                level: isClosed ? 5 : 4,
+                icon: '❄️',
+                color: isClosed ? '#000000' : '#dc3545',
+                reason: extractWeatherReason(allText, causa, descripcio),
+                observations: extractObservations(descripcio, cap_a, descripcioTipus)
+            };
+        }
+        
+        // Priority 3: Accidents (Level 4)
+        if (isAccident(allText, causa, descripcio)) {
+            return {
+                category: 'accident',
+                level: 4,
+                icon: '🚨',
+                color: '#dc3545',
+                reason: extractAccidentReason(allText, causa, descripcio),
+                observations: extractObservations(descripcio, cap_a, descripcioTipus)
+            };
+        }
+        
+        // Priority 4: Congestion/Traffic issues (Level 3)
+        if (isCongestion(allText, descripcioTipus, causa)) {
+            return {
+                category: 'congestion',
+                level: 3,
+                icon: '🚗',
+                color: '#fd7e14',
+                reason: extractCongestionReason(allText, descripcioTipus),
+                observations: extractObservations(descripcio, cap_a, descripcioTipus)
+            };
+        }
+        
+        // Priority 5: Maintenance/Works (Level 2)
+        if (isMaintenance(allText, causa, descripcioTipus)) {
+            return {
+                category: 'maintenance',
+                level: 2,
+                icon: '🔧',
+                color: '#ffc107',
+                reason: extractMaintenanceReason(allText, causa, descripcioTipus),
+                observations: extractObservations(descripcio, cap_a, descripcioTipus)
+            };
+        }
+        
+        // Priority 6: Use nivell from XML if high (Level 4+)
+        if (nivell >= 4) {
+            return {
+                category: 'other',
+                level: 5,
+                icon: '⚠️',
+                color: '#000000',
+                reason: `High severity incident (Level ${nivell})`,
+                observations: extractObservations(descripcio, cap_a, descripcioTipus)
+            };
+        }
+        
+        // Default: Low severity (Level 1)
+        return {
+            category: 'other',
+            level: 1,
+            icon: '⚠️',
+            color: '#28a745',
+            reason: extractGeneralReason(allText, causa, descripcioTipus),
+            observations: extractObservations(descripcio, cap_a, descripcioTipus)
+        };
     }
+
+    // Road closure detection
+    function isRoadClosure(allText, descripcio, descripcioTipus, causa) {
+        const closureKeywords = [
+            'tallada', 'tallat', 'tancat', 'tancada', 'cortada', 'cortat',
+            'calçada tallada', 'via tallada', 'carretera tallada',
+            'desviament', 'desvi', 'desviament senyalitzat',
+            'pas alternatiu', 'passe alternatiu'
+        ];
+        
+        // Check for closure keywords
+        const hasClosureKeywords = closureKeywords.some(keyword => 
+            allText.includes(keyword) || 
+            descripcio.includes(keyword) ||
+            descripcioTipus.includes(keyword) ||
+            causa.includes(keyword)
+        );
+        
+        // But exclude cases where it's just "obligatori cadenes" (chains required) - not a closure
+        const isChainsOnly = allText.includes('obligatori cadenes') && 
+                            !allText.includes('tallada') && 
+                            !allText.includes('tancat') &&
+                            !allText.includes('cortat');
+        
+        return hasClosureKeywords && !isChainsOnly;
+    }
+
+    // Snow/Weather detection
+    function isSnowWeatherIncident(allText, causa, descripcioTipus) {
+        const weatherKeywords = [
+            'neu', 'neu/gel', 'gel', 'meteorologia', 'meterologia',
+            'cadenes', 'obligatori cadenes', 'cadena',
+            'inundacions', 'inundació', 'aiguades',
+            'tempesta', 'vent', 'pluja intensa'
+        ];
+        
+        return weatherKeywords.some(keyword => 
+            allText.includes(keyword) || 
+            causa.includes(keyword) ||
+            descripcioTipus.includes(keyword)
+        );
+    }
+
+    // Accident detection
+    function isAccident(allText, causa, descripcio) {
+        const accidentKeywords = [
+            'accident', 'col·lisió', 'xoc', 'abocament',
+            'vehicle accidentat', 'cotxe accidentat',
+            'sinistre', 'incident', 'emergència'
+        ];
+        
+        return accidentKeywords.some(keyword => 
+            allText.includes(keyword) || 
+            causa.includes(keyword) ||
+            descripcio.includes(keyword)
+        );
+    }
+
+    // Congestion detection
+    function isCongestion(allText, descripcioTipus, causa) {
+        const congestionKeywords = [
+            'retenció', 'retencions', 'retenci', 'congestió', 'densitat',
+            'circulació intensa', 'circulació amb retencions',
+            'trànsit dens', 'trànsit intens', 'engarrot'
+        ];
+        
+        return congestionKeywords.some(keyword => 
+            allText.includes(keyword) || 
+            descripcioTipus.includes(keyword) ||
+            causa.includes(keyword)
+        );
+    }
+
+    // Maintenance detection
+    function isMaintenance(allText, causa, descripcioTipus) {
+        const maintenanceKeywords = [
+            'obres', 'treballs', 'manteniment', 'reparació',
+            'construcció', 'millora', 'neteja', 'reforçament',
+            'reasfaltat', 'asfalt', 'ferm', 'jardineria',
+            'senyalització', 'barrera', 'mur', 'talús',
+            'rotonda', 'pont', 'túnel', 'canalització',
+            'instal·lació', 'sondejos', 'electric'
+        ];
+        
+        return maintenanceKeywords.some(keyword => 
+            allText.includes(keyword) || 
+            causa.includes(keyword) ||
+            descripcioTipus.includes(keyword)
+        );
+    }
+
+    // Extract closure reason - return full text
+    function extractClosureReason(allText, causa, descripcio) {
+        if (causa) {
+            if (descripcio && descripcio.trim()) {
+                return `${causa}: ${descripcio}`;
+            }
+            return causa;
+        }
+        return descripcio || 'Calçada tallada';
+    }
+
+    // Extract weather reason - return full text
+    function extractWeatherReason(allText, causa, descripcio) {
+        if (causa) {
+            if (descripcio && descripcio.trim()) {
+                return `${causa}: ${descripcio}`;
+            }
+            return causa;
+        }
+        return descripcio || 'Condicions meteorològiques';
+    }
+
+    // Extract accident reason - return full text
+    function extractAccidentReason(allText, causa, descripcio) {
+        if (causa) {
+            if (descripcio && descripcio.trim()) {
+                return `${causa}: ${descripcio}`;
+            }
+            return causa;
+        }
+        return descripcio || 'Accident';
+    }
+
+    // Extract congestion reason - return full text
+    function extractCongestionReason(allText, descripcioTipus) {
+        if (descripcioTipus && descripcioTipus.trim()) {
+            return descripcioTipus;
+        }
+        return 'Trànsit dens';
+    }
+
+    // Extract maintenance reason - return full text
+    function extractMaintenanceReason(allText, causa, descripcioTipus) {
+        if (causa) {
+            if (descripcioTipus && descripcioTipus.trim()) {
+                return `${causa} (${descripcioTipus})`;
+            }
+            return causa;
+        }
+        return descripcioTipus || 'Treballs de manteniment';
+    }
+
+    // Extract general reason - return full text
+    function extractGeneralReason(allText, causa, descripcioTipus) {
+        if (causa) {
+            if (descripcioTipus && descripcioTipus.trim()) {
+                return `${causa} (${descripcioTipus})`;
+            }
+            return causa;
+        }
+        return descripcioTipus || 'Incident de trànsit';
+    }
+
+    // Extract observations (additional details) - return complete text
+    function extractObservations(descripcio, cap_a, descripcioTipus) {
+        const observations = [];
+        
+        if (descripcio && descripcio.trim()) {
+            observations.push(descripcio);
+        }
+        
+        if (cap_a && cap_a.trim()) {
+            observations.push(`Direcció: ${cap_a}`);
+        }
+        
+        if (descripcioTipus && descripcioTipus.trim()) {
+            observations.push(`Tipus: ${descripcioTipus}`);
+        }
+        
+        return observations.join(' | ');
+    }
+
+    // Use comprehensive classifier
+    const classification = classifyIncidentComprehensive({
+        causa: causa,
+        descripcio: descripcio,
+        descripcio_tipus: descripcioTipus,
+        cap_a: cap_a,
+        nivell: nivell
+    });
 
     const title = `${descripcio || 'Incident'} - ${carretera || 'Unknown'}`;
 
@@ -1540,15 +1343,17 @@ function parseGENCATGMLFeature(member, index) {
         id: identificador || `gencat-gml-${index}`,
         title: title,
         description: `${descripcio || 'Sense descripció'} (${descripcioTipus || 'Sense tipus'})`,
-        category: category,
-        icon: icon,
-        color: levelColor,
-        level: level,
+        category: classification.category,
+        icon: classification.icon,
+        color: classification.color,
+        level: classification.level,
         location: incidentLocation,
         nivell: nivell, // Store the level for table display
         active: true,
+        reason: classification.reason,
+        observations: classification.observations,
         // GML observation fields for detailed display
-        observations: {
+        gmlObservations: {
             dataInici: dataInici,
             dataFi: dataFi,
             fase: fase,
@@ -1565,11 +1370,10 @@ function parseGENCATGMLFeature(member, index) {
 
 // Combine and deduplicate traffic incidents from multiple sources with priority order
 function combineTrafficIncidents(allIncidents) {
-    // Data source priority: 1=DGT, 2=GENCAT_GML, 3=GENCAT_RSS
+    // Data source priority: 1=SCT_RSS, 2=SCT_GML (temporarily reversed for testing)
     const sourcePriority = {
-        'DGT': 1,
-        'GENCAT_GML': 2,
-        'GENCAT_RSS': 3
+        'SCT_RSS': 1,
+        'SCT_GML': 2
     };
 
     const incidentMap = new Map();
@@ -1591,18 +1395,50 @@ function combineTrafficIncidents(allIncidents) {
             const currentPriority = sourcePriority[incident.source] || 99;
 
             if (currentPriority < existingPriority) {
-                // Current incident has higher priority, replace existing
-                console.log(`Replacing ${existingIncident.source} with ${incident.source} for ${uniqueKey}`);
-                incidentMap.set(uniqueKey, incident);
+                // Current incident has higher priority, but merge fields from RSS if needed
+                const mergedIncident = { ...incident };
+                
+                // Preserve town (municipality) from RSS if current incident (GML) doesn't have it
+                if (!mergedIncident.location?.town && existingIncident.location?.town) {
+                    if (!mergedIncident.location) mergedIncident.location = {};
+                    mergedIncident.location.town = existingIncident.location.town;
+                }
+                
+                // Preserve comarca from RSS if current incident (GML) doesn't have it
+                if (!mergedIncident.location?.comarca && existingIncident.location?.comarca) {
+                    if (!mergedIncident.location) mergedIncident.location = {};
+                    mergedIncident.location.comarca = existingIncident.location.comarca;
+                }
+                
+                // Preserve other fields that might be missing
+                if (!mergedIncident.location?.cap_a && existingIncident.location?.cap_a) {
+                    if (!mergedIncident.location) mergedIncident.location = {};
+                    mergedIncident.location.cap_a = existingIncident.location.cap_a;
+                }
+                
+                incidentMap.set(uniqueKey, mergedIncident);
             } else {
-                // Keep existing incident (higher priority)
-                console.log(`Keeping ${existingIncident.source}, discarding ${incident.source} for ${uniqueKey}`);
+                // Keep existing incident (higher priority), but merge fields from current if needed
+                if (!existingIncident.location?.town && incident.location?.town) {
+                    if (!existingIncident.location) existingIncident.location = {};
+                    existingIncident.location.town = incident.location.town;
+                }
+                
+                if (!existingIncident.location?.comarca && incident.location?.comarca) {
+                    if (!existingIncident.location) existingIncident.location = {};
+                    existingIncident.location.comarca = incident.location.comarca;
+                }
+                
+                if (!existingIncident.location?.cap_a && incident.location?.cap_a) {
+                    if (!existingIncident.location) existingIncident.location = {};
+                    existingIncident.location.cap_a = incident.location.cap_a;
+                }
             }
         }
     });
 
     const combined = Array.from(incidentMap.values());
-    console.log(`Combined ${allIncidents.length} incidents into ${combined.length} unique incidents using priority order: DGT > GENCAT_GML > GENCAT_RSS`);
+    console.log(`Combined ${allIncidents.length} incidents into ${combined.length} unique incidents using priority order: SCT_GML > SCT_RSS`);
     return combined;
 }
 
@@ -1713,14 +1549,24 @@ function addIncidentCard(incident, container) {
         }
     }
 
-    // REASON - the main cause/description
+    // REASON - use the comprehensive reason field
     let reason = 'Unknown';
-    if (incident.source === 'GENCAT_GML') {
-        reason = incident.title || 'Unknown'; // Use the title for GML
+    if (incident.reason && incident.reason.trim()) {
+        reason = incident.reason; // Use the full reason from comprehensive classifier
+    } else if (incident.source === 'GENCAT_GML') {
+        reason = incident.title || 'Unknown'; // Fallback to title for GML
     } else if (incident.source === 'GENCAT_RSS') {
-        reason = incident.title || 'Unknown'; // Use the title for RSS
+        reason = incident.title || 'Unknown'; // Fallback to title for RSS
     } else {
-        reason = incident.description || 'Unknown'; // Use description for DGT
+        reason = incident.description || 'Unknown'; // Fallback to description for DGT
+    }
+
+    // OBSERVATIONS - use the comprehensive observations field
+    let observations = '';
+    if (incident.observations && incident.observations.trim()) {
+        observations = incident.observations; // Use the full observations from comprehensive classifier
+    } else if (incident.description && incident.description.trim()) {
+        observations = incident.description; // Fallback to description
     }
 
     // SUBTOPIC - specific subcategory (like "NEU.", "OBRES", etc.)
@@ -1807,6 +1653,7 @@ function addIncidentCard(incident, container) {
             <div style="flex: 1;">
                 <div style="font-weight: bold; color: ${incident.color}; font-size: 14px; margin-bottom: 4px;">${reason}</div>
                 <div style="font-size: 12px; color: #666; margin-bottom: 8px; line-height: 1.4;">${subtopic} ${topic}</div>
+                ${observations ? `<div style="font-size: 11px; color: #555; margin-bottom: 8px; line-height: 1.3; font-style: italic;">${observations}</div>` : ''}
             </div>
         </div>
 
@@ -1833,9 +1680,10 @@ function addIncidentCard(incident, container) {
         card.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
     };
 
-    // Click handler to zoom to incident if it has coordinates
+    // Click handler to zoom to incident or show location info
     card.onclick = () => {
         if (incident.location.hasCoordinates) {
+            // Zoom to location if coordinates are available
             map.setView([incident.location.lat, incident.location.lng], 15);
             // Find and open the corresponding marker popup
             trafficMarkers.forEach(marker => {
@@ -1844,6 +1692,36 @@ function addIncidentCard(incident, container) {
                     marker.openPopup();
                 }
             });
+        } else {
+            // Show location information popup if no coordinates
+            const locationInfo = `
+                <div style="padding: 10px;">
+                    <h4 style="margin: 0 0 10px 0; color: #333;">${getTranslation('traffic_location_info_title')}</h4>
+                    <div style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin-bottom: 10px;">
+                        <strong>${getTranslation('traffic_location_road')}</strong> ${incident.location.roadNumber || 'Desconeguda'}<br>
+                        <strong>${getTranslation('traffic_location_pk')}</strong> ${incident.location.pkStart || 'N/A'} - ${incident.location.pkEnd || 'N/A'}<br>
+                        <strong>${getTranslation('traffic_location_direction')}</strong> ${incident.location.direction || 'N/A'}<br>
+                        <strong>${getTranslation('traffic_location_description')}</strong> ${incident.location.description || 'N/A'}
+                    </div>
+                    <div style="font-size: 12px; color: #666; font-style: italic;">
+                        <i class="fa fa-info-circle"></i> ${getTranslation('traffic_location_no_gps')}
+                    </div>
+                </div>
+            `;
+            
+            // Create a temporary popup at the center of the map
+            const centerLat = map.getCenter().lat;
+            const centerLng = map.getCenter().lng;
+            
+            const tempPopup = L.popup()
+                .setLatLng([centerLat, centerLng])
+                .setContent(locationInfo)
+                .openOn(map);
+            
+            // Auto-close after 5 seconds
+            setTimeout(() => {
+                map.closePopup(tempPopup);
+            }, 5000);
         }
     };
 
@@ -1877,22 +1755,196 @@ function addIncidentToTableWithLocate(incident, tbody) {
         location = incident.location.displayText || 'Sense localització';
     }
 
-    // Get description (truncated for table)
-    const description = (incident.description || incident.title || 'Unknown');
-    const shortDesc = description.length > 60 ? description.substring(0, 57) + '...' : description;
-
-    // Create locate button
+    // Get full reason from comprehensive classifier
+    let reason = incident.reason || incident.title || incident.description || 'Unknown';
+    
+    // Remove text between square brackets [] from reason (already in Tipus field)
+    reason = reason.replace(/\s*\[.*?\]\s*/g, ' ').trim();
+    
+    // Extract type information from observations for Tipus field
+    let tipus = incident.descripcioTipus || incident.category || '';
+    
+    // If tipus is empty, try to extract from observations using CATALAN keywords
+    if (!tipus) {
+        // Look for type patterns in observations using CATALAN
+        const obsText = (incident.observations || '').toLowerCase();
+        if (obsText.includes('retenció') || obsText.includes('congestió') || obsText.includes('trànsit intens')) {
+            tipus = 'congestion';
+        } else if (obsText.includes('calçada tallada') || obsText.includes('via tallada') || obsText.includes('cortada')) {
+            tipus = 'closure';
+        } else if (obsText.includes('obra') || obsText.includes('treballs') || obsText.includes('manteniment')) {
+            tipus = 'maintenance';
+        } else if (obsText.includes('accident') || obsText.includes('col·lisió') || obsText.includes('xoc')) {
+            tipus = 'accident';
+        } else if (obsText.includes('neu') || obsText.includes('gel') || obsText.includes('pluja') || obsText.includes('meteorologia')) {
+            tipus = 'weather';
+        } else if (obsText.includes('objecte') || obsText.includes('obstrucció') || obsText.includes('vehicle aturat')) {
+            tipus = 'Obstrucció';
+        }
+    }
+    
+    // Get translated type for display
+    const translatedType = getTranslation(`traffic_category_${tipus.toLowerCase()}`) || tipus;
+    
+    // Get FROM/TO location data (cap_a field) - extract specific location from cap_a
+    let fromTo = '';
+    
+    // Get Cap a / Observacions from cap_a field (extract after " - ")
+    if (incident.location && incident.location.cap_a) {
+        // cap_a might contain "Tram - Specific Location", extract just the specific location
+        const cap_aText = incident.location.cap_a;
+        const dashIndex = cap_aText.indexOf(' - ');
+        if (dashIndex > 0) {
+            fromTo = cap_aText.substring(dashIndex + 3).trim(); // Get the part after " - "
+        } else {
+            fromTo = cap_aText;
+        }
+    }
+    
+    // Get date/time information - try all possible date fields from GML and RSS
+    let inici = '';
+    
+    // Try GML date fields first
+    if (incident.location && incident.location.dataInici) {
+        inici = incident.location.dataInici;
+    } else if (incident.location && incident.location.data) {
+        inici = incident.location.data;
+    } else if (incident.location && incident.location.dataPublicacio) {
+        inici = incident.location.dataPublicacio;
+    } else if (incident.location && incident.location.dataActualitzacio) {
+        inici = incident.location.dataActualitzacio;
+    }
+    // Try RSS date field
+    else if (incident.pubDate) {
+        inici = incident.pubDate;
+    }
+    
+    // Remove day of week for proper sorting
+    if (inici) {
+        inici = inici.replace(/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun),\s*/i, ''); // Remove "Mon, " etc.
+        inici = inici.replace(/^(Dilluns|Dimarts|Dimecres|Dijous|Divendres|Dissabte|Diumenge),\s*/i, ''); // Remove Catalan days
+        inici = inici.replace(/^(Lunes|Martes|Miércoles|Jueves|Viernes|Sábado|Domingo),\s*/i, ''); // Remove Spanish days
+        
+        // Convert month names to numbers for proper sorting
+        inici = inici.replace(/Jan(uary)?/gi, '01');
+        inici = inici.replace(/Feb(ruary)?/gi, '02');
+        inici = inici.replace(/Mar(ch)?/gi, '03');
+        inici = inici.replace(/Apr(il)?/gi, '04');
+        inici = inici.replace(/May/gi, '05');
+        inici = inici.replace(/Jun(e)?/gi, '06');
+        inici = inici.replace(/Jul(y)?/gi, '07');
+        inici = inici.replace(/Aug(ust)?/gi, '08');
+        inici = inici.replace(/Sep(tember)?/gi, '09');
+        inici = inici.replace(/Oct(ober)?/gi, '10');
+        inici = inici.replace(/Nov(ember)?/gi, '11');
+        inici = inici.replace(/Dec(ember)?/gi, '12');
+        
+        // Catalan months
+        inici = inici.replace(/gen(er)?/gi, '01');
+        inici = inici.replace(/febr(er)?/gi, '02');
+        inici = inici.replace(/mar(ç)?/gi, '03');
+        inici = inici.replace(/abr(il)?/gi, '04');
+        inici = inici.replace(/maig/gi, '05');
+        inici = inici.replace(/jun(y)?/gi, '06');
+        inici = inici.replace(/jul(iol)?/gi, '07');
+        inici = inici.replace(/ag(ost)?/gi, '08');
+        inici = inici.replace(/set(embre)?/gi, '09');
+        inici = inici.replace(/oct(ubre)?/gi, '10');
+        inici = inici.replace(/nov(embre)?/gi, '11');
+        inici = inici.replace(/des(embre)?/gi, '12');
+        
+        // Spanish months
+        inici = inici.replace(/ene(ro)?/gi, '01');
+        inici = inici.replace(/feb(rero)?/gi, '02');
+        inici = inici.replace(/mar(zo)?/gi, '03');
+        inici = inici.replace(/abr(il)?/gi, '04');
+        inici = inici.replace(/may(o)?/gi, '05');
+        inici = inici.replace(/jun(io)?/gi, '06');
+        inici = inici.replace(/jul(io)?/gi, '07');
+        inici = inici.replace(/ag(osto)?/gi, '08');
+        inici = inici.replace(/sep(tiembre)?/gi, '09');
+        inici = inici.replace(/oct(ubre)?/gi, '10');
+        inici = inici.replace(/nov(iembre)?/gi, '11');
+        inici = inici.replace(/dic(iembre)?/gi, '12');
+        
+        // Convert to YYYY-MM-DD format for proper sorting
+        // Handle different date formats
+        const dateMatch = inici.match(/(\d{1,4})[\/\-\s](\d{1,2})[\/\-\s](\d{1,4})/);
+        if (dateMatch) {
+            const part1 = dateMatch[1];
+            const part2 = dateMatch[2];
+            const part3 = dateMatch[3];
+            
+            // Determine which part is year (4 digits)
+            let year, month, day;
+            if (part1.length === 4) {
+                // Format: YYYY-MM-DD or YYYY/MM/DD
+                year = part1;
+                month = part2.padStart(2, '0');
+                day = part3.padStart(2, '0');
+            } else if (part3.length === 4) {
+                // Format: DD-MM-YYYY or DD/MM/YYYY (convert to YYYY-MM-DD)
+                year = part3;
+                month = part2.padStart(2, '0');
+                day = part1.padStart(2, '0');
+            } else {
+                // Default assumption: DD-MM-YYYY
+                year = part3;
+                month = part2.padStart(2, '0');
+                day = part1.padStart(2, '0');
+            }
+            
+            inici = inici.replace(dateMatch[0], `${year}-${month}-${day}`);
+        }
+        
+        // Clean up extra spaces and format dates
+        inici = inici.replace(/\s+/g, ' ').trim();
+    }
+    
+    // Add time if available from GML
+    if (inici && incident.location && incident.location.horaInici) {
+        inici += ' ' + incident.location.horaInici;
+    }
+    
+    // Extract PK values for length calculation
+    const pkStart = incident.location.pkStart || 0;
+    const pkEnd = incident.location.pkEnd || pkStart;
+    const length = Math.abs(parseFloat(pkEnd) - parseFloat(pkStart)).toFixed(2);
+    
+    // Build GML observations string if available (fallback for old data)
+    let gmlObservations = '';
+    if (incident.source === 'GENCAT_GML' && incident.gmlObservations) {
+        const obs = incident.gmlObservations;
+        const obsParts = [
+            obs.dataInici || '',
+            obs.dataFi || '',
+            obs.fase || '',
+            obs.tipusCirculacio || '',
+            obs.tipusAfectacio || '',
+            obs.tipusIncidencia || ''
+        ].filter(part => part.trim() !== '');
+        gmlObservations = obsParts.join(' ');
+    }
+    
+    // Create minimal locate button with map marker icon
     const locateBtn = document.createElement('button');
-    locateBtn.textContent = 'Locate';
+    locateBtn.innerHTML = '<i class="fas fa-map-marker-alt" style="display: block; margin: -1px 0 0 -1px;"></i>';
     locateBtn.style.cssText = `
-        padding: 4px 8px;
+        padding: 0;
+        margin: 0;
         background: ${incident.color};
         color: white;
         border: none;
-        border-radius: 4px;
+        border-radius: 0;
         cursor: pointer;
         font-size: 10px;
-        font-weight: bold;
+        width: 16px;
+        height: 18px;
+        line-height: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
     `;
 
     locateBtn.onmouseover = () => locateBtn.style.background = '#555';
@@ -1910,7 +1962,35 @@ function addIncidentToTableWithLocate(incident, tbody) {
                 }
             });
         } else {
-            alert('This incident does not have location coordinates available.');
+            // Show location information popup if no coordinates
+            const locationInfo = `
+                <div style="padding: 10px;">
+                    <h4 style="margin: 0 0 10px 0; color: #333;">${getTranslation('traffic_location_info_title')}</h4>
+                    <div style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin-bottom: 10px;">
+                        <strong>${getTranslation('traffic_location_road')}</strong> ${incident.location.roadNumber || 'Desconeguda'}<br>
+                        <strong>${getTranslation('traffic_location_pk')}</strong> ${incident.location.pkStart || 'N/A'} - ${incident.location.pkEnd || 'N/A'}<br>
+                        <strong>${getTranslation('traffic_location_direction')}</strong> ${incident.location.direction || 'N/A'}<br>
+                        <strong>${getTranslation('traffic_location_description')}</strong> ${incident.location.description || 'N/A'}
+                    </div>
+                    <div style="font-size: 12px; color: #666; font-style: italic;">
+                        <i class="fa fa-info-circle"></i> ${getTranslation('traffic_location_no_gps')}
+                    </div>
+                </div>
+            `;
+            
+            // Create a temporary popup at the center of the map
+            const centerLat = map.getCenter().lat;
+            const centerLng = map.getCenter().lng;
+            
+            const tempPopup = L.popup()
+                .setLatLng([centerLat, centerLng])
+                .setContent(locationInfo)
+                .openOn(map);
+            
+            // Auto-close after 5 seconds
+            setTimeout(() => {
+                map.closePopup(tempPopup);
+            }, 5000);
         }
     };
 
@@ -1942,14 +2022,14 @@ function addIncidentToTableWithLocate(incident, tbody) {
 
     // Get direction information
     let direction = incident.location.direction || 'Unknown';
-    // Translate DATEX2 direction names to Catalan
-    if (direction === 'northBound') direction = 'Sentit nord';
-    else if (direction === 'southBound') direction = 'Sentit sud';
-    else if (direction === 'eastBound') direction = 'Sentit est';
-    else if (direction === 'westBound') direction = 'Sentit oest';
-    else if (direction === 'bothWays') direction = 'Ambdós sentits';
-    else if (direction === 'clockwise') direction = 'Sentit horari';
-    else if (direction === 'counterclockwise') direction = 'Sentit antihorari';
+    // Translate DATEX2 direction names using translation system
+    if (direction === 'northBound') direction = getTranslation('traffic_direction_north');
+    else if (direction === 'southBound') direction = getTranslation('traffic_direction_south');
+    else if (direction === 'eastBound') direction = getTranslation('traffic_direction_east');
+    else if (direction === 'westBound') direction = getTranslation('traffic_direction_west');
+    else if (direction === 'bothWays') direction = getTranslation('traffic_direction_both');
+    else if (direction === 'clockwise') direction = getTranslation('traffic_direction_clockwise');
+    else if (direction === 'counterclockwise') direction = getTranslation('traffic_direction_counterclockwise');
 
     // Get source
     const sourceMap = {
@@ -1959,36 +2039,36 @@ function addIncidentToTableWithLocate(incident, tbody) {
     };
     const source = sourceMap[incident.source] || incident.source;
 
-    // Build GML observations string if available
-    let gmlObservations = '';
-    if (incident.source === 'GENCAT_GML' && incident.observations) {
-        const obs = incident.observations;
-        const obsParts = [
-            obs.dataInici || '',
-            obs.dataFi || '',
-            obs.fase || '',
-            obs.tipusCirculacio || '',
-            obs.tipusAfectacio || '',
-            obs.tipusIncidencia || ''
-        ].filter(part => part.trim() !== '');
-        gmlObservations = obsParts.join(' ');
+    // Get municipality information
+    let municipality = '';
+    if (incident.location && incident.location.town) {
+        // Use the town field that was extracted during RSS parsing
+        municipality = incident.location.town;
+    } else if (incident.source === 'SCT_RSS' && incident.description) {
+        // Fallback: extract directly from description for RSS data
+        const descParts = incident.description.split(' | ').map(part => part.trim());
+        if (descParts.length >= 2) {
+            municipality = descParts[1];
+        }
     }
-
+    
     row.innerHTML = `
+        <td style="padding: 0; margin: 0; border: 1px solid #dee2e6; width: 18px; height: 20px; text-align: center; vertical-align: middle; overflow: hidden;"></td>
         <td style="padding: 8px; text-align: center; border: 1px solid #dee2e6; font-size: 11px; font-weight: bold; background: ${incident.color}; color: white; border-left: 3px solid ${incident.color};">${displayLevel}</td>
-        <td style="padding: 8px; text-align: center; border: 1px solid #dee2e6; font-size: 11px; font-weight: bold; color: ${incident.color};">${road}</td>
-        <td style="padding: 8px; text-align: center; border: 1px solid #dee2e6; font-size: 11px;">${location}</td>
+        <td style="padding: 8px 4px; text-align: left; border: 1px solid #dee2e6; font-size: 11px; font-weight: bold; color: ${incident.color}; width: 60px; min-width: 60px; max-width: 60px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${road}">${road}</td>
         <td style="padding: 8px; text-align: center; border: 1px solid #dee2e6; font-size: 11px;">${pk}</td>
+        <td style="padding: 8px; text-align: left; border: 1px solid #dee2e6; font-size: 11px; max-width: 200px; word-wrap: break-word;">${reason.replace(/\s*\[.*?\]\s*/g, ' ').trim()}</td>
+        <td style="padding: 8px; text-align: left; border: 1px solid #dee2e6; font-size: 11px; max-width: 200px; min-width: 100px; word-wrap: break-word;">${translatedType}</td>
+        <td style="padding: 8px; text-align: center; border: 1px solid #dee2e6; font-size: 11px;">${length}</td>
         <td style="padding: 8px; text-align: center; border: 1px solid #dee2e6; font-size: 11px;">${direction}</td>
-        <td style="padding: 8px; text-align: left; border: 1px solid #dee2e6; font-size: 11px; max-width: 300px; word-wrap: break-word;">${shortDesc}</td>
-        <td style="padding: 8px; text-align: left; border: 1px solid #dee2e6; font-size: 11px; max-width: 200px; word-wrap: break-word;">${gmlObservations}</td>
-        <td style="padding: 8px; text-align: center; border: 1px solid #dee2e6; font-size: 11px;">${source}</td>
-        <td style="padding: 8px; text-align: center; border: 1px solid #dee2e6;"></td>
+        <td style="padding: 8px; text-align: left; border: 1px solid #dee2e6; font-size: 11px; max-width: 120px; min-width: 80px; word-wrap: break-word;">${municipality || ''}</td>
+        <td style="padding: 8px; text-align: left; border: 1px solid #dee2e6; font-size: 11px; max-width: 240px; min-width: 120px; word-wrap: break-word;">${fromTo}</td>
+        <td style="padding: 8px; text-align: center; border: 1px solid #dee2e6; font-size: 11px;">${inici}</td>
     `;
 
-    // Add the button to the last cell
-    const lastCell = row.querySelector('td:last-child');
-    lastCell.appendChild(locateBtn);
+    // Add the button to the first cell (LOCATE column)
+    const firstCell = row.querySelector('td:first-child');
+    firstCell.appendChild(locateBtn);
 
     tbody.appendChild(row);
 }
@@ -2185,13 +2265,48 @@ function sortTable(columnIndex) {
 
         let comparison = 0;
 
-        // Numeric sorting for LEVEL (column 0) and PK (column 3)
-        if (columnIndex === 0 || columnIndex === 3) {
+        // Determine sorting type based on column
+        if (columnIndex === 1) {
+            // LEVEL column - always numeric
             const aNum = parseFloat(aValue.replace(/[^\d.-]/g, '')) || 0;
             const bNum = parseFloat(bValue.replace(/[^\d.-]/g, '')) || 0;
             comparison = aNum - bNum;
+        } else if (columnIndex === 2) {
+            // VIA column - road references (AP-7, C-58, etc.) - sort by road type first, then number
+            const aMatch = aValue.match(/^([A-Z]{1,3})-?(\d+)$/i);
+            const bMatch = bValue.match(/^([A-Z]{1,3})-?(\d+)$/i);
+            if (aMatch && bMatch) {
+                const aType = aMatch[1];
+                const bType = bMatch[1];
+                const aNum = parseInt(aMatch[2]);
+                const bNum = parseInt(bMatch[2]);
+                
+                if (aType !== bType) {
+                    comparison = aType.localeCompare(bType);
+                } else {
+                    comparison = aNum - bNum;
+                }
+            } else {
+                comparison = aValue.localeCompare(bValue);
+            }
+        } else if (columnIndex === 3) {
+            // KM. INICI-FI column - handle ranges like "545-544.2" or single values
+            const aNum = parseFloat(aValue.split('-')[0].replace(/[^\d.-]/g, '')) || 0;
+            const bNum = parseFloat(bValue.split('-')[0].replace(/[^\d.-]/g, '')) || 0;
+            comparison = aNum - bNum;
+        } else if (columnIndex === 8) {
+            // MUNICIPALITY column - string sorting
+            comparison = aValue.localeCompare(bValue);
+        } else if (columnIndex === 9) {
+            // CAP A / OBSERVACIONS column - string sorting
+            comparison = aValue.localeCompare(bValue);
+        } else if (columnIndex === 10) {
+            // INICI column - date sorting
+            const aDate = new Date(aValue);
+            const bDate = new Date(bValue);
+            comparison = aDate - bDate;
         } else {
-            // String sorting for other columns
+            // String sorting for all other columns
             comparison = aValue.localeCompare(bValue);
         }
 
@@ -2239,8 +2354,32 @@ async function loadTrafficCameras() {
         console.log('📹 Loading traffic cameras from GENCAT...');
         updateStatus('Carregant càmeres de trànsit...');
         
-        // Fetch cameras XML data
-        const response = await fetch('https://www.gencat.cat/transit/opendata/cameres.xml');
+        // Detect deployment environment for API calls
+        var hostname = window.location.hostname;
+        var isGitHubPages = hostname.includes('github.io');
+        var isVercel = hostname.includes('vercel.app') || hostname.includes('now.sh');
+
+        // Function to get API URL based on environment
+        function getApiUrl(endpoint) {
+            if (isVercel) {
+                // Use Vercel API
+                return endpoint;
+            } else if (isGitHubPages) {
+                // Use Vercel proxy from GitHub Pages
+                return 'https://tempsrealcat.vercel.app' + endpoint;
+            } else {
+                // Local development
+                return endpoint;
+            }
+        }
+        
+        // Fetch cameras XML data using proxy to avoid CORS
+        const camerasUrl = 'https://www.gencat.cat/transit/opendata/cameres.xml';
+        const proxyUrl = getApiUrl(`/api/proxy?url=${encodeURIComponent(camerasUrl)}`);
+        
+        console.log('📡 Fetching cameras from:', proxyUrl);
+        const response = await fetch(proxyUrl);
+        
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
@@ -2469,4 +2608,259 @@ function clearTrafficCameras() {
     
     // Hide cameras section
     document.getElementById('traffic-cameras-section').style.display = 'none';
+}
+
+// Load Andorra cameras from mobilitat.ad API
+async function loadAndorraCameras() {
+    try {
+        console.log('🇦🇩 Loading Andorra cameras from mobilitat.ad...');
+        updateStatus('Carregant càmeres d\'Andorra...');
+        
+        // Detect deployment environment for API calls
+        var hostname = window.location.hostname;
+        var isGitHubPages = hostname.includes('github.io');
+        var isVercel = hostname.includes('vercel.app') || hostname.includes('now.sh');
+
+        // Function to get API URL based on environment
+        function getApiUrl(endpoint) {
+            if (isVercel) {
+                // Use Vercel API
+                return endpoint;
+            } else if (isGitHubPages) {
+                // Use Vercel proxy from GitHub Pages
+                return 'https://tempsrealcat.vercel.app' + endpoint;
+            } else {
+                // Local development
+                return endpoint;
+            }
+        }
+        
+        // Fetch Andorra cameras API data using proxy
+        const andorraApiUrl = 'https://app.mobilitat.ad/api/v1/cameras';
+        const proxyUrl = getApiUrl(`/api/proxy?url=${encodeURIComponent(andorraApiUrl)}`);
+        
+        console.log('📡 Fetching Andorra cameras from:', proxyUrl);
+        const response = await fetch(proxyUrl, {
+            headers: {
+                'token': '0b48426d-af88-45cf-8caa-8cb3b9858266'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('✅ Successfully fetched Andorra cameras data');
+        
+        // Parse cameras from the API response
+        const cameras = parseAndorraCameras(data);
+        console.log(`🇦🇩 Found ${cameras.length} Andorra cameras`);
+        
+        // Display cameras
+        displayAndorraCameras(cameras);
+        
+        // Show cameras section
+        document.getElementById('traffic-cameras-section').style.display = 'block';
+        document.getElementById('clear-traffic-btn').style.display = 'inline-block';
+        
+        updateStatus(`S'han carregat ${cameras.length} càmeres d'Andorra`);
+        
+    } catch (error) {
+        console.error('❌ Error loading Andorra cameras:', error);
+        updateStatus(`Error carregant càmeres d'Andorra: ${error.message}`);
+    }
+}
+
+// Parse Andorra cameras API response
+function parseAndorraCameras(data) {
+    const cameras = [];
+    
+    if (!data.success || !data.result || !Array.isArray(data.result)) {
+        console.warn('Invalid Andorra cameras API response format');
+        return cameras;
+    }
+    
+    data.result.forEach((camera, index) => {
+        try {
+            const cameraData = {
+                id: camera.id || `andorra-${index}`,
+                name: camera.title || `Càmera Andorra ${index}`,
+                lat: parseFloat(camera.lat),
+                lng: parseFloat(camera.lng),
+                imageUrl: camera.url_gif,
+                road: extractRoadFromTitle(camera.title),
+                pk: extractPKFromTitle(camera.title),
+                altitude: extractAltitudeFromTitle(camera.title),
+                categoryId: camera.category_id,
+                categoryOrder: camera.category_order,
+                cameraOrder: camera.camera_order,
+                icon: camera.icon,
+                source: 'ANDORRA',
+                description: camera.title || 'Sense descripció'
+            };
+            
+            // Validate coordinates
+            if (isNaN(cameraData.lat) || isNaN(cameraData.lng)) {
+                console.warn(`Andorra camera ${cameraData.id} has invalid coordinates: lat=${cameraData.lat}, lng=${cameraData.lng}`);
+                return;
+            }
+            
+            // Check if coordinates are in reasonable range for Andorra
+            if (cameraData.lat < 42.4 || cameraData.lat > 42.7 || cameraData.lng < 1.4 || cameraData.lng > 1.8) {
+                console.warn(`Andorra camera ${cameraData.id} has coordinates outside Andorra: lat=${cameraData.lat}, lng=${cameraData.lng}`);
+                return;
+            }
+            
+            cameras.push(cameraData);
+        } catch (error) {
+            console.warn(`Error parsing Andorra camera ${index}:`, error);
+        }
+    });
+    
+    return cameras;
+}
+
+// Extract road information from Andorra camera title
+function extractRoadFromTitle(title) {
+    if (!title) return '';
+    const roadMatch = title.match(/(CG\d+|CS\d+|C\d+)/);
+    return roadMatch ? roadMatch[1] : '';
+}
+
+// Extract PK information from Andorra camera title
+function extractPKFromTitle(title) {
+    if (!title) return '';
+    const pkMatch = title.match(/PK\s*([\d\+\-]+)/);
+    return pkMatch ? pkMatch[1] : '';
+}
+
+// Extract altitude from Andorra camera title
+function extractAltitudeFromTitle(title) {
+    if (!title) return '';
+    const altitudeMatch = title.match(/([\d,]+)\s*metres/);
+    return altitudeMatch ? altitudeMatch[1] : '';
+}
+
+// Display Andorra cameras on map and in list
+function displayAndorraCameras(cameras) {
+    // Clear existing camera markers
+    clearTrafficCameras();
+    
+    const camerasContainer = document.getElementById('cameras-container');
+    camerasContainer.innerHTML = '';
+    
+    // Add header for Andorra cameras
+    const header = document.createElement('div');
+    header.innerHTML = '<h4 style="color: #e83e8c; margin-bottom: 10px;">🇦🇩 Càmeres d\'Andorra</h4>';
+    camerasContainer.appendChild(header);
+    
+    // Create grid layout for camera thumbnails
+    const cameraGrid = document.createElement('div');
+    cameraGrid.style.cssText = `
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 15px;
+    `;
+    
+    cameras.forEach(camera => {
+        // Add marker to map
+        addAndorraCameraMarker(camera);
+        
+        // Add thumbnail to list
+        addAndorraCameraThumbnail(camera, cameraGrid);
+    });
+    
+    camerasContainer.appendChild(cameraGrid);
+    
+    console.log(`✅ Displayed ${cameras.length} Andorra traffic cameras`);
+}
+
+// Add Andorra camera marker to map
+function addAndorraCameraMarker(camera) {
+    const marker = L.marker([camera.lat, camera.lng], {
+        icon: L.divIcon({
+            html: `<div style="background: #e83e8c; border: 2px solid white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">🇦🇩</div>`,
+            className: 'andorra-camera-marker',
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
+        })
+    });
+    
+    // Create popup content
+    let popupContent = `<div style="max-width: 250px;">
+        <h4 style="margin: 0 0 8px 0; color: #e83e8c;">🇦🇩 ${camera.name}</h4>`;
+    
+    if (camera.road) {
+        popupContent += `<p style="margin: 4px 0; font-size: 12px;"><strong>Carretera:</strong> ${camera.road}</p>`;
+    }
+    
+    if (camera.pk) {
+        popupContent += `<p style="margin: 4px 0; font-size: 12px;"><strong>PK:</strong> ${camera.pk}</p>`;
+    }
+    
+    if (camera.altitude) {
+        popupContent += `<p style="margin: 4px 0; font-size: 12px;"><strong>Altitud:</strong> ${camera.altitude} metres</p>`;
+    }
+    
+    if (camera.imageUrl) {
+        popupContent += `<p style="margin: 8px 0;"><img src="${camera.imageUrl}" alt="${camera.name}" style="max-width: 100%; border-radius: 4px; border: 1px solid #ddd;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+        <span style="display: none; color: #666; font-size: 11px;">Imatge no disponible</span></p>`;
+        popupContent += `<p style="margin: 4px 0;"><a href="${camera.imageUrl}" target="_blank" style="color: #e83e8c; text-decoration: none; font-size: 12px;">🔗 Obrir imatge en finestra nova</a></p>`;
+    }
+    
+    popupContent += `<p style="margin: 4px 0; font-size: 11px; color: #666;">ID: ${camera.id}</p>
+        <p style="margin: 4px 0; font-size: 10px; color: #999;">${camera.lat.toFixed(4)}, ${camera.lng.toFixed(4)}</p>
+        </div>`;
+    
+    marker.bindPopup(popupContent);
+    marker.addTo(map);
+    trafficCameraMarkers.push(marker);
+}
+
+// Add Andorra camera thumbnail to list
+function addAndorraCameraThumbnail(camera, container) {
+    const thumbnail = document.createElement('div');
+    thumbnail.style.cssText = `
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 10px;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    `;
+    
+    thumbnail.innerHTML = `
+        <div style="font-weight: bold; color: #e83e8c; margin-bottom: 5px; font-size: 12px;">🇦🇩 ${camera.name}</div>
+        <div style="font-size: 11px; color: #666; margin-bottom: 8px;">${camera.description}</div>
+        ${camera.imageUrl ? `<img src="${camera.imageUrl}" alt="${camera.name}" style="width: 100%; height: 80px; object-fit: cover; border-radius: 4px; border: 1px solid #eee;" onerror="this.style.display='none';">` : '<div style="width: 100%; height: 80px; background: #f8f9fa; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #999; font-size: 11px;">Sense imatge</div>'}
+        <div style="margin-top: 8px; font-size: 10px; color: #999;">${camera.lat.toFixed(4)}, ${camera.lng.toFixed(4)}</div>
+    `;
+    
+    // Hover effects
+    thumbnail.onmouseover = () => {
+        thumbnail.style.transform = 'translateY(-2px)';
+        thumbnail.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)';
+    };
+    
+    thumbnail.onmouseout = () => {
+        thumbnail.style.transform = 'translateY(0)';
+        thumbnail.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+    };
+    
+    // Click to zoom to camera
+    thumbnail.onclick = () => {
+        map.setView([camera.lat, camera.lng], 16);
+        // Find and open the corresponding marker popup
+        trafficCameraMarkers.forEach(marker => {
+            const markerLatLng = marker.getLatLng();
+            if (Math.abs(markerLatLng.lat - camera.lat) < 0.0001 && 
+                Math.abs(markerLatLng.lng - camera.lng) < 0.0001) {
+                marker.openPopup();
+            }
+        });
+    };
+    
+    container.appendChild(thumbnail);
 }

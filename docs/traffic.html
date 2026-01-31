@@ -3,60 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DGT Traffic Information</title>
+    <title data-i18n="traffic_page_title">Trànsit Catalunya</title>
 </head>
 <body>
     <!--TRAFFIC-->
     <div class="sidebar-pane" id="traffic">
       <div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span>
       </div>
-      <h1>🚦 Trànsit DGT</h1>
-      <p style="text-align:justify; margin-right:5px;">Informació del trànsit en temps real a Espanya. Les dades provenen directament de la DGT (Dirección General de Tráfico) a través del protocol DATEX2.</p>
+      <h1 data-i18n="traffic_main_title">🚦 Trànsit Catalunya</h1>
+      <p style="text-align:justify; margin-right:5px;" data-i18n="traffic_main_description">
+        Informació del trànsit en temps real a Catalunya. Les dades provenen directament del Servei Català de Trànsit (SCT).
+      </p>
 
       <!-- Real-time traffic controls -->
       <div style="margin-bottom: 15px;">
-        <h3 style="margin-bottom: 10px; color: #333;">📡 Informació en temps real</h3>
+        <h3 style="margin-bottom: 10px; color: #333;" data-i18n="traffic_realtime_title">📡 Informació en temps real</h3>
         <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
           <button id="load-traffic-btn" onclick="loadTrafficData()" style="background:#2a2a2a; color:white; padding:10px 15px; border:none; border-radius:5px; cursor:pointer; font-size: 14px;">
-            <i class="fa fa-sync"></i> Carregar dades
+            <i class="fa fa-sync"></i> <span data-i18n="traffic_load_data">Carregar dades</span>
           </button>
           <button id="load-cameras-btn" onclick="loadTrafficCameras()" style="background:#17a2b8; color:white; padding:10px 15px; border:none; border-radius:5px; cursor:pointer; font-size: 14px;">
-            <i class="fa fa-video"></i> Càmeres de trànsit
+            <i class="fa fa-video"></i> <span data-i18n="traffic_cameras">Càmeres de trànsit</span>
+          </button>
+          <button id="load-andorra-cameras-btn" onclick="loadAndorraCameras()" style="background:#e83e8c; color:white; padding:10px 15px; border:none; border-radius:5px; cursor:pointer; font-size: 14px;">
+            <i class="fa fa-video"></i> <span data-i18n="traffic_andorra_cameras">Càmeres d'Andorra</span>
+          </button>
+          <button id="load-panels-btn" onclick="loadTrafficPanels()" style="background:#6f42c1; color:white; padding:10px 15px; border:none; border-radius:5px; cursor:pointer; font-size: 14px;">
+            <i class="fa fa-info-circle"></i> <span data-i18n="traffic_panels">Panells informatius</span>
           </button>
           <button id="clear-traffic-btn" onclick="clearTrafficData()" style="background:#cc0000; color:white; padding:10px 15px; border:none; border-radius:5px; cursor:pointer; font-size: 14px; display: none;">
-            <i class="fa fa-trash"></i> Neteja mapa
+            <i class="fa fa-trash"></i> <span data-i18n="traffic_clear_map">Neteja mapa</span>
           </button>
         </div>
 
         <!-- Filter options -->
         <div style="margin-top: 10px;">
-          <label style="font-size: 12px; color: #666;">Filtrar per tipus:</label>
+          <label style="font-size: 12px; color: #666;" data-i18n="traffic_filter_label">Filtrar per tipus:</label>
           <select id="traffic-filter" onchange="filterTrafficIncidents()" style="margin-left: 10px; padding: 5px; border: 1px solid #ccc; border-radius: 3px;">
-            <option value="all">Tots els incidents</option>
-            <option value="maintenance">Obres</option>
-            <option value="accident">Accidents</option>
-            <option value="congestion">Congestió</option>
-            <option value="closure">Tancaments</option>
+            <option value="all" data-i18n="traffic_filter_all">Tots els incidents</option>
+            <option value="maintenance" data-i18n="traffic_filter_maintenance">Obres</option>
+            <option value="accident" data-i18n="traffic_filter_accident">Accidents</option>
+            <option value="congestion" data-i18n="traffic_filter_congestion">Congestió</option>
+            <option value="closure" data-i18n="traffic_filter_closure">Tancaments</option>
           </select>
         </div>
       </div>
 
       <!-- Status display -->
       <div id="traffic-status" style="background: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #ddd;">
-        Status: <span id="status-text">Preparat per carregar dades</span>
+        <span data-i18n="traffic_status_label">Status:</span> <span id="status-text" data-i18n="traffic_status_ready">Preparat per carregar dades</span>
       </div>
 
       <!-- Traffic table -->
       <div id="traffic-table-section" style="display: none; margin-bottom: 20px;">
-        <h4 style="margin-bottom: 10px; color: #333;">📊 Taula d'incidents</h4>
-        <div id="table-container" style="max-height: 250px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px;">
+        <h4 style="margin-bottom: 10px; color: #333;" data-i18n="traffic_table_title">📊 Taula d'incidents</h4>
+        <div id="table-container">
           <!-- Table will be populated here -->
         </div>
       </div>
 
       <!-- Traffic incidents cards -->
       <div id="traffic-cards-section" style="display: none; margin-bottom: 15px;">
-        <h4 style="margin-bottom: 10px; color: #333;">🎴 Targetes d'incidents</h4>
+        <h4 style="margin-bottom: 10px; color: #333;" data-i18n="traffic_cards_title">🎴 Targetes d'incidents</h4>
         <div id="cards-container" style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; padding: 10px;">
           <!-- Cards will be populated here -->
         </div>
@@ -64,37 +72,68 @@
 
       <!-- Traffic cameras section -->
       <div id="traffic-cameras-section" style="display: none; margin-bottom: 15px;">
-        <h4 style="margin-bottom: 10px; color: #333;">📹 Càmeres de trànsit</h4>
+        <h4 style="margin-bottom: 10px; color: #333;" data-i18n="traffic_cameras_title">📹 Càmeres de trànsit</h4>
         <div id="cameras-container" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; padding: 10px;">
           <!-- Camera thumbnails will be populated here -->
         </div>
       </div>
 
+      <!-- Traffic panels section -->
+      <div id="traffic-panels-section" style="display: none; margin-bottom: 15px;">
+        <h4 style="margin-bottom: 10px; color: #333;" data-i18n="traffic_panels_title">🚦 Panells informatius</h4>
+        <div style="margin-bottom: 10px;">
+          <label style="font-size: 12px; color: #666;" data-i18n="traffic_select_road">Seleccionar carretera:</label>
+          <select id="panel-road-select" onchange="loadPanelsForSelectedRoad()" style="margin-left: 10px; padding: 5px; border: 1px solid #ccc; border-radius: 3px;">
+            <option value="" data-i18n="traffic_choose_road">Tria una carretera...</option>
+            <option value="A-2">A-2 (17 panells)</option>
+            <option value="AP-7">AP-7 (1 panell)</option>
+            <option value="B-20">B-20 (1 panell)</option>
+            <option value="B-23">B-23 (2 panells)</option>
+            <option value="B-30">B-30 (4 panells)</option>
+            <option value="C-16">C-16 (2 panells)</option>
+            <option value="C-31">C-31 (5 panells)</option>
+            <option value="C-32S">C-32S (1 panell)</option>
+            <option value="C-33">C-33 (1 panell)</option>
+            <option value="C-58">C-58 (9 panells)</option>
+          </select>
+          <button id="refresh-panels-btn" onclick="refreshCurrentPanels()" style="margin-left: 10px; background:#6c757d; color:white; padding:5px 10px; border:none; border-radius:3px; cursor:pointer; font-size: 12px;">
+            <i class="fa fa-refresh"></i> <span data-i18n="traffic_refresh_panels">Actualitzar</span>
+          </button>
+        </div>
+        <div id="panels-container" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; padding: 10px;">
+          <!-- Panel information will be populated here -->
+        </div>
+      </div>
+
       <!-- Instructions -->
       <div style="background: #e8f4f8; padding: 15px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #b8daff;">
-        <h4 style="margin-top: 0; color: #004085;">📖 Com funciona</h4>
+        <h4 style="margin-top: 0; color: #004085;" data-i18n="traffic_how_it_works">📖 Com funciona</h4>
         <ol style="font-size: 13px; color: #004085; margin: 0; padding-left: 20px;">
-          <li>Prem "Carregar dades" per obtenir informació del trànsit actual</li>
-          <li>Prem "Càmeres de trànsit" per veure les càmeres disponibles</li>
-          <li>Els incidents apareixeran com marcadors al mapa</li>
-          <li>Clica als marcadors per veure detalls de cada incident</li>
-          <li>Utilitza el filtre per mostrar només certs tipus d'incidents</li>
-          <li>Prem "Neteja mapa" per eliminar tots els marcadors</li>
+          <li data-i18n="traffic_instruction_load_data">Prem "Carregar dades" per obtenir informació del trànsit actual</li>
+          <li data-i18n="traffic_instruction_cameras">Prem "Càmeres de trànsit" per veure les càmeres de Catalunya</li>
+          <li data-i18n="traffic_instruction_andorra">Prem "Càmeres d'Andorra" per veure les càmeres d'Andorra</li>
+          <li data-i18n="traffic_instruction_panels">Prem "Panells informatius" per veure els missatges dels panells de trànsit</li>
+          <li data-i18n="traffic_instruction_markers">Els incidents apareixeran com marcadors al mapa</li>
+          <li data-i18n="traffic_instruction_click_markers">Clica als marcadors per veure detalls de cada incident</li>
+          <li data-i18n="traffic_instruction_filter">Utilitza el filtre per mostrar només certs tipus d'incidents</li>
+          <li data-i18n="traffic_instruction_clear">Prem "Neteja mapa" per eliminar tots els marcadors</li>
         </ol>
       </div>
 
       <!-- Coverage info -->
-      <div style="background: #fff3cd; padding: 10px; border-radius: 3px; border: 1px solid #ffeaa7; font-size: 12px;">
-        <strong>ℹ️ Cobertura:</strong> Aquest servei mostra informació del trànsit de tot Espanya proporcionada per la DGT. Les dades s'actualitzen regularment.
+      <div style="background: #fff3cd; padding: 10px; border-radius: 3px; border: 1px solid #ffeaa7; font-size: 12px;" data-i18n="traffic_coverage_info">
+        <strong>ℹ️ Cobertura:</strong> Aquest servei mostra informació del trànsit de Catalunya proporcionada pel Servei Català de Trànsit (SCT). Les dades s'actualitzen regularment.
       </div>
 
       <br><hr width="90%">
 
       <!-- Help section -->
-      <h3 style="color: #333;"><i class="fa fa-question-circle"></i> Ajuda</h3>
-      <p style="text-align:justify; margin-right:5px; font-size: 13px;">
-        Aquest panell et permet visualitzar incidents de trànsit en temps real a Espanya. Les dades provenen del servei DATEX2 de la DGT i inclouen obres, accidents, congestions i tancaments de carreteres.
+      <h3 style="color: #333;" data-i18n="traffic_help_title">Ajuda</h3>
+      <p style="text-align:justify; margin-right:5px; font-size: 13px;" data-i18n="traffic_help_description">
+        Aquest panell et permet visualitzar incidents de trànsit en temps real a Catalunya. Les dades provenen del Servei Català de Trànsit (SCT) i inclouen obres, accidents, congestions i tancaments de carreteres.
       </p>
     </div>
 </body>
+<script src="assets/js/translations.js"></script>
+<script src="assets/js/traffic.functions.js"></script>
 </html>

@@ -27,11 +27,11 @@
 
         <!-- Filter options -->
         <div style="margin-bottom: 10px;">
-          <label for="fuel-type-filter" style="display: block; margin-bottom: 5px; font-weight: bold;">Filtrar per tipus:</label>
+          <label for="fuel-type-filter" style="display: block; margin-bottom: 5px; font-weight: bold;" data-i18n="fuel_filter_label">Filtrar per tipus:</label>
           <select id="fuel-type-filter" onchange="filterFuelStations()" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 3px;">
-            <option value="all">Tots els tipus</option>
-            <option value="fuel">Només benzineres</option>
-            <option value="charging">Només punts de recàrrega</option>
+            <option value="all" data-i18n="fuel_filter_all">Tots els tipus</option>
+            <option value="fuel" data-i18n="fuel_filter_fuel">Només benzineres</option>
+            <option value="charging" data-i18n="fuel_filter_charging">Només punts de recàrrega</option>
           </select>
         </div>
       </div>
