@@ -2,7 +2,7 @@
 
 A map application that shows real-time information about transports and traffic in Catalonia.
 
-## Live Version https://yopaseopor.github.io/tempsrealcat/docs
+## Live Version (https://yopaseopor.github.io/tempsrealcat/docs)
 
 ## Data Sources
 
