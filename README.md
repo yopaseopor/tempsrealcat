@@ -2,8 +2,7 @@
 
 A map application that shows real-time information about transports and traffic in Catalonia.
 
-## Live Version
-https://yopaseopor.github.io/tempsrealcat/docs
+## Live Version https://yopaseopor.github.io/tempsrealcat/docs
 
 ## Data Sources
 
@@ -21,15 +20,6 @@ All data is accessed through a proxy API layer on Vercel to avoid CORS issues an
 https://tempsrealcat.vercel.app/api/[service-name]
 
 ## Traffic
-### DGT - Dirección General de Tráfico
-**Type**: XML, DATEX2  
-**Description**: Real-time traffic incident data from the Spanish DGT in DATEX2 format. Includes accidents, works, congestion, road closures, and other incidents.  
-**URLs**:
-- https://infocar.dgt.es/datex2.xml
-- https://infocar.dgt.es/xml.xml
-- https://www.dgt.es/incidencias/incidencias.xml
-- https://dgt.es/incidencias.xml
-**Update Frequency**: Real-time
 
 ### GENCAT - Generalitat de Catalunya (RSS)
 **Type**: RSS, XML  
