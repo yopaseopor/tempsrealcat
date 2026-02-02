@@ -61,7 +61,7 @@ All data is accessed through a proxy API layer on Vercel to avoid CORS issues an
 **Type**: JSON, API  
 **Description**: TMB bus service data through their iTransit API. Includes stop information, schedules, and waiting times.  
 **URL**: [https://api.tmb.cat/v1/itransit/bus/parades/108](https://api.tmb.cat/v1/itransit/bus/parades/108)  
-**Update Frequency** : Real-time
+**Update Frequency**: Real-time
 
 ### TMB - Metro de Barcelona
 **Type**: JSON, API  
