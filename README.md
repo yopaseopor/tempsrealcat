@@ -54,7 +54,7 @@ All data is accessed through a proxy API layer on Vercel to avoid CORS issues an
 **Type**: JSON, API  
 **Description**: FGC train positioning data through the FGC Open Data API. Provides updated information about the FGC train fleet.  
 **URL**: [https://dadesobertes.fgc.cat/api/explore/v2.1/catalog/datasets/posicionament-dels-trens/records?limit=100](https://dadesobertes.fgc.cat/api/explore/v2.1/catalog/datasets/posicionament-dels-trens/records?limit=100)  
-**Update Frequency**: Real-time
+**Update Frequency** : Real-time
 
 ## Urban Transport
 ### TMB - Transports Metropolitans de Barcelona
