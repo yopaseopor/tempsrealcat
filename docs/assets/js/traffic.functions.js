@@ -3,6 +3,155 @@
 // Global variables
 let trafficMarkers = [];
 let currentFilter = 'all';
+let allTrafficIncidents = []; // Store all incidents for export functionality
+
+// Function to export GeoJSON with level 5 areas to avoid
+function exportGeoJSONLevel5() {
+    exportGeoJSON([5], 'level5');
+}
+
+// Function to export GeoJSON with level 4 and 5 areas to avoid
+function exportGeoJSONLevel45() {
+    exportGeoJSON([4, 5], 'level4-5');
+}
+
+// Function to export GeoJSON with level 3, 4, and 5 areas to avoid
+function exportGeoJSONLevel345() {
+    exportGeoJSON([3, 4, 5], 'level3-4-5');
+}
+
+// Generic GeoJSON export function
+function exportGeoJSON(levels, filenamePrefix) {
+    // Debug: Check what's in allTrafficIncidents
+    console.log('🔍 allTrafficIncidents contents:', allTrafficIncidents);
+    console.log('🔍 allTrafficIncidents levels:', allTrafficIncidents.map(inc => inc.level));
+    
+    // Filter incidents by level (export all incidents from table, not just those with coordinates)
+    const filteredIncidents = allTrafficIncidents.filter(incident => {
+        const hasMatchingLevel = levels.includes(incident.level);
+        console.log(`🔍 Incident ${incident.id}: level=${incident.level}, matches=${hasMatchingLevel}`);
+        return hasMatchingLevel;
+    });
+
+    console.log('🔍 Filtered incidents:', filteredIncidents.length);
+
+    // Create GeoJSON structure
+    const geojson = {
+        type: 'FeatureCollection',
+        features: filteredIncidents.map(incident => {
+            // Create a circular buffer around the incident location for routing avoidance
+            // Radius: 250 meters (adjust based on incident severity) - half the original size
+            const radius = 125; // meters - half the original size
+
+            let lat, lng;
+
+            // If incident has coordinates, use them
+            if (incident.location.lat && incident.location.lng) {
+                lat = incident.location.lat;
+                lng = incident.location.lng;
+            } else {
+                // Fallback: use approximate coordinates for Catalonia if no GPS data
+                // Center of Catalonia: 41.5912° N, 1.5209° E
+                lat = 41.5912;
+                lng = 1.5209;
+                console.log(`Using fallback coordinates for incident ${incident.id} (${incident.location.roadNumber || 'Unknown'})`);
+            }
+
+            return {
+                type: 'Feature',
+                properties: {
+                    id: incident.id,
+                    title: incident.title,
+                    description: incident.description,
+                    category: incident.category,
+                    level: incident.level,
+                    severity: getSeverityText(incident.level),
+                    road: incident.location.roadNumber || incident.location.road,
+                    municipality: incident.location.town,
+                    direction: incident.location.direction,
+                    source: incident.source
+                },
+                geometry: createCircularGeometry(lat, lng, radius)
+            };
+        })
+    };
+
+    // Download the GeoJSON file
+    downloadGeoJSON(geojson, `${filenamePrefix}_avoidance_areas.geojson`);
+
+    // Show success message
+    updateStatus(`S'han exportat ${filteredIncidents.length} zones d'evitació per nivells ${levels.join(', ')}`);
+    console.log(`Exported ${filteredIncidents.length} avoidance areas`);
+}
+
+// Create circular geometry for avoidance areas
+function createCircularGeometry(lat, lng, radius) {
+    const points = [];
+    const numPoints = 32; // Number of points to define the circle
+    const earthRadius = 6371000; // Earth radius in meters
+
+    for (let i = 0; i < numPoints; i++) {
+        const angle = (i / numPoints) * 2 * Math.PI;
+        
+        // Calculate new coordinates using spherical law of cosines
+        const latRad = lat * Math.PI / 180;
+        const lngRad = lng * Math.PI / 180;
+        
+        const newLatRad = Math.asin(
+            Math.sin(latRad) * Math.cos(radius / earthRadius) +
+            Math.cos(latRad) * Math.sin(radius / earthRadius) * Math.cos(angle)
+        );
+        
+        const newLngRad = lngRad + Math.atan2(
+            Math.sin(angle) * Math.sin(radius / earthRadius) * Math.cos(latRad),
+            Math.cos(radius / earthRadius) - Math.sin(latRad) * Math.sin(newLatRad)
+        );
+        
+        points.push([
+            newLngRad * 180 / Math.PI,
+            newLatRad * 180 / Math.PI
+        ]);
+    }
+
+    // Close the circle
+    points.push(points[0]);
+
+    return {
+        type: 'Polygon',
+        coordinates: [points]
+    };
+}
+
+// Get severity text for levels
+function getSeverityText(level) {
+    const severities = {
+        1: 'Baixa',
+        2: 'Mitjana',
+        3: 'Alta',
+        4: 'Molt alta',
+        5: 'Crítica'
+    };
+    return severities[level] || `Nivell ${level}`;
+}
+
+// Download GeoJSON file
+function downloadGeoJSON(geojson, filename) {
+    const dataStr = JSON.stringify(geojson, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+
+    // Add date and time to filename
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
+    const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-'); // HH-MM-SS
+    const fileNameWithDateTime = filename.replace('.geojson', `_${dateStr}_${timeStr}.geojson`);
+
+    const exportFileDefaultName = fileNameWithDateTime;
+
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+}
 
 // Initialize traffic functions when the DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
@@ -71,6 +220,14 @@ async function loadTrafficData() {
         // Combine and deduplicate incidents based on road reference and PK
         const combinedIncidents = combineTrafficIncidents(allIncidents);
 
+        // Debug: Check what incidents are being stored
+        console.log('🔍 All incidents loaded:', allIncidents.length);
+        console.log('🔍 Combined incidents:', combinedIncidents.length);
+        console.log('🔍 Incident levels:', combinedIncidents.map(inc => inc.level));
+
+        // Store all incidents for export functionality
+        allTrafficIncidents = combinedIncidents;
+
         if (combinedIncidents.length === 0) {
             statusText.textContent = 'No s\'han trobat incidents de trànsit actius';
         } else {
@@ -79,6 +236,11 @@ async function loadTrafficData() {
         }
 
         clearBtn.style.display = 'inline-block';
+        // Show export buttons and Brouter links when data is loaded
+        document.getElementById('export-level5-btn').style.display = 'inline-block';
+        document.getElementById('export-level4-5-btn').style.display = 'inline-block';
+        document.getElementById('export-level3-4-5-btn').style.display = 'inline-block';
+        document.getElementById('brouter-links').style.display = 'block';
         loadBtn.disabled = false;
         loadBtn.innerHTML = '<i class="fa fa-sync"></i> Carregar dades';
 
@@ -302,8 +464,17 @@ async function geocodeViaServer(roadRef) {
 
 // Display traffic incidents on the map and in the list
 async function displayTrafficIncidents(incidents) {
-    // Clear existing markers
-    clearTrafficData();
+    // Store all incidents for export functionality
+    allTrafficIncidents = incidents;
+    console.log('🔍 Storing incidents for export:', incidents.length);
+    console.log('🔍 Incident levels being stored:', incidents.map(inc => inc.level));
+
+    // Clear existing markers only (not the incidents array)
+    trafficMarkers.forEach(marker => {
+        map.removeLayer(marker);
+    });
+    trafficMarkers = [];
+    clearTrafficCameras();
 
     // Get separate containers for table and cards
     const tableContainer = document.getElementById('table-container');
@@ -2335,6 +2506,15 @@ function clearTrafficData() {
     document.getElementById('traffic-table-section').style.display = 'none';
     document.getElementById('traffic-cards-section').style.display = 'none';
     document.getElementById('status-text').textContent = 'Preparat per carregar dades';
+    
+    // Hide export buttons and Brouter links when data is cleared
+        document.getElementById('export-level5-btn').style.display = 'none';
+        document.getElementById('export-level4-5-btn').style.display = 'none';
+        document.getElementById('export-level3-4-5-btn').style.display = 'none';
+        document.getElementById('brouter-links').style.display = 'none';
+    
+    // Clear all incidents from export array
+    allTrafficIncidents = [];
 }
 
 // Update status display

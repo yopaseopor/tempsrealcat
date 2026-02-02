@@ -31,9 +31,28 @@
           <button id="load-panels-btn" onclick="loadTrafficPanels()" style="background:#6f42c1; color:white; padding:10px 15px; border:none; border-radius:5px; cursor:pointer; font-size: 14px;">
             <i class="fa fa-info-circle"></i> <span data-i18n="traffic_panels">Panells informatius</span>
           </button>
+          <button id="export-level5-btn" onclick="exportGeoJSONLevel5()" style="background:#000000; color:white; padding:10px 15px; border:none; border-radius:5px; cursor:pointer; font-size: 14px; display: none;">
+            <i class="fa fa-download"></i> <span data-i18n="traffic_export_level5">Export Level 5</span>
+          </button>
+          <button id="export-level4-5-btn" onclick="exportGeoJSONLevel45()" style="background:#dc3545; color:white; padding:10px 15px; border:none; border-radius:5px; cursor:pointer; font-size: 14px; display: none;">
+            <i class="fa fa-download"></i> <span data-i18n="traffic_export_level45">Export Level 4+5</span>
+          </button>
+          <button id="export-level3-4-5-btn" onclick="exportGeoJSONLevel345()" style="background:#fd7e14; color:white; padding:10px 15px; border:none; border-radius:5px; cursor:pointer; font-size: 14px; display: none;">
+            <i class="fa fa-download"></i> <span data-i18n="traffic_export_level345">Export Level 3+4+5</span>
+          </button>
           <button id="clear-traffic-btn" onclick="clearTrafficData()" style="background:#cc0000; color:white; padding:10px 15px; border:none; border-radius:5px; cursor:pointer; font-size: 14px; display: none;">
             <i class="fa fa-trash"></i> <span data-i18n="traffic_clear_map">Neteja mapa</span>
           </button>
+        </div>
+
+        <!-- Brouter links -->
+        <div id="brouter-links" style="display: none; margin-top: 10px; gap: 10px; flex-wrap: wrap;">
+          <a href="https://brouter.m11n.de/#map=9/41.5859/1.5986/standard&profile=car-fast" target="_blank" style="background:#28a745; color:white; padding:8px 12px; border:none; border-radius:5px; cursor:pointer; font-size: 12px; text-decoration: none; display: inline-block; margin-right: 10px;">
+            <i class="fa fa-map"></i> Carregar en Brouter (m11n.de)
+          </a>
+          <a href="https://brouter.de/brouter-web/#map=9/41.8235/1.4227/standard&profile=car-fast" target="_blank" style="background:#17a2b8; color:white; padding:8px 12px; border:none; border-radius:5px; cursor:pointer; font-size: 12px; text-decoration: none; display: inline-block;">
+            <i class="fa fa-map"></i> Carregar en Brouter (brouter.de)
+          </a>
         </div>
 
         <!-- Filter options -->
