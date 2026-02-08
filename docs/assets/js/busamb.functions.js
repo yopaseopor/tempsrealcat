@@ -811,64 +811,55 @@ function displayAMBStops(stops) {
                 '<div style="background: #0088cc15; border: 1px solid #0088cc; border-radius: 4px; padding: 10px; margin: 8px 0;">' +
                 '<strong>Nom:</strong> ' + stopName + '<br>' +
                 '<strong>Codi:</strong> ' + stopId + '<br>' +
-                '<strong>Posició:</strong> ' + lat.toFixed(4) + ', ' + lng.toFixed(4) +
+                '<strong>Posició:</strong> ' + lat.toFixed(4) + ', ' + lng.toFixed(4) + '<br>' +
+                '<strong>Hora actual:</strong> ' + new Date().toLocaleTimeString('ca-ES') + '<br>' +
                 '</div>';
 
-            // Add scheduled arrivals section with timetable view
-            if (stop.scheduledArrivals && stop.scheduledArrivals.length > 0) {
-                // Group arrivals by route for better organization
-                var arrivalsByRoute = {};
-                stop.scheduledArrivals.forEach(function(arrival) {
-                    if (!arrivalsByRoute[arrival.route]) {
-                        arrivalsByRoute[arrival.route] = [];
-                    }
-                    arrivalsByRoute[arrival.route].push(arrival);
-                });
+            // Filter out past arrivals before displaying
+            stop.scheduledArrivals = stop.scheduledArrivals.filter(function(arrival) {
+                return arrival.scheduledTime > new Date();
+            });
+
+            // Sort arrivals by time to arrival and show the next two
+            stop.scheduledArrivals.sort(function(a, b) {
+                return a.timeToArrival - b.timeToArrival;
+            });
+            var nextArrivals = stop.scheduledArrivals.slice(0, 2);
+
+            if (nextArrivals.length > 0) {
+                var firstArrival = nextArrivals[0];
 
                 popupContent += '<div style="background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px; padding: 10px; margin: 8px 0;">' +
-                    '<h5 style="margin: 0 0 8px 0; color: #0066cc;">🕒 Horaris d\'autobusos</h5>' +
-                    '<div style="max-height: 200px; overflow-y: auto;">';
+                    '<h5 style="margin: 0 0 8px 0; color: #0066cc;">🕒 Properes arribades</h5>';
 
-                // Show arrivals grouped by route
-                Object.keys(arrivalsByRoute).sort().forEach(function(routeId) {
-                    var routeArrivals = arrivalsByRoute[routeId];
-                    var firstArrival = routeArrivals[0];
+                nextArrivals.forEach(function(arrival, index) {
+                    var routeId = arrival.route;
+                    var routeLongName = arrival.route_long_name || '';
 
-                    popupContent += '<div style="margin-bottom: 8px; padding: 8px; background: #fff; border-radius: 4px; border: 1px solid #eee;">' +
-                        '<div style="font-weight: bold; color: #0088cc; margin-bottom: 6px;">Línia ' + routeId;
-                    if (firstArrival.route_long_name) {
-                        popupContent += ' - ' + firstArrival.route_long_name;
-                    }
-                    popupContent += '</div>';
-
-                    // Show up to 5 times per route
-                    routeArrivals.slice(0, 5).forEach(function(arrival, index) {
-                        var scheduledTime = arrival.scheduledTime;
-                        var scheduledTimeStr = scheduledTime ? scheduledTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : '--:--';
-                        var timeToArrival = arrival.timeToArrival;
-
-                        var arrivalId = 'popup-arrival-' + stop.stop_id + '-' + index;
-
-                        popupContent += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; padding: 4px; background: #f9f9f9; border-radius: 3px;">' +
-                            '<div style="font-size: 12px; color: #666;">' + scheduledTimeStr;
-                        if (arrival.destination) {
-                            popupContent += ' ➜ ' + arrival.destination;
+                    if (index === 0) {
+                        popupContent += '<div style="margin-bottom: 8px; padding: 8px; background: #fff; border-radius: 4px; border: 1px solid #eee;">' +
+                            '<div style="font-weight: bold; color: #0088cc; margin-bottom: 6px;">Línia ' + routeId;
+                        if (routeLongName) {
+                            popupContent += ' - ' + routeLongName;
                         }
-                        popupContent += '</div>' +
-                            '<div style="font-weight: bold; font-family: monospace; font-size: 11px;">' +
-                            '<span id="' + arrivalId + '">Calculating...</span></div>' +
-                            '</div>';
-
-                        // Start live countdown for this popup arrival
-                        startAMBArrivalCountdown(arrivalId, scheduledTime);
-                    });
-
-                    // Show remaining count if more than 5
-                    if (routeArrivals.length > 5) {
-                        popupContent += '<div style="font-size: 11px; color: #666; text-align: center; padding: 4px; font-style: italic;">+' + (routeArrivals.length - 5) + ' més sortides avui</div>';
+                        popupContent += '</div>';
                     }
 
-                    popupContent += '</div>';
+                    var scheduledTime = arrival.scheduledTime;
+                    var scheduledTimeStr = scheduledTime ? scheduledTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) + (scheduledTime.getDate() !== new Date().getDate() ? ' (demà)' : '') : '--:--';
+                    var timeToArrival = arrival.timeToArrival;
+
+                    var arrivalId = 'popup-arrival-' + stop.stop_id + '-' + index;
+
+                    popupContent += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; padding: 4px; background: #f9f9f9; border-radius: 3px;">' +
+                        '<div style="font-size: 12px; color: #666;">' + scheduledTimeStr;
+                    if (arrival.destination) {
+                        popupContent += ' ➜ ' + arrival.destination;
+                    }
+                    popupContent += '</div>' +
+                        '<div style="font-weight: bold; font-family: monospace; font-size: 11px;">' +
+                        '<span id="' + arrivalId + '">Calculating...</span></div>' +
+                        '</div>';
                 });
 
                 popupContent += '</div>' +
@@ -879,7 +870,7 @@ function displayAMBStops(stops) {
                     '</div>';
             } else {
                 popupContent += '<div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 8px; margin: 8px 0; text-align: center;">' +
-                    '<em>No hi ha horaris disponibles per aquesta parada</em>' +
+                    '<em>No hi ha autobusos programats en les properes hores</em>' +
                     '</div>';
             }
 
@@ -889,6 +880,26 @@ function displayAMBStops(stops) {
                 '</div>';
 
             stopMarker.bindPopup(popupContent);
+
+            // Start live countdown when popup opens
+            stopMarker.on('popupopen', function() {
+                var nextArrivals = stop.scheduledArrivals.slice(0, 2);
+                nextArrivals.forEach(function(arrival, index) {
+                    if (arrival) {
+                        startAMBArrivalCountdown('popup-arrival-' + stopId + '-' + index, arrival.scheduledTime);
+                    }
+                });
+            });
+
+            // Clear countdown when popup closes
+            stopMarker.on('popupclose', function() {
+                if (window.ambCountdownIntervals && window.ambCountdownIntervals[stopId]) {
+                    window.ambCountdownIntervals[stopId].forEach(function(interval) {
+                        clearInterval(interval);
+                    });
+                    delete window.ambCountdownIntervals[stopId];
+                }
+            });
             stopMarker.addTo(map);
             ambBusStopsMarkers.push(stopMarker);
             totalStops++;
@@ -950,8 +961,8 @@ function parseCSVStopTimes(csvContent) {
         return [];
     }
 
-    // Parse data rows (increased limit to handle all AMB bus lines - 269 lines with extensive schedules)
-    var maxRows = Math.min(lines.length - 1, 150000); // Increased from 50,000 to 150,000
+    // Parse data rows (increased limit to handle all AMB bus lines - now parsing all lines)
+    var maxRows = lines.length - 1;
     console.log('📊 Processing', maxRows, 'stop times out of', (lines.length - 1), 'total rows');
 
     for (var i = 1; i <= maxRows; i++) {
@@ -1328,7 +1339,7 @@ function combineGTFSData(gtfsData) {
             var scheduledTime = new Date(now);
             scheduledTime.setHours(arrivalTime.hours, arrivalTime.minutes, arrivalTime.seconds, 0);
 
-            // If the scheduled time has already passed, assume it's for tomorrow
+            // If the scheduled time has already passed today, assume it's for tomorrow
             if (scheduledTime.getTime() < now.getTime()) {
                 scheduledTime.setDate(scheduledTime.getDate() + 1);
             }
@@ -1336,8 +1347,8 @@ function combineGTFSData(gtfsData) {
             // Calculate time to arrival in minutes
             var timeToArrival = Math.max(0, Math.round((scheduledTime.getTime() - now.getTime()) / (1000 * 60)));
 
-            // Only include arrivals within the next 24 hours
-            if (timeToArrival <= 1440) {
+            // Only include arrivals within the next 2 hours
+            if (timeToArrival <= 120) {
                 scheduledArrivals.push({
                     route: route.route_short_name || route.route_id,
                     route_long_name: route.route_long_name || '',
@@ -2874,12 +2885,12 @@ function startAMBArrivalCountdown(elementId, scheduledTime) {
             return;
         }
 
-        var countdownStr = getAMBCountdownString(scheduledTime);
+        var now = new Date();
+        var diffMs = scheduledTime.getTime() - now.getTime();
+        var totalSeconds = Math.floor(diffMs / 1000);
+        var countdownStr = formatTimeRemaining(totalSeconds);
 
         // Color coding based on urgency
-        var now = new Date().getTime();
-        var arrivalMs = scheduledTime.getTime();
-        var diffMs = arrivalMs - now;
         var diffMinutes = diffMs / (1000 * 60);
 
         var color = '#0066cc'; // Default blue
@@ -2934,7 +2945,7 @@ function startAMBArrivalCountdown(elementId, scheduledTime) {
 
 // Format time remaining as HH:MM:SS
 function formatTimeRemaining(seconds) {
-    if (seconds <= 0) return '00:00:00';
+    if (seconds <= 0) return 'Sortint';
 
     var hours = Math.floor(seconds / 3600);
     var minutes = Math.floor((seconds % 3600) / 60);
@@ -2943,6 +2954,21 @@ function formatTimeRemaining(seconds) {
     return hours.toString().padStart(2, '0') + ':' +
            minutes.toString().padStart(2, '0') + ':' +
            secs.toString().padStart(2, '0');
+}
+
+// Update live countdown for timetable
+function updateLiveCountdown() {
+    // Update all countdown elements in the timetable
+    var now = new Date();
+    console.log('⏰ Updating live countdowns at', now.toLocaleTimeString());
+
+    // Since each countdown has its own interval, this function can be used for additional updates
+    // For now, it ensures the timetable is refreshed if needed
+    if (document.getElementById('amb-standalone-timetable') && 
+        document.getElementById('amb-standalone-timetable').style.display !== 'none') {
+        // Optional: Re-render timetable if needed for consistency
+        // renderTimetablePage(); // Commented out to avoid excessive re-rendering
+    }
 }
 
 // Start live countdown timer
@@ -2956,8 +2982,8 @@ function startLiveCountdown() {
     // Update immediately
     updateLiveCountdown();
 
-    // Then update every minute
-    countdownInterval = setInterval(updateLiveCountdown, 60000); // Update every minute
+    // Then update every second
+    countdownInterval = setInterval(updateLiveCountdown, 1000); // Update every second
 }
 
 // Stop live countdown timer
@@ -2967,103 +2993,6 @@ function stopLiveCountdown() {
         countdownInterval = null;
         console.log('⏰ Stopped live countdown timer');
     }
-}
-
-// Update live countdown for all timetable displays
-function updateLiveCountdown() {
-    var now = new Date();
-    var currentTime = now.getTime();
-
-    // Only update if it's been more than 30 seconds since last update
-    if (currentTime - lastCountdownUpdate < 30000) {
-        return;
-    }
-
-    lastCountdownUpdate = currentTime;
-    console.log('⏰ Updating live countdowns at', now.toLocaleTimeString());
-
-    // Update timetable entries
-    if (ambAllTimetableEntries && ambAllTimetableEntries.length > 0) {
-        ambAllTimetableEntries.forEach(function(entry) {
-            // Recalculate time to arrival in seconds for HH:MM:SS format
-            var timeToArrivalSeconds = Math.max(0, Math.round((entry.scheduledTime.getTime() - now.getTime()) / 1000));
-
-            // Update the entry with both seconds and formatted HH:MM:SS
-            entry.timeToArrivalSeconds = timeToArrivalSeconds;
-            entry.timeToArrivalFormatted = formatTimeRemaining(timeToArrivalSeconds);
-
-            // Update status based on real-time data if available
-            if (entry.isRealtime) {
-                // Keep real-time status
-            } else {
-                entry.status = 'Horari';
-            }
-        });
-
-        // Re-sort by time to arrival
-        ambAllTimetableEntries.sort(function(a, b) {
-            return a.timeToArrivalSeconds - b.timeToArrivalSeconds;
-        });
-
-        // Re-render current page if timetable is visible
-        var timetableSection = document.getElementById('amb-standalone-timetable');
-        if (timetableSection && timetableSection.style.display !== 'none') {
-            renderTimetablePage();
-        }
-    }
-
-    // Update popup countdowns for visible markers
-    if (ambBusStopsMarkers && ambBusStopsMarkers.length > 0) {
-        ambBusStopsMarkers.forEach(function(marker) {
-            if (marker && marker.getPopup()) {
-                var popup = marker.getPopup();
-
-                // Get popup content using getContent() instead of getElement()
-                var content = popup.getContent();
-
-                if (content && typeof content === 'string') {
-                    // Find the stop ID from the popup content
-                    var stopIdMatch = content.match(/Parada AMB ([^\s<]+)/);
-
-                    if (stopIdMatch && stopIdMatch[1]) {
-                        var stopId = stopIdMatch[1];
-
-                        // Find the stop data
-                        var stopData = allAMBStops ? allAMBStops.find(function(stop) {
-                            return stop.stop_id === stopId;
-                        }) : null;
-
-                        if (stopData && stopData.scheduledArrivals && stopData.scheduledArrivals.length > 0) {
-                            // Update the countdowns in the popup
-                            var updatedContent = updatePopupCountdowns(content, stopData.scheduledArrivals, now);
-                            if (updatedContent !== content) {
-                                popup.setContent(updatedContent);
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-}
-
-// Update popup content with live countdowns
-function updatePopupCountdowns(popupContent, arrivals, now) {
-    // Find and update countdown elements in the popup
-    var updatedContent = popupContent;
-
-    arrivals.slice(0, 5).forEach(function(arrival, index) {
-        var timeToArrivalSeconds = Math.max(0, Math.round((arrival.scheduledTime.getTime() - now.getTime()) / 1000));
-        var timeColor = timeToArrivalSeconds <= 300 ? '#d63031' : timeToArrivalSeconds <= 900 ? '#e17055' : '#0066cc';
-        var countdownText = timeToArrivalSeconds === 0 ? 'Sortint' : formatTimeRemaining(timeToArrivalSeconds);
-
-        // Create a regex to find and replace the countdown for this arrival
-        // This is a bit complex due to the HTML structure, but we'll look for patterns
-        var timePattern = new RegExp('(' + arrival.timeStr.replace(':', '\\:') + '[^>]*>)[^<]*(min|Sortint|\\d+:\\d+:\\d+)', 'g');
-        updatedContent = updatedContent.replace(timePattern, '$1<span style="font-weight: bold; font-family: monospace; font-size: 11px; color: ' + timeColor + ';">' + countdownText + '</span>');
-    });
-
-    return updatedContent;
 }
 
 // Show standalone timetable for all AMB stops
@@ -3133,15 +3062,15 @@ function showAMBStandaloneTimetable() {
                 var scheduledTime = new Date(now);
                 scheduledTime.setHours(arrivalTime.hours, arrivalTime.minutes, arrivalTime.seconds, 0);
 
-                // If the scheduled time has already passed, assume it's for tomorrow
+                // If the scheduled time has already passed, skip it
                 if (scheduledTime.getTime() < now.getTime()) {
-                    scheduledTime.setDate(scheduledTime.getDate() + 1);
+                    return;
                 }
 
                 var timeToArrival = Math.max(0, Math.round((scheduledTime.getTime() - now.getTime()) / (1000 * 60)));
 
-                // Only include arrivals within the next 24 hours
-                if (timeToArrival <= 1440) {
+                // Only include arrivals within the next 2 hours
+                if (timeToArrival <= 120) {
                     // Create unique key to avoid duplicates
                     var entryKey = routeName + '_' + stopTime.stop_id + '_' + scheduledTime.getTime() + '_' + (trip.trip_headsign || '');
 
@@ -3173,7 +3102,7 @@ function showAMBStandaloneTimetable() {
                             routeLongName: route.route_long_name || '',
                             destination: trip.trip_headsign || '',
                             scheduledTime: scheduledTime,
-                            timeStr: scheduledTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}),
+                            timeStr: scheduledTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) + (scheduledTime.getDate() !== now.getDate() ? ' (demà)' : ''),
                             timeToArrival: timeToArrival,
                             stopId: stopTime.stop_id,
                             stopName: stopName,

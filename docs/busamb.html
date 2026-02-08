@@ -29,13 +29,13 @@
 
       <!-- Bus AMB timetable controls -->
       <div style="margin-bottom: 15px;">
-        <h3 style="margin-bottom: 10px; color: #333;">📋 Horaris d'autobusos</h3>
+        <h3 style="margin-bottom: 10px; color: #333;" data-i18n="busamb_schedules_title">📋 Horaris d'autobusos</h3>
         <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">
           <button onclick="showAMBStandaloneTimetable()" style="background:#28a745; color:white; padding:10px 15px; border:none; border-radius:5px; cursor:pointer; font-size: 14px;">
-            <i class="fa fa-table"></i> <span>Veure horari complet</span>
+            <i class="fa fa-table"></i> <span data-i18n="busamb_view_full_schedule">Veure horari complet</span>
           </button>
           <button onclick="updateAMBData()" id="update-amb-data-btn" style="background:#17a2b8; color:white; padding:10px 15px; border:none; border-radius:5px; cursor:pointer; font-size: 14px;">
-            <i class="fa fa-refresh"></i> <span>Actualitzar dades</span>
+            <i class="fa fa-refresh"></i> <span data-i18n="busamb_update_data">Actualitzar dades</span>
           </button>
         </div>
       </div>
@@ -65,26 +65,26 @@
 
       <!-- Full Timetable Section -->
       <div id="amb-full-timetable" style="display: none; margin-top: 15px;">
-        <h3 style="color: #333;"><i class="fa fa-calendar"></i> Horari complet de la parada</h3>
+        <h3 style="color: #333;"><i class="fa fa-calendar"></i> <span data-i18n="busamb_full_timetable_title">Horari complet de la parada</span></h3>
         <div id="amb-timetable-content" style="background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px; padding: 15px; max-height: 400px; overflow-y: auto;">
           <!-- Full timetable will be loaded here -->
         </div>
         <div style="text-align: center; margin-top: 10px;">
           <button onclick="hideAMBFullTimetable()" style="background: #6c757d; color: white; border: none; padding: 8px 15px; border-radius: 3px; cursor: pointer;">
-            <i class="fa fa-times"></i> Tancar horari complet
+            <i class="fa fa-times"></i> <span data-i18n="busamb_close_full_timetable">Tancar horari complet</span>
           </button>
         </div>
       </div>
 
       <!-- Standalone Timetable Viewer -->
       <div id="amb-standalone-timetable" style="display: none; margin-top: 15px;">
-        <h3 style="color: #333;"><i class="fa fa-table"></i> Horaris de totes les parades AMB</h3>
+        <h3 style="color: #333;"><i class="fa fa-table"></i> <span data-i18n="busamb_standalone_timetable_title">Horaris de totes les parades AMB</span></h3>
         <div id="amb-standalone-content" style="background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px; padding: 15px; max-height: 600px; overflow-y: auto;">
           <!-- Standalone timetable will be loaded here -->
         </div>
         <div style="text-align: center; margin-top: 10px;">
           <button onclick="hideAMBStandaloneTimetable()" style="background: #6c757d; color: white; border: none; padding: 8px 15px; border-radius: 3px; cursor: pointer;">
-            <i class="fa fa-times"></i> Tancar horari general
+            <i class="fa fa-times"></i> <span data-i18n="busamb_close_standalone_timetable">Tancar horari general</span>
           </button>
         </div>
       </div>

@@ -1894,63 +1894,63 @@ s.setAttribute('data-timestamp', +new Date());
 	  <div class="close-button"><span class="fa fa-close" onclick="javascript: sidebar.close()"></span>
 	  </div>
 	  <a name="IniciRouting"></a>
-	  <h1>Calculadora de Rutes</h1>
-	  <p style="text-align:justify; margin-right:5px;">Calcula rutes per cotxe, bicicleta o a peu utilitzant el servei OSRM (Open Source Routing Machine). Les rutes es centren en la vostra ubicació actual.</p>
+	  <h1 data-i18n="routing_calculator">Calculadora de Rutes</h1>
+	  <p style="text-align:justify; margin-right:5px;" data-i18n="routing_description">Calcula rutes per cotxe, bicicleta o a peu utilitzant el servei OSRM (Open Source Routing Machine). Les rutes es centren en la vostra ubicació actual.</p>
 
 	  <!-- Route Type Selection -->
 	  <div style="margin-bottom: 15px;">
-	    <h4>Tipus de ruta:</h4>
+	    <h4 data-i18n="routing_type">Tipus de ruta:</h4>
 	    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
 	      <button id="route-car" class="route-type-btn active" onclick="setRouteType('driving')" style="background:#2a2a2a; color:white; padding:8px 12px; border:none; border-radius:3px; cursor:pointer;">
-	        <i class="fa fa-car"></i> Cotxe
+	        <i class="fa fa-car"></i> <span data-i18n="routing_car">Cotxe</span>
 	      </button>
 	      <button id="route-bike" class="route-type-btn" onclick="setRouteType('cycling')" style="background:#2a2a2a; color:white; padding:8px 12px; border:none; border-radius:3px; cursor:pointer;">
-	        <i class="fa fa-bicycle"></i> Bicicleta
+	        <i class="fa fa-bicycle"></i> <span data-i18n="routing_bike">Bicicleta</span>
 	      </button>
 	      <button id="route-walk" class="route-type-btn" onclick="setRouteType('walking')" style="background:#2a2a2a; color:white; padding:8px 12px; border:none; border-radius:3px; cursor:pointer;">
-	        <i class="fa fa-walking"></i> A peu
+	        <i class="fa fa-walking"></i> <span data-i18n="routing_walk">A peu</span>
 	      </button>
 	    </div>
 	  </div>
 
 	  <!-- Route Input -->
 	  <div style="margin-bottom: 15px;">
-	    <h4>Punts de la ruta:</h4>
+	    <h4 data-i18n="routing_points">Punts de la ruta:</h4>
 	    <div style="margin-bottom: 10px;">
-	      <label>Origen:</label>
-	      <input type="text" id="route-start" placeholder="Clic al mapa o introdueix adreça" style="width: 100%; padding: 5px; margin-top: 3px;">
+	      <label data-i18n="routing_origin">Origen:</label>
+	      <input type="text" id="route-start" placeholder="Clic al mapa o introdueix adreça" style="width: 100%; padding: 5px; margin-top: 3px;" data-i18n-placeholder="routing_origin_placeholder">
 	    </div>
 	    <div style="margin-bottom: 10px;">
-	      <label>Destí:</label>
-	      <input type="text" id="route-end" placeholder="Clic al mapa o introdueix adreça" style="width: 100%; padding: 5px; margin-top: 3px;">
+	      <label data-i18n="routing_destination">Destí:</label>
+	      <input type="text" id="route-end" placeholder="Clic al mapa o introdueix adreça" style="width: 100%; padding: 5px; margin-top: 3px;" data-i18n-placeholder="routing_destination_placeholder">
 	    </div>
 	    <div style="display: flex; gap: 10px;">
 	      <button onclick="calculateRoute()" style="background:#007acc; color:white; padding:8px 15px; border:none; border-radius:3px; cursor:pointer;">
-	        <i class="fa fa-route"></i> Calcular Ruta
+	        <i class="fa fa-route"></i> <span data-i18n="routing_calculate">Calcular Ruta</span>
 	      </button>
 	      <button onclick="clearRoute()" style="background:#666; color:white; padding:8px 15px; border:none; border-radius:3px; cursor:pointer;">
-	        <i class="fa fa-trash"></i> Neteja
+	        <i class="fa fa-trash"></i> <span data-i18n="routing_clear">Neteja</span>
 	      </button>
 	    </div>
 	  </div>
 
 	  <!-- Route Results -->
 	  <div id="route-results" style="display: none; margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
-	    <h4>Resultats de la ruta:</h4>
+	    <h4 data-i18n="routing_results">Resultats de la ruta:</h4>
 	    <div id="route-info"></div>
 	  </div>
 
 	  <!-- Instructions -->
 	  <div style="margin-top: 15px; padding: 10px; background: #e8f4f8; border-radius: 5px; font-size: 14px;">
-	    <strong>Instruccions:</strong>
+	    <strong data-i18n="routing_instructions">Instruccions:</strong>
 	    <ul style="margin: 5px 0; padding-left: 20px;">
-	      <li>Selecciona el tipus de ruta (cotxe, bicicleta o a peu)</li>
-	      <li>Introdueix origen i destí, o fes clic al mapa</li>
-	      <li>Prem "Calcular Ruta" per veure el resultat</li>
+	      <li data-i18n="routing_instruction1">Selecciona el tipus de ruta (cotxe, bicicleta o a peu)</li>
+	      <li data-i18n="routing_instruction2">Introdueix origen i destí, o fes clic al mapa</li>
+	      <li data-i18n="routing_instruction3">Prem "Calcular Ruta" per veure el resultat</li>
 	    </ul>
 	  </div>
 
-	  <center><a href="#IniciRouting">Torna a l'inici</a></center>
+	  <center><a href="#IniciRouting" data-i18n="routing_back">Torna a l'inici</a></center>
 	</div>
 	  
 	<!-- ENLLAÇOS D'INTERÈS -->

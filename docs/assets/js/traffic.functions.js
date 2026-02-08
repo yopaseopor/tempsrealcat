@@ -286,13 +286,13 @@ function parseRSSItem(item) {
     const pubDate = item.querySelector('pubDate');
     const category = item.querySelector('category');
 
-    if (!title || !description || !link || !pubDate || !category) return null;
+    if (!title || !description || !link || !pubDate) return null;
 
     const incident = {
         id: link.textContent,
         title: title.textContent,
         description: description.textContent,
-        category: category.textContent,
+        category: category?.textContent || 'other',
         pubDate: pubDate.textContent
     };
 
@@ -548,7 +548,7 @@ async function displayTrafficIncidents(incidents) {
             <th style="padding: 6px; text-align: left; border: 1px solid #dee2e6; cursor: pointer; width: 100px;" onclick="sortTable(5)" id="sort-type">${getTranslation('traffic_tipus')} ▼</th>
             <th style="padding: 6px; text-align: center; border: 1px solid #dee2e6; cursor: pointer; width: 40px;" onclick="sortTable(6)" id="sort-length">${getTranslation('traffic_long')} ▼</th>
             <th style="padding: 6px; text-align: center; border: 1px solid #dee2e6; cursor: pointer; width: 50px;" onclick="sortTable(7)" id="sort-direction">${getTranslation('traffic_sentit')} ▼</th>
-            <th style="padding: 6px; text-align: left; border: 1px solid #dee2e6; cursor: pointer; width: 80px;" onclick="sortTable(8)" id="sort-municipi">${getTranslation('traffic_municipality')} ▼</th>
+            <th style="padding: 6px; text-align: left; border: 1px solid #dee2e6; cursor: pointer; width: 120px;" onclick="sortTable(8)" id="sort-municipi">${getTranslation('traffic_municipality')} ▼</th>
             <th style="padding: 6px; text-align: left; border: 1px solid #dee2e6; cursor: pointer; width: 120px;" onclick="sortTable(9)" id="sort-dest">${getTranslation('traffic_cap_a')} / ${getTranslation('traffic_observacions')} ▼</th>
             <th style="padding: 6px; text-align: center; border: 1px solid #dee2e6; cursor: pointer; width: 80px;" onclick="sortTable(10)" id="sort-start">${getTranslation('traffic_inici')} ▼</th>
         </tr>
@@ -1541,75 +1541,89 @@ function parseGENCATGMLFeature(member, index) {
 
 // Combine and deduplicate traffic incidents from multiple sources with priority order
 function combineTrafficIncidents(allIncidents) {
-    // Data source priority: 1=SCT_RSS, 2=SCT_GML (temporarily reversed for testing)
+    // Separate incidents by source
+    const rssIncidents = allIncidents.filter(inc => inc.source === 'SCT_RSS');
+    const gmlIncidents = allIncidents.filter(inc => inc.source === 'SCT_GML');
+
+    // Data source priority: 1=SCT_GML, 2=SCT_RSS (GML has coordinates, RSS has municipality)
     const sourcePriority = {
-        'SCT_RSS': 1,
-        'SCT_GML': 2
+        'SCT_GML': 1,
+        'SCT_RSS': 2
     };
 
     const incidentMap = new Map();
 
-    allIncidents.forEach(incident => {
-        // Create a unique key based on road reference and PK range
+    // First, process all GML incidents (higher priority)
+    gmlIncidents.forEach(incident => {
         const roadKey = incident.location.roadNumber || incident.location.road || 'unknown';
         const pkKey = `${incident.location.pkStart || 'unknown'}-${incident.location.pkEnd || 'unknown'}`;
         const uniqueKey = `${roadKey}-${pkKey}`;
 
-        const existingIncident = incidentMap.get(uniqueKey);
+        incidentMap.set(uniqueKey, incident);
+    });
 
-        if (!existingIncident) {
-            // First incident for this location
-            incidentMap.set(uniqueKey, incident);
-        } else {
-            // Compare priorities - keep the higher priority source (lower number)
-            const existingPriority = sourcePriority[existingIncident.source] || 99;
-            const currentPriority = sourcePriority[incident.source] || 99;
+    // Then, process RSS incidents and merge with GML if matching road and overlapping PK range
+    rssIncidents.forEach(rssIncident => {
+        // Extract road and PK range from RSS incident (from description)
+        let rssRoad = rssIncident.location.roadNumber || rssIncident.location.road;
+        let rssPkStart = null, rssPkEnd = null;
 
-            if (currentPriority < existingPriority) {
-                // Current incident has higher priority, but merge fields from RSS if needed
-                const mergedIncident = { ...incident };
-                
-                // Preserve town (municipality) from RSS if current incident (GML) doesn't have it
-                if (!mergedIncident.location?.town && existingIncident.location?.town) {
-                    if (!mergedIncident.location) mergedIncident.location = {};
-                    mergedIncident.location.town = existingIncident.location.town;
-                }
-                
-                // Preserve comarca from RSS if current incident (GML) doesn't have it
-                if (!mergedIncident.location?.comarca && existingIncident.location?.comarca) {
-                    if (!mergedIncident.location) mergedIncident.location = {};
-                    mergedIncident.location.comarca = existingIncident.location.comarca;
-                }
-                
-                // Preserve other fields that might be missing
-                if (!mergedIncident.location?.cap_a && existingIncident.location?.cap_a) {
-                    if (!mergedIncident.location) mergedIncident.location = {};
-                    mergedIncident.location.cap_a = existingIncident.location.cap_a;
-                }
-                
-                incidentMap.set(uniqueKey, mergedIncident);
-            } else {
-                // Keep existing incident (higher priority), but merge fields from current if needed
-                if (!existingIncident.location?.town && incident.location?.town) {
-                    if (!existingIncident.location) existingIncident.location = {};
-                    existingIncident.location.town = incident.location.town;
-                }
-                
-                if (!existingIncident.location?.comarca && incident.location?.comarca) {
-                    if (!existingIncident.location) existingIncident.location = {};
-                    existingIncident.location.comarca = incident.location.comarca;
-                }
-                
-                if (!existingIncident.location?.cap_a && incident.location?.cap_a) {
-                    if (!existingIncident.location) existingIncident.location = {};
-                    existingIncident.location.cap_a = incident.location.cap_a;
+        if (rssIncident.description) {
+            // Parse description like "A-2 | JORBA | Sentit Oest | Punt km. 545-544.2 | 08:04"
+            const descParts = rssIncident.description.split(' | ').map(part => part.trim());
+            if (descParts.length >= 4) {
+                rssRoad = descParts[0]; // Road is first part
+                const pkRange = descParts[3]; // PK range is fourth part (e.g., "Punt km. 545-544.2")
+                const pkMatch = pkRange.match(/Punt km\. (.+)/);
+                if (pkMatch) {
+                    const pkParts = pkMatch[1].split('-').map(p => parseFloat(p.trim()));
+                    if (pkParts.length >= 1) {
+                        rssPkStart = pkParts[0];
+                        rssPkEnd = pkParts[1] || pkParts[0];
+                    }
                 }
             }
+        }
+
+        // Find matching GML incident with same road and overlapping PK range
+        let matchedGmlIncident = null;
+        for (const [key, gmlIncident] of incidentMap.entries()) {
+            const gmlRoad = gmlIncident.location.roadNumber || gmlIncident.location.road;
+            const gmlPkStart = gmlIncident.location.pkStart || 0;
+            const gmlPkEnd = gmlIncident.location.pkEnd || gmlPkStart;
+
+            // Check if roads match and PK ranges overlap
+            if (gmlRoad === rssRoad && 
+                ((rssPkStart <= gmlPkEnd && rssPkEnd >= gmlPkStart) || 
+                 (gmlPkStart <= rssPkEnd && gmlPkEnd >= rssPkStart))) {
+                matchedGmlIncident = gmlIncident;
+                break;
+            }
+        }
+
+        if (matchedGmlIncident) {
+            // If matching GML incident exists, add municipality from RSS to GML
+            if (!matchedGmlIncident.location?.town && rssIncident.location?.town) {
+                if (!matchedGmlIncident.location) matchedGmlIncident.location = {};
+                matchedGmlIncident.location.town = rssIncident.location.town;
+            }
+            // Also add comarca if missing
+            if (!matchedGmlIncident.location?.comarca && rssIncident.location?.comarca) {
+                if (!matchedGmlIncident.location) matchedGmlIncident.location = {};
+                matchedGmlIncident.location.comarca = rssIncident.location.comarca;
+            }
+        } else {
+            // If no matching GML incident, add RSS incident to map
+            const roadKey = rssRoad || 'unknown';
+            const pkKey = `${rssPkStart || 'unknown'}-${rssPkEnd || 'unknown'}`;
+            const uniqueKey = `${roadKey}-${pkKey}`;
+            incidentMap.set(uniqueKey, rssIncident);
         }
     });
 
     const combined = Array.from(incidentMap.values());
     console.log(`Combined ${allIncidents.length} incidents into ${combined.length} unique incidents using priority order: SCT_GML > SCT_RSS`);
+    console.log(`Matched ${gmlIncidents.length} GML incidents with RSS municipality data`);
     return combined;
 }
 

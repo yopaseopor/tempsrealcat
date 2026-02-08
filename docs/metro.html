@@ -50,26 +50,26 @@
 
       <!-- Metro Stops Table -->
       <div style="margin-top: 20px;">
-        <h3 style="margin-bottom: 10px; color: #333;">📋 Llistat d'estacions de metro</h3>
+        <h3 style="margin-bottom: 10px; color: #333;" data-i18n="metro_table_title">📋 Llistat d'estacions de metro</h3>
 
         <!-- Table Controls -->
         <div style="margin-bottom: 15px;">
           <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px;">
             <button onclick="loadTMBMetroStopsTable()" style="background:#007acc; color:white; padding:8px 12px; border:none; border-radius:3px; cursor:pointer; font-size: 12px;">
-              <i class="fa fa-refresh"></i> Actualitzar taula
+              <i class="fa fa-refresh"></i> <span data-i18n="metro_refresh_table">Actualitzar taula</span>
             </button>
             <button onclick="clearTMBMetroTableSearch()" style="background:#666; color:white; padding:8px 12px; border:none; border-radius:3px; cursor:pointer; font-size: 12px;">
-              <i class="fa fa-eraser"></i> Netejar cerca
+              <i class="fa fa-eraser"></i> <span data-i18n="metro_clear_search">Netejar cerca</span>
             </button>
           </div>
 
           <!-- Search -->
           <div style="margin-bottom: 10px;">
-            <input type="text" id="tmb-metro-table-search" placeholder="🔍 Cerca per codi, nom o línia..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 3px; font-size: 12px;" onkeyup="searchTMBMetroTable()">
+            <input type="text" id="tmb-metro-table-search" placeholder="🔍 Cerca per codi, nom o línia..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 3px; font-size: 12px;" onkeyup="searchTMBMetroTable()" data-i18n-placeholder="metro_search_placeholder">
           </div>
 
           <!-- Table Status -->
-          <div id="tmb-metro-table-status" style="background: #f8f9fa; padding: 8px; border-radius: 3px; font-size: 11px; border: 1px solid #ddd;">
+          <div id="tmb-metro-table-status" style="background: #f8f9fa; padding: 8px; border-radius: 3px; font-size: 11px; border: 1px solid #ddd;" data-i18n="metro_table_status">
             Preparat per carregar dades...
           </div>
         </div>
@@ -105,24 +105,24 @@
         <!-- Pagination -->
         <div id="tmb-metro-pagination" style="display: none; text-align: center; margin-bottom: 15px;">
           <button id="tmb-metro-prev-page" onclick="changeTMBMetroPage(-1)" style="background:#666; color:white; padding:6px 12px; border:none; border-radius:3px; cursor:pointer; margin-right: 10px; font-size: 12px;" disabled>
-            <i class="fa fa-chevron-left"></i> Anterior
+            <i class="fa fa-chevron-left"></i> <span data-i18n="metro_prev_page">Anterior</span>
           </button>
           <span id="tmb-metro-page-info" style="font-size: 12px; color: #666;"></span>
           <button id="tmb-metro-next-page" onclick="changeTMBMetroPage(1)" style="background:#666; color:white; padding:6px 12px; border:none; border-radius:3px; cursor:pointer; margin-left: 10px; font-size: 12px;" disabled>
-            Següent <i class="fa fa-chevron-right"></i>
+            <span data-i18n="metro_next_page">Següent</span> <i class="fa fa-chevron-right"></i>
           </button>
         </div>
 
         <!-- Loading indicator -->
         <div id="tmb-metro-table-loading" style="text-align: center; padding: 20px; display: none;">
           <img src="assets/img/spinner.gif" alt="Loading..." style="width: 24px; height: 24px;">
-          <p style="margin: 10px 0 0 0; font-size: 12px; color: #666;">Carregant dades d'estacions...</p>
+          <p style="margin: 10px 0 0 0; font-size: 12px; color: #666;" data-i18n="metro_loading_data">Carregant dades d'estacions...</p>
         </div>
 
         <!-- No results message -->
         <div id="tmb-metro-no-results" style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 3px; display: none;">
           <i class="fa fa-info-circle" style="font-size: 24px; color: #666; margin-bottom: 10px;"></i>
-          <p style="margin: 0; font-size: 12px; color: #666;">No s'han trobat estacions que coincideixin amb la cerca.</p>
+          <p style="margin: 0; font-size: 12px; color: #666;" data-i18n="metro_no_results">No s'han trobat estacions que coincideixin amb la cerca.</p>
         </div>
       </div>
 
