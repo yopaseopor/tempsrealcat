@@ -144,19 +144,54 @@ function fetchAllAMBStops() {
             return null;
         });
 
+    // Fetch real-time vehicle positions from protobuf
+    var vehiclePositionsUrl = proxyUrl + encodeURIComponent('https://www.ambmobilitat.cat/transit/vehicle-positions/vehicle-positions.bin');
+
+    console.log('🚌 Fetching real-time vehicle positions from:', vehiclePositionsUrl);
+
+    var vehiclePositionsPromise = fetch(vehiclePositionsUrl)
+        .then(response => {
+            if (!response.ok) {
+                console.warn('⚠️ Vehicle positions not available:', response.status);
+                return null;
+            }
+            return response.arrayBuffer();
+        })
+        .then(buffer => {
+            if (buffer) {
+                return parseGTFSRealtime(buffer, 'vehicle_positions');
+            }
+            return null;
+        })
+        .catch(error => {
+            console.warn('⚠️ Error fetching vehicle positions:', error);
+            return null;
+        });
+
     // Wait for requests and combine data
-    return Promise.all([gtfsPromise, tripUpdatesPromise])
+    return Promise.all([gtfsPromise, tripUpdatesPromise, vehiclePositionsPromise])
         .then(function(results) {
             var stopsData = results[0];
             var tripUpdatesData = results[1];
+            var vehiclePositionsData = results[2];
 
+            // First merge trip updates if available
             if (tripUpdatesData && tripUpdatesData.length > 0) {
-                console.log('✅ Merging', tripUpdatesData.length, 'real-time updates with scheduled data');
-                return mergeRealtimeData(stopsData, tripUpdatesData);
+                console.log('✅ Merging', tripUpdatesData.length, 'real-time trip updates with scheduled data');
+                stopsData = mergeRealtimeData(stopsData, tripUpdatesData);
             } else {
-                console.log('ℹ️ No real-time data available, using scheduled data only');
-                return stopsData;
+                console.log('ℹ️ No real-time trip updates available, using scheduled data only');
             }
+
+            // Then merge vehicle positions if available
+            if (vehiclePositionsData && vehiclePositionsData.length > 0) {
+                console.log('✅ Merging', vehiclePositionsData.length, 'real-time vehicle positions with stop data');
+                stopsData = mergeVehiclePositionData(stopsData, vehiclePositionsData);
+            } else {
+                console.log('ℹ️ No real-time vehicle positions available');
+            }
+
+            return stopsData;
         })
         .catch(error => {
             console.error('❌ Error fetching AMB GTFS data:', error);
@@ -871,6 +906,36 @@ function displayAMBStops(stops) {
             } else {
                 popupContent += '<div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 8px; margin: 8px 0; text-align: center;">' +
                     '<em>No hi ha autobusos programats en les properes hores</em>' +
+                    '</div>';
+            }
+
+            // Add approaching buses section if available
+            if (stop.approachingBuses && stop.approachingBuses.length > 0) {
+                popupContent += '<div style="background: #e8f5e8; border: 1px solid #c3e6cb; border-radius: 4px; padding: 10px; margin: 8px 0;">' +
+                    '<h5 style="margin: 0 0 8px 0; color: #155724;">🚌 Autobuses en temps real</h5>' +
+                    '<div style="font-size: 11px; color: #155724; margin-bottom: 8px;">Autobuses detectats aprop de la parada:</div>';
+
+                stop.approachingBuses.forEach(function(bus, index) {
+                    popupContent += '<div style="margin-bottom: 6px; padding: 6px; background: #fff; border-radius: 3px; border: 1px solid #d4edda;">' +
+                        '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">' +
+                        '<div style="font-weight: bold; color: #0088cc; font-size: 12px;">Línia ' + bus.routeInfo + '</div>' +
+                        '<div style="font-size: 10px; padding: 2px 6px; background: ' + bus.statusColor + '; color: white; border-radius: 2px; font-weight: bold;">' + bus.status + '</div>' +
+                        '</div>';
+
+                    if (bus.destination) {
+                        popupContent += '<div style="font-size: 11px; color: #666; margin-bottom: 2px;">➜ ' + bus.destination + '</div>';
+                    }
+
+                    popupContent += '<div style="font-size: 10px; color: #666;">' +
+                        'Vehicle: ' + bus.vehicleId;
+                    if (bus.timeSinceUpdate > 0) {
+                        popupContent += ' (fa ' + bus.timeSinceUpdate + ' min)';
+                    }
+                    popupContent += '</div>' +
+                        '</div>';
+                });
+
+                popupContent += '<div style="font-size: 10px; color: #155724; margin-top: 6px; text-align: center;">Dades en temps real d\'AMB</div>' +
                     '</div>';
             }
 
@@ -2045,74 +2110,122 @@ function exportUpdatedGTFSData() {
     console.log('✅ Exported completeness report to gtfs_completeness_report.txt');
 }
 
-// Merge real-time data with scheduled arrivals
-function mergeRealtimeData(stopsData, realtimeData) {
-    if (!realtimeData || realtimeData.length === 0) {
-        console.log('ℹ️ No real-time data to merge');
+// Merge real-time vehicle position data with stop data to show approaching buses
+function mergeVehiclePositionData(stopsData, vehiclePositionsData) {
+    if (!vehiclePositionsData || vehiclePositionsData.length === 0) {
+        console.log('ℹ️ No vehicle position data to merge');
         return stopsData;
     }
 
-    console.log('🔄 Merging', realtimeData.length, 'real-time updates with scheduled data');
+    console.log('🔄 Merging', vehiclePositionsData.length, 'vehicle positions with stop data');
 
-    // Create lookup map for real-time updates by stop_id and route_id
-    var realtimeByStopAndRoute = {};
-    realtimeData.forEach(function(update) {
-        var key = update.stopId + '_' + update.routeId;
-        if (!realtimeByStopAndRoute[key]) {
-            realtimeByStopAndRoute[key] = [];
-        }
-        realtimeByStopAndRoute[key].push(update);
+    // Create lookup map for stops by stop_id
+    var stopsById = {};
+    stopsData.forEach(function(stop) {
+        stopsById[stop.stop_id] = stop;
     });
 
-    // Merge real-time data with scheduled arrivals
-    stopsData.forEach(function(stop) {
-        if (!stop.scheduledArrivals || stop.scheduledArrivals.length === 0) {
-            return;
-        }
+    // Process each vehicle position
+    vehiclePositionsData.forEach(function(vehiclePos) {
+        // Only process vehicles that have a current stop ID
+        if (vehiclePos.stopId && stopsById[vehiclePos.stopId]) {
+            var stop = stopsById[vehiclePos.stopId];
 
-        stop.scheduledArrivals.forEach(function(arrival) {
-            var key = stop.stop_id + '_' + arrival.route;
+            // Initialize approaching buses array if not exists
+            if (!stop.approachingBuses) {
+                stop.approachingBuses = [];
+            }
 
-            // Look for real-time updates for this stop and route
-            var realtimeUpdates = realtimeByStopAndRoute[key];
-            if (realtimeUpdates && realtimeUpdates.length > 0) {
-                // Find the closest real-time update in time
-                var scheduledTime = arrival.scheduledTime;
-                var closestUpdate = null;
-                var minTimeDiff = Infinity;
-
-                realtimeUpdates.forEach(function(update) {
-                    var timeDiff = Math.abs(update.arrivalTime.getTime() - scheduledTime.getTime());
-                    if (timeDiff < minTimeDiff && timeDiff < 600000) { // Within 10 minutes
-                        minTimeDiff = timeDiff;
-                        closestUpdate = update;
+            // Get route information
+            var routeInfo = '';
+            if (window.gtfsData && window.gtfsData.routesMap && vehiclePos.routeId) {
+                var route = window.gtfsData.routesMap[vehiclePos.routeId];
+                if (route) {
+                    routeInfo = route.route_short_name || route.route_id;
+                    if (route.route_long_name) {
+                        routeInfo += ' - ' + route.route_long_name;
                     }
-                });
-
-                if (closestUpdate) {
-                    // Update with real-time information
-                    var now = new Date();
-                    var realtimeArrival = new Date(closestUpdate.arrivalTime.getTime() + (closestUpdate.delay * 1000));
-
-                    arrival.scheduledTime = realtimeArrival;
-                    arrival.timeToArrival = Math.max(0, Math.round((realtimeArrival.getTime() - now.getTime()) / (1000 * 60)));
-                    arrival.status = closestUpdate.delay !== 0 ?
-                        (closestUpdate.delay > 0 ? 'Retard ' + Math.round(closestUpdate.delay / 60) + ' min' : 'Avanç ' + Math.round(Math.abs(closestUpdate.delay) / 60) + ' min') :
-                        'A l\'hora';
-                    arrival.isRealtime = true;
-
-                    console.log('🕒 Updated', arrival.route, 'at stop', stop.stop_id, 'with real-time data:', arrival.status);
                 }
             }
-        });
 
-        // Re-sort by time to arrival after merging real-time data
-        stop.scheduledArrivals.sort(function(a, b) {
-            return a.timeToArrival - b.timeToArrival;
-        });
+            // Get trip information for destination
+            var destination = '';
+            if (window.gtfsData && window.gtfsData.tripsMap && vehiclePos.tripId) {
+                var trip = window.gtfsData.tripsMap[vehiclePos.tripId];
+                if (trip && trip.trip_headsign) {
+                    destination = trip.trip_headsign;
+                }
+            }
+
+            // Calculate distance and status
+            var statusText = '';
+            var statusColor = '#0066cc'; // Default blue
+
+            switch(vehiclePos.currentStatus) {
+                case 0: // INCOMING_AT
+                    statusText = 'S\'acosta';
+                    statusColor = '#28a745'; // Green
+                    break;
+                case 1: // STOPPED_AT
+                    statusText = 'Aturat';
+                    statusColor = '#ffc107'; // Yellow
+                    break;
+                case 2: // IN_TRANSIT_TO
+                    statusText = 'En trànsit';
+                    statusColor = '#17a2b8'; // Teal
+                    break;
+                default:
+                    statusText = 'Desconegut';
+                    break;
+            }
+
+            // Calculate time since last update
+            var timeSinceUpdate = 0;
+            if (vehiclePos.timestamp) {
+                timeSinceUpdate = Math.round((new Date() - vehiclePos.timestamp) / (1000 * 60)); // minutes
+            }
+
+            // Only add if recent update (within last 5 minutes)
+            if (timeSinceUpdate <= 5) {
+                var approachingBus = {
+                    vehicleId: vehiclePos.vehicleId || 'Desconegut',
+                    route: vehiclePos.routeId || 'Desconegut',
+                    routeInfo: routeInfo,
+                    destination: destination,
+                    status: statusText,
+                    statusColor: statusColor,
+                    currentStatus: vehiclePos.currentStatus,
+                    latitude: vehiclePos.latitude,
+                    longitude: vehiclePos.longitude,
+                    bearing: vehiclePos.bearing,
+                    speed: vehiclePos.speed,
+                    timestamp: vehiclePos.timestamp,
+                    timeSinceUpdate: timeSinceUpdate,
+                    currentStopSequence: vehiclePos.currentStopSequence,
+                    type: 'vehicle_position'
+                };
+
+                stop.approachingBuses.push(approachingBus);
+            }
+        }
     });
 
-    console.log('✅ Real-time data merged successfully');
+    // Sort approaching buses by status priority (approaching first, then stopped, then in transit)
+    stopsData.forEach(function(stop) {
+        if (stop.approachingBuses && stop.approachingBuses.length > 0) {
+            stop.approachingBuses.sort(function(a, b) {
+                // Priority: INCOMING_AT (0) > STOPPED_AT (1) > IN_TRANSIT_TO (2)
+                return a.currentStatus - b.currentStatus;
+            });
+
+            // Limit to maximum 5 approaching buses per stop
+            if (stop.approachingBuses.length > 5) {
+                stop.approachingBuses = stop.approachingBuses.slice(0, 5);
+            }
+        }
+    });
+
+    console.log('✅ Vehicle position data merged successfully');
     return stopsData;
 }
 
